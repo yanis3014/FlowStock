@@ -1,0 +1,20 @@
+{
+  "name": "bmad-stock-agent",
+  "private": true,
+  "version": "0.1.0",
+  "description": "SaaS de gestion de stocks pour PME avec IA, monorepo fullstack.",
+  "scripts": {
+    "dev": "turbo run dev --parallel",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "test": "turbo run test"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "devDependencies": {
+    "turbo": "^2.2.3"
+  }
+}
+

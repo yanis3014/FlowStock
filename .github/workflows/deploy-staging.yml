@@ -1,0 +1,64 @@
+name: Deploy to Staging
+
+on:
+  push:
+    branches: [develop]
+  workflow_dispatch:
+
+env:
+  GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  GCP_REGION: europe-west1
+  ARTIFACT_REGISTRY: ${{ secrets.GCP_ARTIFACT_REGISTRY }}
+
+jobs:
+  deploy:
+    name: Deploy to GCP Cloud Run
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for GCP Artifact Registry
+        run: |
+          gcloud auth configure-docker $GCP_REGION-docker.pkg.dev
+
+      - name: Build and push API image
+        run: |
+          docker build -t $GCP_REGION-docker.pkg.dev/$GCP_PROJECT_ID/$ARTIFACT_REGISTRY/api:${{ github.sha }} ./apps/api
+          docker push $GCP_REGION-docker.pkg.dev/$GCP_PROJECT_ID/$ARTIFACT_REGISTRY/api:${{ github.sha }}
+
+      - name: Build and push ML Service image
+        run: |
+          docker build -t $GCP_REGION-docker.pkg.dev/$GCP_PROJECT_ID/$ARTIFACT_REGISTRY/ml-service:${{ github.sha }} ./apps/ml-service
+          docker push $GCP_REGION-docker.pkg.dev/$GCP_PROJECT_ID/$ARTIFACT_REGISTRY/ml-service:${{ github.sha }}
+
+      - name: Deploy API to Cloud Run
+        run: |
+          gcloud run deploy api \
+            --image $GCP_REGION-docker.pkg.dev/$GCP_PROJECT_ID/$ARTIFACT_REGISTRY/api:${{ github.sha }} \
+            --region $GCP_REGION \
+            --platform managed \
+            --allow-unauthenticated \
+            --set-env-vars NODE_ENV=staging
+
+      - name: Deploy ML Service to Cloud Run
+        run: |
+          gcloud run deploy ml-service \
+            --image $GCP_REGION-docker.pkg.dev/$GCP_PROJECT_ID/$ARTIFACT_REGISTRY/ml-service:${{ github.sha }} \
+            --region $GCP_REGION \
+            --platform managed \
+            --allow-unauthenticated \
+            --set-env-vars ENV=staging
