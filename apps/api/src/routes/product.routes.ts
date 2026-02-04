@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import multer from 'multer';
 import { authenticateToken } from '../middleware/auth';
 import { body, query, param, validationResult } from 'express-validator';
 import {
@@ -7,12 +8,115 @@ import {
   createProduct,
   updateProduct,
   deleteProduct,
+  VALID_UNITS,
   type ProductListFilters,
 } from '../services/product.service';
-import type { ProductCreateInput, ProductUpdateInput, ProductUnit } from '@bmad/shared';
+import {
+  getImportPreview,
+  importProducts,
+  CSV_TEMPLATE,
+} from '../services/product-import.service';
+import type { ProductCreateInput, ProductUpdateInput } from '@bmad/shared';
 
 const router = Router();
-const VALID_UNITS: ProductUnit[] = ['piece', 'kg', 'liter', 'box', 'pack'];
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB
+  fileFilter: (_req, file, cb) => {
+    const allowed = ['.csv', '.xlsx', '.xls'];
+    const ext = (file.originalname || '').toLowerCase().slice(file.originalname.lastIndexOf('.'));
+    if (allowed.includes(ext)) cb(null, true);
+    else cb(new Error('Only CSV and Excel files are allowed'));
+  },
+});
+/**
+ * GET /products/import/template
+ * Download CSV template for product import
+ */
+router.get('/import/template', authenticateToken, (_req: Request, res: Response) => {
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', 'attachment; filename="products-import-template.csv"');
+  res.send(CSV_TEMPLATE);
+});
+
+/**
+ * POST /products/import/preview
+ * Parse file and return columns, sample rows, suggested mapping
+ */
+router.post(
+  '/import/preview',
+  authenticateToken,
+  upload.single('file'),
+  async (req: Request, res: Response) => {
+    if (!req.user?.tenantId) {
+      res.status(401).json({ success: false, error: 'Authentication required' });
+      return;
+    }
+    const file = req.file;
+    if (!file) {
+      res.status(400).json({ success: false, error: 'No file uploaded' });
+      return;
+    }
+    try {
+      const preview = getImportPreview(file.buffer, file.originalname);
+      res.status(200).json({ success: true, data: preview });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to parse file';
+      res.status(400).json({ success: false, error: message });
+    }
+  }
+);
+
+/**
+ * POST /products/import
+ * Execute import with optional mapping
+ */
+router.post(
+  '/import',
+  authenticateToken,
+  upload.single('file'),
+  async (req: Request, res: Response) => {
+    if (!req.user?.tenantId) {
+      res.status(401).json({ success: false, error: 'Authentication required' });
+      return;
+    }
+    const file = req.file;
+    if (!file) {
+      res.status(400).json({ success: false, error: 'No file uploaded' });
+      return;
+    }
+    let mapping: Record<string, string> | undefined;
+    if (typeof req.body.mapping === 'string') {
+      try {
+        mapping = JSON.parse(req.body.mapping) as Record<string, string>;
+      } catch {
+        res.status(400).json({ success: false, error: 'Invalid mapping JSON' });
+        return;
+      }
+    }
+    try {
+      const result = await importProducts(
+        req.user.tenantId,
+        file.buffer,
+        file.originalname,
+        mapping
+      );
+      res.status(200).json({
+        success: true,
+        data: {
+          imported: result.imported,
+          errors: result.errors,
+          ignored: result.ignored,
+          totalRows: result.totalRows,
+        },
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Import failed';
+      res.status(500).json({ success: false, error: message });
+    }
+  }
+);
 
 /**
  * GET /products

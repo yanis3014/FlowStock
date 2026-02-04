@@ -211,6 +211,119 @@ export const openApiDocument = {
         responses: { '201': { description: 'Produit créé' }, '400': { description: 'Validation' } },
       },
     },
+    '/products/import/template': {
+      get: {
+        tags: ['Products'],
+        summary: 'Télécharger le template CSV d\'import',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          '200': { description: 'Fichier CSV (attachment)', content: { 'text/csv': { schema: { type: 'string', format: 'binary' } } } },
+          '401': { description: 'Non authentifié' },
+        },
+      },
+    },
+    '/products/import/preview': {
+      post: {
+        tags: ['Products'],
+        summary: 'Prévisualiser un fichier CSV/Excel (colonnes, mapping suggéré, aperçu)',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'multipart/form-data': {
+              schema: {
+                type: 'object',
+                required: ['file'],
+                properties: { file: { type: 'string', format: 'binary', description: 'Fichier .csv, .xlsx ou .xls' } },
+              },
+            },
+          },
+        },
+        responses: {
+          '200': {
+            description: 'Colonnes, lignes échantillon, mapping suggéré',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean' },
+                    data: {
+                      type: 'object',
+                      properties: {
+                        columns: { type: 'array', items: { type: 'string' } },
+                        sampleRows: { type: 'array', items: { type: 'object' } },
+                        suggestedMapping: { type: 'object', additionalProperties: { type: 'string' } },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          '400': { description: 'Fichier absent ou type non autorisé' },
+          '401': { description: 'Non authentifié' },
+        },
+      },
+    },
+    '/products/import': {
+      post: {
+        tags: ['Products'],
+        summary: 'Exécuter l\'import produits (CSV/Excel)',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'multipart/form-data': {
+              schema: {
+                type: 'object',
+                properties: {
+                  file: { type: 'string', format: 'binary', description: 'Fichier .csv, .xlsx ou .xls' },
+                  mapping: { type: 'string', description: 'JSON optionnel: mapping colonne → champ produit' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '200': {
+            description: 'Rapport d\'import',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean' },
+                    data: {
+                      type: 'object',
+                      properties: {
+                        imported: { type: 'integer' },
+                        errors: {
+                          type: 'array',
+                          items: {
+                            type: 'object',
+                            properties: {
+                              row: { type: 'integer' },
+                              value: { type: 'string' },
+                              message: { type: 'string' },
+                            },
+                          },
+                        },
+                        ignored: { type: 'integer' },
+                        totalRows: { type: 'integer' },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          '400': { description: 'Fichier absent ou type non autorisé' },
+          '401': { description: 'Non authentifié' },
+          '500': { description: 'Erreur serveur' },
+        },
+      },
+    },
     '/products/{id}': {
       get: {
         tags: ['Products'],

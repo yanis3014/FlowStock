@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import express from 'express';
+import path from 'path';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
@@ -66,7 +67,21 @@ app.use('/auth', authRoutes);
 app.use('/subscriptions', subscriptionRoutes);
 app.use('/products', productRoutes);
 
+// Story 2.2: Import stocks page
+app.get('/import-stocks', (_req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'import-stocks.html'));
+});
+
 app.use(csrfErrorHandler);
+
+// Global error handler (multer fileFilter, etc.) — returns JSON for API clients
+app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  const message = err instanceof Error ? err.message : 'Internal server error';
+  const status = message.includes('CSRF') ? 403 : message.includes('file') || message.includes('allowed') ? 400 : 500;
+  if (!res.headersSent) {
+    res.status(status).json({ success: false, error: message });
+  }
+});
 
 let server: ReturnType<typeof app.listen> | null = null;
 

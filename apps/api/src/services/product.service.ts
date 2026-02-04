@@ -7,7 +7,7 @@ import type {
   ProductUpdateInput,
 } from '@bmad/shared';
 
-const VALID_UNITS: ProductUnit[] = ['piece', 'kg', 'liter', 'box', 'pack'];
+export const VALID_UNITS: ProductUnit[] = ['piece', 'kg', 'liter', 'box', 'pack'];
 
 export interface ProductListFilters {
   page?: number;
