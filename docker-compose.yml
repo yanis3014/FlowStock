@@ -63,11 +63,45 @@ services:
       timeout: 5s
       retries: 5
 
+  prometheus:
+    image: prom/prometheus:v2.47.0
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./infrastructure/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.enable-lifecycle'
+    networks:
+      - bmad-network
+    depends_on:
+      - api
+
+  grafana:
+    image: grafana/grafana:10.2.0
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana-data:/var/lib/grafana
+    networks:
+      - bmad-network
+    depends_on:
+      - prometheus
+
 networks:
   bmad-network:
     driver: bridge
 
 volumes:
   pgdata:
+    driver: local
+  prometheus-data:
+    driver: local
+  grafana-data:
     driver: local
 

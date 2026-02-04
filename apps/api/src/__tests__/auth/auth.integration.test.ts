@@ -32,8 +32,10 @@ describe('Auth Integration Tests', () => {
   });
 
   afterAll(async () => {
-    // Clean up test data
+    // Clean up test data (order: FKs first)
     await pool.query('DELETE FROM refresh_tokens');
+    await pool.query('DELETE FROM subscription_changes');
+    await pool.query('DELETE FROM subscriptions');
     await pool.query('DELETE FROM users');
     await pool.query('DELETE FROM tenants WHERE slug = $1', ['test-tenant']);
     await pool.query('DELETE FROM tenants WHERE slug LIKE $1', ['test-company%']);
@@ -259,7 +261,7 @@ describe('Auth Integration Tests', () => {
       const response = await request(app)
         .get('/auth/verify-email?token=invalid-token');
 
-      expect(response.status).toBe(400);
+      expect(response.status).toBe(401);
       expect(response.body.success).toBe(false);
     });
   });
@@ -420,7 +422,7 @@ describe('Auth Integration Tests', () => {
           new_password: 'NewPassword123',
         });
 
-      expect(response.status).toBe(400);
+      expect(response.status).toBe(401);
       expect(response.body.success).toBe(false);
     });
   });

@@ -16,16 +16,19 @@ let envLoaded = false;
 for (const envPath of possibleEnvPaths) {
   if (existsSync(envPath)) {
     config({ path: envPath });
-    console.log(`📄 Loaded .env from: ${envPath}`);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`📄 Loaded .env from: ${envPath}`);
+    }
     envLoaded = true;
     break;
   }
 }
 
 if (!envLoaded) {
-  // Fallback: try default dotenv behavior (current directory)
   config();
-  console.log(`⚠️  .env not found in standard locations, using default dotenv behavior`);
+  if (process.env.NODE_ENV !== 'production') {
+    console.log(`⚠️  .env not found in standard locations, using default dotenv behavior`);
+  }
 }
 
 /**
@@ -47,13 +50,14 @@ class MigrationRunner {
     const databaseUrl = process.env.DATABASE_URL || 
       `postgresql://${user}:${password}@${host}:${port}/${database}`;
 
-    // Debug: Show connection URL (mask password)
-    const maskedUrl = databaseUrl.replace(/:[^:@]+@/, ':****@');
-    console.log(`🔗 Connecting to database: ${maskedUrl}`);
-    console.log(`📄 DATABASE_URL from env: ${process.env.DATABASE_URL ? 'SET' : 'NOT SET'}`);
-    console.log(`📄 POSTGRES_HOST: ${host}, PORT: ${port}, USER: ${user}, DB: ${database}`);
-    console.log(`📄 POSTGRES_PASSWORD: ${password ? 'SET' : 'NOT SET'}`);
-    
+    if (process.env.NODE_ENV !== 'production') {
+      const maskedUrl = databaseUrl.replace(/:[^:@]+@/, ':****@');
+      console.log(`🔗 Connecting to database: ${maskedUrl}`);
+      console.log(`📄 DATABASE_URL from env: ${process.env.DATABASE_URL ? 'SET' : 'NOT SET'}`);
+      console.log(`📄 POSTGRES_HOST: ${host}, PORT: ${port}, USER: ${user}, DB: ${database}`);
+      console.log(`📄 POSTGRES_PASSWORD: ${password ? 'SET' : 'NOT SET'}`);
+    }
+
     // Remove ?schema=public if present (can cause connection issues)
     const cleanDatabaseUrl = databaseUrl.replace(/\?schema=.*$/, '');
 

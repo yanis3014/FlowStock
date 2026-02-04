@@ -23,6 +23,7 @@ import {
   resetPassword,
 } from '../services/auth.service';
 import { authenticateToken } from '../middleware/auth';
+import { sendAuthErrorResponse } from '../utils/authErrors';
 
 const router = Router();
 
@@ -71,27 +72,7 @@ router.post(
         data: result,
       });
     } catch (error: unknown) {
-      const err = error as Error & { code?: string };
-      if (err?.message?.includes('already exists') || err?.code === '23505' || err?.message?.toLowerCase().includes('duplicate') || err?.message?.toLowerCase().includes('unique constraint')) {
-        res.status(409).json({
-          success: false,
-          error: err?.message ?? 'Email already exists for this tenant',
-        });
-        return;
-      }
-      if (err?.message && (err.message.includes('required') || err.message.includes('Invalid'))) {
-        res.status(400).json({
-          success: false,
-          error: err.message,
-        });
-        return;
-      }
-      const message = (error as Error)?.message;
-      res.status(500).json({
-        success: false,
-        error: 'Registration failed',
-        ...(process.env.NODE_ENV === 'test' && message ? { detail: message } : {}),
-      });
+      sendAuthErrorResponse(res, error, 'Registration failed');
     }
   }
 );
@@ -117,28 +98,7 @@ router.post(
         data: result,
       });
     } catch (error) {
-      if (error instanceof Error) {
-        if (error.message.includes('Invalid credentials')) {
-          res.status(401).json({
-            success: false,
-            error: error.message,
-          });
-          return;
-        }
-        if (error.message.includes('not verified')) {
-          res.status(403).json({
-            success: false,
-            error: error.message,
-          });
-          return;
-        }
-      }
-      const message = error instanceof Error ? error.message : String(error);
-      res.status(500).json({
-        success: false,
-        error: 'Login failed',
-        ...(process.env.NODE_ENV === 'test' && message ? { detail: message } : {}),
-      });
+      sendAuthErrorResponse(res, error, 'Login failed');
     }
   }
 );
@@ -161,19 +121,7 @@ router.get('/verify-email', verifyEmailRateLimiter, async (req: Request, res: Re
     const result = await verifyEmail(token);
     res.status(200).json(result);
   } catch (error) {
-    if (error instanceof Error) {
-      if (error.message.includes('expired') || error.message.includes('Invalid')) {
-        res.status(400).json({
-          success: false,
-          error: error.message,
-        });
-        return;
-      }
-    }
-    res.status(500).json({
-      success: false,
-      error: 'Email verification failed',
-    });
+    sendAuthErrorResponse(res, error, 'Email verification failed');
   }
 });
 
@@ -193,26 +141,7 @@ router.post(
         data: result,
       });
     } catch (error) {
-      if (error instanceof Error) {
-        if (error.message.includes('expired') || error.message.includes('Invalid') || error.message.includes('not found')) {
-          res.status(401).json({
-            success: false,
-            error: error.message,
-          });
-          return;
-        }
-        if (error.message.includes('inactive')) {
-          res.status(403).json({
-            success: false,
-            error: error.message,
-          });
-          return;
-        }
-      }
-      res.status(500).json({
-        success: false,
-        error: 'Token refresh failed',
-      });
+      sendAuthErrorResponse(res, error, 'Token refresh failed');
     }
   }
 );
@@ -277,26 +206,7 @@ router.post(
       const result = await resetPassword(req.body.token, req.body.new_password);
       res.status(200).json(result);
     } catch (error) {
-      if (error instanceof Error) {
-        if (error.message.includes('expired') || error.message.includes('Invalid')) {
-          res.status(400).json({
-            success: false,
-            error: error.message,
-          });
-          return;
-        }
-        if (error.message.includes('Invalid password')) {
-          res.status(400).json({
-            success: false,
-            error: error.message,
-          });
-          return;
-        }
-      }
-      res.status(500).json({
-        success: false,
-        error: 'Password reset failed',
-      });
+      sendAuthErrorResponse(res, error, 'Password reset failed');
     }
   }
 );

@@ -2,6 +2,7 @@ module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'node',
   roots: ['<rootDir>/src'],
+  setupFiles: ['<rootDir>/jest.setup.js'],
   testMatch: ['**/__tests__/**/*.test.ts'],
   // Run tests sequentially to avoid DB races (migrations.test drops schema; multi-tenancy/auth need migrated DB)
   maxWorkers: 1,

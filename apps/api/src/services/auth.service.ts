@@ -9,6 +9,10 @@ import {
   verifyPasswordResetToken,
   verifyToken,
 } from '../utils/jwt';
+import {
+  createTrialSubscriptionForTenant,
+  getSubscriptionForAuth,
+} from './subscription.service';
 
 export interface RegisterInput {
   email: string;
@@ -114,9 +118,26 @@ export async function registerUser(input: RegisterInput) {
 
     const user = userResult.rows[0];
 
-    // Create trial subscription (will be implemented in Story 1.4, for now just return null)
-    // TODO: Create subscription in Story 1.4
-    const subscription = null;
+    // Ensure trial subscription exists for this tenant (create if missing)
+    const existingSub = await client.query(
+      'SELECT id FROM subscriptions WHERE tenant_id = $1',
+      [tenantId]
+    );
+    if (existingSub.rows.length === 0) {
+      await createTrialSubscriptionForTenant(client, tenantId);
+    }
+    const subscriptionRow = await client.query(
+      `SELECT tier, status, trial_ends_at FROM subscriptions WHERE tenant_id = $1`,
+      [tenantId]
+    );
+    const sub = subscriptionRow.rows[0];
+    const subscription = sub
+      ? {
+          tier: sub.tier,
+          status: sub.status,
+          trial_ends_at: sub.trial_ends_at ? new Date(sub.trial_ends_at).toISOString() : null,
+        }
+      : { tier: 'normal', status: 'trial', trial_ends_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() };
 
     // Generate tokens
     const emailVerificationToken = generateEmailVerificationToken(user.id, user.email);
@@ -158,7 +179,7 @@ export async function registerUser(input: RegisterInput) {
     console.log(`   Token: ${emailVerificationToken}`);
     console.log(`   Verification URL: http://localhost:3000/auth/verify-email?token=${emailVerificationToken}`);
 
-    return {
+    const result = {
       user: {
         id: user.id,
         email: user.email,
@@ -171,15 +192,17 @@ export async function registerUser(input: RegisterInput) {
         company_name: tenant.company_name,
         slug: tenant.slug,
       },
-      subscription: subscription || {
-        tier: 'normal',
-        status: 'trial',
-        trial_ends_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days
-      },
+      subscription,
       access_token: accessToken,
       refresh_token: refreshToken,
       expires_in: 900, // 15 minutes in seconds
     };
+    // Expose verification token only in development/test (never in production)
+    const nodeEnv = process.env.NODE_ENV;
+    if (nodeEnv === 'development' || nodeEnv === 'test') {
+      (result as Record<string, unknown>).email_verification_token = emailVerificationToken;
+    }
+    return result;
   } catch (error: unknown) {
     await client.query('ROLLBACK').catch(() => {}); // Ignore rollback errors
     client.release();
@@ -261,11 +284,7 @@ export async function loginUser(input: LoginInput) {
     [user.id, refreshToken, expiresAt]
   );
 
-  // Mock subscription (will be implemented in Story 1.4)
-  const subscription = {
-    tier: 'normal',
-    status: 'trial',
-  };
+  const subscription = await getSubscriptionForAuth(user.tenant_id);
 
   return {
     user: {
@@ -280,7 +299,7 @@ export async function loginUser(input: LoginInput) {
       company_name: tenant.company_name,
       slug: tenant.slug,
     },
-    subscription,
+    subscription: subscription ?? { tier: 'normal', status: 'trial' },
     access_token: accessToken,
     refresh_token: refreshToken,
     expires_in: 900, // 15 minutes in seconds

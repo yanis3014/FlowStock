@@ -3,64 +3,117 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
-import { readFileSync } from 'fs';
-import { join } from 'path';
+import cookieParser from 'cookie-parser';
 import { runMigrations } from './database/migrations';
+import { closeDatabase } from './database/connection';
+import { config } from './config';
 import { validateJwtSecret } from './utils/jwt';
+import { logger, logError } from './utils/logger';
+import { metricsMiddleware, metricsHandler } from './middleware/metrics';
+import { csrfProtection, csrfErrorHandler } from './middleware/csrf';
+import swaggerUi from 'swagger-ui-express';
+import authRoutes from './routes/auth.routes';
+import subscriptionRoutes from './routes/subscription.routes';
+import productRoutes from './routes/product.routes';
+import { openApiDocument } from './openapi/spec';
+import type { HealthResponse } from '@bmad/shared';
 
 const app = express();
 
 app.use(helmet());
-app.use(cors());
+app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
 app.use(morgan('dev'));
+app.use(cookieParser());
+app.use(metricsMiddleware);
 
-const PORT = process.env.PORT || 3000;
-
-// Read version from package.json
-let appVersion = '0.1.0';
-try {
-  const packageJson = JSON.parse(
-    readFileSync(join(__dirname, '../package.json'), 'utf-8')
-  );
-  appVersion = packageJson.version || process.env.APP_VERSION || '0.1.0';
-} catch (error) {
-  // Fallback to env or default
-  appVersion = process.env.APP_VERSION || '0.1.0';
-}
+const PORT = config.PORT;
+const appVersion = config.APP_VERSION;
 
 app.get('/health', (_req, res) => {
-  res.status(200).json({
+  const body: HealthResponse = {
     status: 'ok',
     service: 'bmad-stock-agent-api',
     version: appVersion,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+  };
+  res.status(200).json(body);
+});
+
+app.get('/metrics', metricsHandler);
+
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(openApiDocument));
+app.get('/api-docs/openapi.json', (_req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.send(JSON.stringify(openApiDocument, null, 2));
+});
+
+app.get('/csrf-token', (req, res, next) => {
+  if (config.NODE_ENV === 'test') return res.json({ csrfToken: 'test-token' });
+  csrfProtection(req, res, (err) => {
+    if (err) return next(err);
+    res.json({ csrfToken: (req as express.Request & { csrfToken: () => string }).csrfToken() });
   });
 });
 
-// Auth routes
-import authRoutes from './routes/auth.routes';
-app.use('/auth', authRoutes);
+app.use((req, res, next) => {
+  if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) return next();
+  if (config.NODE_ENV === 'test') return next();
+  csrfProtection(req, res, next);
+});
 
-// TODO: plug routers for /api/products, /api/sales, /api/orders, /api/invoices, /api/ml, etc.
+app.use('/auth', authRoutes);
+app.use('/subscriptions', subscriptionRoutes);
+app.use('/products', productRoutes);
+
+app.use(csrfErrorHandler);
+
+let server: ReturnType<typeof app.listen> | null = null;
+
+async function gracefulShutdown(signal: string): Promise<void> {
+  logger.info(`${signal} received, starting graceful shutdown...`);
+
+  if (server) {
+    server.close(() => {
+      logger.info('HTTP server closed');
+    });
+    server = null;
+  }
+
+  try {
+    await closeDatabase();
+    logger.info('Database connections closed');
+  } catch (error) {
+    logError(error, { context: 'graceful_shutdown_database' });
+  }
+
+  process.exit(0);
+}
 
 if (require.main === module) {
-  // Run migrations on startup (in production, migrations should be run separately)
-  // For development, this is convenient
-  if (process.env.RUN_MIGRATIONS_ON_STARTUP !== 'false') {
+  process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+  process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+  process.on('uncaughtException', (error) => {
+    logError(error, { context: 'uncaughtException' });
+    void gracefulShutdown('UNCAUGHT_EXCEPTION');
+  });
+  process.on('unhandledRejection', (reason: unknown, promise: Promise<unknown>) => {
+    logger.error('Unhandled Rejection', { reason, promise: String(promise) });
+    void gracefulShutdown('UNHANDLED_REJECTION');
+  });
+
+  if (config.RUN_MIGRATIONS_ON_STARTUP) {
     runMigrations()
       .then(() => {
-        console.log('✅ Database migrations completed');
+        logger.info('Database migrations completed');
         startServer();
       })
       .catch((error) => {
-        console.error('❌ Migration error:', error);
-        // In production, fail fast if migrations fail
-        if (process.env.NODE_ENV === 'production') {
+        logError(error, { context: 'migrations_startup' });
+        if (config.NODE_ENV === 'production') {
           process.exit(1);
         } else {
-          // In development, start server anyway (migrations might have already run)
-          console.warn('⚠️ Starting server despite migration errors (development mode)');
+          logger.warn('Starting server despite migration errors (development mode)');
           startServer();
         }
       });
@@ -69,11 +122,10 @@ if (require.main === module) {
   }
 }
 
-function startServer() {
+function startServer(): void {
   validateJwtSecret();
-  app.listen(PORT, () => {
-    // eslint-disable-next-line no-console
-    console.log(`API server listening on http://localhost:${PORT}`);
+  server = app.listen(PORT, () => {
+    logger.info(`API server listening on http://localhost:${PORT}`);
   });
 }
 

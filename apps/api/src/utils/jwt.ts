@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
+import { config } from '../config';
 
 const MIN_SECRET_LENGTH = 32;
 
@@ -8,21 +9,21 @@ const MIN_SECRET_LENGTH = 32;
  * Call at app startup (e.g. index.ts) so the process fails fast.
  */
 export function validateJwtSecret(): void {
-  if (process.env.NODE_ENV !== 'production') return;
-  const secret = process.env.JWT_SECRET;
+  if (config.NODE_ENV !== 'production') return;
+  const secret = config.JWT_SECRET;
   if (!secret || secret.length < MIN_SECRET_LENGTH) {
     throw new Error(
       `JWT_SECRET must be set and at least ${MIN_SECRET_LENGTH} characters in production. ` +
-      'Set JWT_SECRET in your environment.'
+        'Set JWT_SECRET in your environment.'
     );
   }
 }
 
-const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-change-in-production-min-32-chars';
-const JWT_ACCESS_EXPIRES_IN = process.env.JWT_ACCESS_EXPIRES_IN || '15m';
-const JWT_REFRESH_EXPIRES_IN = process.env.JWT_REFRESH_EXPIRES_IN || '7d';
-const JWT_EMAIL_VERIFICATION_EXPIRES_IN = process.env.JWT_EMAIL_VERIFICATION_EXPIRES_IN || '24h';
-const JWT_PASSWORD_RESET_EXPIRES_IN = process.env.JWT_PASSWORD_RESET_EXPIRES_IN || '1h';
+const JWT_SECRET = config.JWT_SECRET;
+const JWT_ACCESS_EXPIRES_IN = config.JWT_ACCESS_EXPIRES_IN;
+const JWT_REFRESH_EXPIRES_IN = config.JWT_REFRESH_EXPIRES_IN;
+const JWT_EMAIL_VERIFICATION_EXPIRES_IN = config.JWT_EMAIL_VERIFICATION_EXPIRES_IN;
+const JWT_PASSWORD_RESET_EXPIRES_IN = config.JWT_PASSWORD_RESET_EXPIRES_IN;
 
 export interface JWTPayload {
   userId: string;

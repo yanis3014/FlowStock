@@ -10,7 +10,22 @@ jobs:
   lint-and-test:
     name: Lint and Test
     runs-on: ubuntu-latest
-    
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: bmad
+          POSTGRES_PASSWORD: bmad
+          POSTGRES_DB: bmad_stock_agent
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U bmad -d bmad_stock_agent"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -28,6 +43,10 @@ jobs:
         run: npm run lint
 
       - name: Run tests
+        env:
+          DATABASE_URL: postgresql://bmad:bmad@localhost:5432/bmad_stock_agent
+          JWT_SECRET: ci-test-secret-min-32-chars-for-tests-only
+          NODE_ENV: test
         run: npm run test
 
   build:

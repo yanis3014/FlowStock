@@ -1,10 +1,6 @@
 import { Pool, PoolClient, QueryResult, QueryResultRow } from 'pg';
-import { config } from 'dotenv';
-import { resolve } from 'path';
-
-// Load .env from project root (2 levels up from this file)
-const envPath = resolve(__dirname, '../../../.env');
-config({ path: envPath });
+import { logError } from '../utils/logger';
+import { getDatabaseUrl } from '../config';
 
 /**
  * Database connection pool for PostgreSQL
@@ -14,8 +10,7 @@ class DatabaseConnection {
   private pool: Pool;
 
   constructor() {
-    const databaseUrl = process.env.DATABASE_URL || 
-      `postgresql://${process.env.POSTGRES_USER || 'bmad'}:${process.env.POSTGRES_PASSWORD || 'bmad'}@${process.env.POSTGRES_HOST || 'localhost'}:${process.env.POSTGRES_PORT || '5432'}/${process.env.POSTGRES_DB || 'bmad_stock_agent'}`;
+    const databaseUrl = getDatabaseUrl();
 
     this.pool = new Pool({
       connectionString: databaseUrl,
@@ -26,7 +21,7 @@ class DatabaseConnection {
 
     // Handle pool errors
     this.pool.on('error', (err) => {
-      console.error('Unexpected error on idle client', err);
+      logError(err, { context: 'database_pool_idle_client' });
       process.exit(-1);
     });
   }
