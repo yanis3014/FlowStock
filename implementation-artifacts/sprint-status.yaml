@@ -47,13 +47,13 @@ development_status:
   1-4-subscription-tiers-management: done
   epic-1-retrospective: done
 
-  epic-2: in-progress
+  epic-2: done
   2-1-crud-stocks-de-base: done
   2-2-import-initial-stocks-onboarding: done
-  2-3-gestion-emplacements: backlog
-  2-4-historique-mouvements-stocks: backlog
-  2-5-gestion-fournisseurs: backlog
-  epic-2-retrospective: optional
+  2-3-gestion-emplacements: done
+  2-4-historique-mouvements-stocks: done
+  2-5-gestion-fournisseurs: done
+  epic-2-retrospective: done
 
   epic-3: backlog
   3-1-saisie-manuelle-ventes: backlog

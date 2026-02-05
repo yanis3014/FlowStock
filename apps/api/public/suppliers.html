@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fournisseurs - bmad-stock-agent</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: system-ui, sans-serif; max-width: 960px; margin: 2rem auto; padding: 0 1rem; }
+    h1 { margin-bottom: 0.5rem; }
+    .section { margin: 1.5rem 0; padding: 1rem; border: 1px solid #ddd; border-radius: 8px; }
+    label { display: block; margin-top: 0.5rem; font-weight: 500; }
+    input[type="text"], input[type="email"], textarea { margin-top: 0.25rem; width: 100%; max-width: 400px; padding: 0.35rem; }
+    textarea { min-height: 60px; resize: vertical; }
+    button { margin-top: 0.5rem; margin-right: 0.5rem; padding: 0.5rem 1rem; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 4px; }
+    button:hover { background: #0056b3; }
+    button:disabled { background: #ccc; cursor: not-allowed; }
+    button.danger { background: #dc3545; }
+    button.danger:hover { background: #c82333; }
+    .error { color: #c00; }
+    .success { color: #0a0; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+    th, td { border: 1px solid #ddd; padding: 0.5rem; text-align: left; }
+    th { background: #f5f5f5; }
+    .hidden { display: none; }
+    a { color: #007bff; }
+  </style>
+</head>
+<body>
+  <h1>Gestion des fournisseurs</h1>
+  <p>Créez et gérez vos fournisseurs. Associez les produits à un fournisseur depuis la liste des produits (filtre par fournisseur).</p>
+
+  <div class="section">
+    <h2>Authentification</h2>
+    <label>Token JWT (après connexion via /auth/login) :</label>
+    <input type="text" id="token" placeholder="Collez votre access_token ici" style="width: 100%;" />
+  </div>
+
+  <div class="section">
+    <h2>Liste des fournisseurs</h2>
+    <button id="refreshBtn">Rafraîchir</button>
+    <button id="newBtn">Nouveau fournisseur</button>
+    <div id="listError" class="error hidden"></div>
+    <div id="listSuccess" class="success hidden"></div>
+    <table id="suppliersTable" class="hidden">
+      <thead>
+        <tr>
+          <th>Nom</th>
+          <th>Contact</th>
+          <th>Email</th>
+          <th>Produits</th>
+          <th>Actif</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="suppliersBody"></tbody>
+    </table>
+    <p id="emptyList" class="hidden">Aucun fournisseur. Cliquez sur "Nouveau fournisseur".</p>
+  </div>
+
+  <div class="section hidden" id="formSection">
+    <h2 id="formTitle">Nouveau fournisseur</h2>
+    <div id="formError" class="error hidden"></div>
+    <input type="hidden" id="editId" />
+    <label>Nom *</label>
+    <input type="text" id="name" required placeholder="ex: Grossiste Alimentaire" />
+    <label>Contact</label>
+    <input type="text" id="contact_name" placeholder="Nom du contact" />
+    <label>Email</label>
+    <input type="email" id="email" placeholder="contact@fournisseur.com" />
+    <label>Téléphone</label>
+    <input type="text" id="phone" placeholder="+33 1 23 45 67 89" />
+    <label>Adresse</label>
+    <input type="text" id="address" placeholder="Adresse complète" />
+    <label>Notes</label>
+    <textarea id="notes" placeholder="Notes internes"></textarea>
+    <div id="editActiveRow" class="hidden">
+      <label><input type="checkbox" id="is_active" checked /> Actif</label>
+    </div>
+    <button id="saveBtn">Enregistrer</button>
+    <button id="cancelBtn">Annuler</button>
+  </div>
+
+  <script>
+    const API_BASE = '';
+    const tokenEl = document.getElementById('token');
+    const refreshBtn = document.getElementById('refreshBtn');
+    const newBtn = document.getElementById('newBtn');
+    const listError = document.getElementById('listError');
+    const listSuccess = document.getElementById('listSuccess');
+    const suppliersTable = document.getElementById('suppliersTable');
+    const suppliersBody = document.getElementById('suppliersBody');
+    const emptyList = document.getElementById('emptyList');
+    const formSection = document.getElementById('formSection');
+    const formTitle = document.getElementById('formTitle');
+    const formError = document.getElementById('formError');
+    const editId = document.getElementById('editId');
+    const nameEl = document.getElementById('name');
+    const contactNameEl = document.getElementById('contact_name');
+    const emailEl = document.getElementById('email');
+    const phoneEl = document.getElementById('phone');
+    const addressEl = document.getElementById('address');
+    const notesEl = document.getElementById('notes');
+    const isActiveEl = document.getElementById('is_active');
+    const editActiveRow = document.getElementById('editActiveRow');
+    const saveBtn = document.getElementById('saveBtn');
+    const cancelBtn = document.getElementById('cancelBtn');
+
+    function headers() {
+      const t = tokenEl.value.trim();
+      const h = { 'Content-Type': 'application/json' };
+      if (t) h['Authorization'] = 'Bearer ' + t;
+      return h;
+    }
+
+    function showListError(msg) {
+      listError.textContent = msg || '';
+      listError.classList.toggle('hidden', !msg);
+    }
+    function showListSuccess(msg) {
+      listSuccess.textContent = msg || '';
+      listSuccess.classList.toggle('hidden', !msg);
+    }
+    function showFormError(msg) {
+      formError.textContent = msg || '';
+      formError.classList.toggle('hidden', !msg);
+    }
+
+    async function loadSuppliers() {
+      showListError('');
+      const res = await fetch(API_BASE + '/suppliers', { headers: headers() });
+      if (!res.ok) {
+        if (res.status === 401) showListError('Token manquant ou invalide.');
+        else showListError(await res.text().catch(() => res.statusText));
+        suppliersTable.classList.add('hidden');
+        emptyList.classList.add('hidden');
+        return;
+      }
+      const data = await res.json();
+      const list = data.data || [];
+      if (list.length === 0) {
+        suppliersTable.classList.add('hidden');
+        emptyList.classList.remove('hidden');
+      } else {
+        emptyList.classList.add('hidden');
+        suppliersTable.classList.remove('hidden');
+        suppliersBody.innerHTML = list.map(sup => `
+          <tr>
+            <td>${escapeHtml(sup.name)}</td>
+            <td>${escapeHtml(sup.contact_name || '—')}</td>
+            <td>${escapeHtml(sup.email || '—')}</td>
+            <td>${Number(sup.products_count ?? 0)}</td>
+            <td>${sup.is_active ? 'Oui' : 'Non'}</td>
+            <td>
+              <button class="edit-btn" data-id="${sup.id}">Modifier</button>
+              <button class="delete-btn danger" data-id="${sup.id}" data-name="${escapeHtml(sup.name)}">Supprimer</button>
+            </td>
+          </tr>
+        `).join('');
+        suppliersBody.querySelectorAll('.edit-btn').forEach(btn => {
+          btn.addEventListener('click', () => openEdit(btn.dataset.id));
+        });
+        suppliersBody.querySelectorAll('.delete-btn').forEach(btn => {
+          btn.addEventListener('click', () => confirmDelete(btn.dataset.id, btn.dataset.name));
+        });
+      }
+    }
+
+    function escapeHtml(s) {
+      if (s == null) return '';
+      const div = document.createElement('div');
+      div.textContent = s;
+      return div.innerHTML;
+    }
+
+    function openNew() {
+      editId.value = '';
+      formTitle.textContent = 'Nouveau fournisseur';
+      nameEl.value = '';
+      contactNameEl.value = '';
+      emailEl.value = '';
+      phoneEl.value = '';
+      addressEl.value = '';
+      notesEl.value = '';
+      editActiveRow.classList.add('hidden');
+      formSection.classList.remove('hidden');
+      showFormError('');
+    }
+
+    async function openEdit(id) {
+      const res = await fetch(API_BASE + '/suppliers/' + id, { headers: headers() });
+      if (!res.ok) {
+        showFormError('Impossible de charger le fournisseur.');
+        return;
+      }
+      const data = await res.json();
+      const sup = data.data;
+      editId.value = sup.id;
+      formTitle.textContent = 'Modifier le fournisseur';
+      nameEl.value = sup.name || '';
+      contactNameEl.value = sup.contact_name || '';
+      emailEl.value = sup.email || '';
+      phoneEl.value = sup.phone || '';
+      addressEl.value = sup.address || '';
+      notesEl.value = sup.notes || '';
+      isActiveEl.checked = sup.is_active !== false;
+      editActiveRow.classList.remove('hidden');
+      formSection.classList.remove('hidden');
+      showFormError('');
+    }
+
+    async function saveSupplier() {
+      const id = editId.value.trim();
+      const name = nameEl.value.trim();
+      if (!name) {
+        showFormError('Le nom est obligatoire.');
+        return;
+      }
+      showFormError('');
+      saveBtn.disabled = true;
+      const body = {
+        name,
+        contact_name: contactNameEl.value.trim() || null,
+        email: emailEl.value.trim() || null,
+        phone: phoneEl.value.trim() || null,
+        address: addressEl.value.trim() || null,
+        notes: notesEl.value.trim() || null,
+      };
+      if (id) body.is_active = isActiveEl.checked;
+
+      const url = id ? API_BASE + '/suppliers/' + id : API_BASE + '/suppliers';
+      const method = id ? 'PUT' : 'POST';
+      const res = await fetch(url, { method, headers: headers(), body: JSON.stringify(body) });
+      const text = await res.text();
+      let errMsg = '';
+      try {
+        const j = JSON.parse(text);
+        errMsg = j.error || text;
+      } catch {
+        errMsg = text || res.statusText;
+      }
+      saveBtn.disabled = false;
+      if (!res.ok) {
+        showFormError(errMsg || 'Erreur ' + res.status);
+        return;
+      }
+      formSection.classList.add('hidden');
+      showListSuccess(id ? 'Fournisseur mis à jour.' : 'Fournisseur créé.');
+      loadSuppliers();
+      setTimeout(() => showListSuccess(''), 3000);
+    }
+
+    async function confirmDelete(id, name) {
+      if (!confirm('Supprimer le fournisseur « ' + name + ' » ? (soft delete)')) return;
+      const res = await fetch(API_BASE + '/suppliers/' + id, { method: 'DELETE', headers: headers() });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        showListError(j.error || res.statusText);
+        return;
+      }
+      showListSuccess('Fournisseur supprimé.');
+      loadSuppliers();
+      setTimeout(() => showListSuccess(''), 3000);
+    }
+
+    refreshBtn.addEventListener('click', () => loadSuppliers());
+    newBtn.addEventListener('click', openNew);
+    saveBtn.addEventListener('click', saveSupplier);
+    cancelBtn.addEventListener('click', () => formSection.classList.add('hidden'));
+
+    loadSuppliers();
+  </script>
+</body>
+</html>

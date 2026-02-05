@@ -40,6 +40,8 @@ describe('Auth Integration Tests', () => {
     await pool.query('DELETE FROM tenants WHERE slug = $1', ['test-tenant']);
     await pool.query('DELETE FROM tenants WHERE slug LIKE $1', ['test-company%']);
     await pool.end();
+    // Close app singleton pool so Jest can exit
+    await closeDatabase();
   });
 
   describe('POST /auth/register', () => {

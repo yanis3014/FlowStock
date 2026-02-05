@@ -1,4 +1,5 @@
 import { getDatabase } from '../database/connection';
+import { logMovement } from './stockMovement.service';
 import type {
   ProductUnit,
   StockStatus,
@@ -6,6 +7,12 @@ import type {
   ProductCreateInput,
   ProductUpdateInput,
 } from '@bmad/shared';
+import type { MovementType } from '@bmad/shared';
+
+export interface ProductServiceContext {
+  userId?: string | null;
+  reason?: string | null;
+}
 
 export const VALID_UNITS: ProductUnit[] = ['piece', 'kg', 'liter', 'box', 'pack'];
 
@@ -183,11 +190,12 @@ export async function getProductById(tenantId: string, productId: string): Promi
 }
 
 /**
- * Create a new product (tenant-scoped)
+ * Create a new product (tenant-scoped) and log creation movement.
  */
 export async function createProduct(
   tenantId: string,
-  input: ProductCreateInput
+  input: ProductCreateInput,
+  context?: ProductServiceContext
 ): Promise<Product> {
   const db = getDatabase();
 
@@ -205,6 +213,9 @@ export async function createProduct(
     throw new Error(`Invalid unit. Must be one of: ${VALID_UNITS.join(', ')}`);
   }
 
+  const quantity = input.quantity ?? 0;
+  const movementType: MovementType = context?.reason === 'Import initial' ? 'import' : 'creation';
+
   const insertQuery = `
     INSERT INTO products (tenant_id, sku, name, description, unit, quantity, min_quantity,
                           location_id, supplier_id, purchase_price, selling_price, lead_time_days)
@@ -219,7 +230,7 @@ export async function createProduct(
     input.name.trim(),
     input.description?.trim() || null,
     unit,
-    input.quantity ?? 0,
+    quantity,
     input.min_quantity ?? null,
     input.location_id || null,
     input.supplier_id || null,
@@ -235,6 +246,15 @@ export async function createProduct(
       values
     );
     const row = result.rows[0];
+    await logMovement(
+      tenantId,
+      row.id,
+      movementType,
+      null,
+      quantity,
+      context?.userId ?? null,
+      context?.reason ?? null
+    );
     const withNames = await getProductById(tenantId, row.id);
     return withNames!;
   } catch (err: unknown) {
@@ -247,12 +267,13 @@ export async function createProduct(
 }
 
 /**
- * Update a product (tenant-scoped)
+ * Update a product (tenant-scoped) and log quantity change if applicable.
  */
 export async function updateProduct(
   tenantId: string,
   productId: string,
-  input: ProductUpdateInput
+  input: ProductUpdateInput,
+  context?: ProductServiceContext
 ): Promise<Product | null> {
   const db = getDatabase();
   const existing = await getProductById(tenantId, productId);
@@ -304,19 +325,47 @@ export async function updateProduct(
   );
   if (result.rows.length === 0) return null;
   const row = result.rows[0];
+  const newQuantity = parseFloat(row.quantity);
+  if (input.quantity !== undefined && existing.quantity !== newQuantity) {
+    await logMovement(
+      tenantId,
+      productId,
+      'quantity_update',
+      existing.quantity,
+      newQuantity,
+      context?.userId ?? null,
+      context?.reason ?? null
+    );
+  }
   const withNames = await getProductById(tenantId, row.id);
   return withNames;
 }
 
 /**
- * Soft delete a product (set is_active = false)
+ * Soft delete a product (set is_active = false) and log deletion movement.
  */
-export async function deleteProduct(tenantId: string, productId: string): Promise<boolean> {
+export async function deleteProduct(
+  tenantId: string,
+  productId: string,
+  context?: ProductServiceContext
+): Promise<boolean> {
   const db = getDatabase();
+  const existing = await getProductById(tenantId, productId);
   const result = await db.queryWithTenant(
     tenantId,
     'UPDATE products SET is_active = false, updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND tenant_id = $2',
     [productId, tenantId]
   );
+  if ((result.rowCount ?? 0) > 0 && existing) {
+    await logMovement(
+      tenantId,
+      productId,
+      'deletion',
+      existing.quantity,
+      0,
+      context?.userId ?? null,
+      null
+    );
+  }
   return (result.rowCount ?? 0) > 0;
 }

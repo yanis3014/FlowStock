@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Emplacements - bmad-stock-agent</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: system-ui, sans-serif; max-width: 900px; margin: 2rem auto; padding: 0 1rem; }
+    h1 { margin-bottom: 0.5rem; }
+    .section { margin: 1.5rem 0; padding: 1rem; border: 1px solid #ddd; border-radius: 8px; }
+    label { display: block; margin-top: 0.5rem; font-weight: 500; }
+    input[type="text"], select { margin-top: 0.25rem; width: 100%; max-width: 400px; padding: 0.35rem; }
+    button { margin-top: 0.5rem; margin-right: 0.5rem; padding: 0.5rem 1rem; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 4px; }
+    button:hover { background: #0056b3; }
+    button:disabled { background: #ccc; cursor: not-allowed; }
+    button.danger { background: #dc3545; }
+    button.danger:hover { background: #c82333; }
+    .error { color: #c00; }
+    .success { color: #0a0; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+    th, td { border: 1px solid #ddd; padding: 0.5rem; text-align: left; }
+    th { background: #f5f5f5; }
+    .hidden { display: none; }
+    a { color: #007bff; }
+  </style>
+</head>
+<body>
+  <h1>Gestion des emplacements</h1>
+  <p>Créez et gérez vos emplacements (entrepôts, magasins). Associez les stocks aux emplacements depuis la liste des produits (filtre par emplacement).</p>
+
+  <div class="section">
+    <h2>Authentification</h2>
+    <label>Token JWT (après connexion via /auth/login) :</label>
+    <input type="text" id="token" placeholder="Collez votre access_token ici" style="width: 100%;" />
+  </div>
+
+  <div class="section">
+    <h2>Liste des emplacements</h2>
+    <button id="refreshBtn">Rafraîchir</button>
+    <button id="newBtn">Nouvel emplacement</button>
+    <div id="listError" class="error hidden"></div>
+    <div id="listSuccess" class="success hidden"></div>
+    <table id="locationsTable" class="hidden">
+      <thead>
+        <tr>
+          <th>Nom</th>
+          <th>Type</th>
+          <th>Adresse</th>
+          <th>Quantité totale</th>
+          <th>Actif</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="locationsBody"></tbody>
+    </table>
+    <p id="emptyList" class="hidden">Aucun emplacement. Cliquez sur "Nouvel emplacement".</p>
+  </div>
+
+  <div class="section hidden" id="formSection">
+    <h2 id="formTitle">Nouvel emplacement</h2>
+    <div id="formError" class="error hidden"></div>
+    <input type="hidden" id="editId" />
+    <label>Nom *</label>
+    <input type="text" id="name" required placeholder="ex: Entrepôt principal" />
+    <label>Type</label>
+    <input type="text" id="location_type" placeholder="ex: entrepôt, magasin" />
+    <label>Adresse</label>
+    <input type="text" id="address" placeholder="Adresse complète" />
+    <div id="editActiveRow" class="hidden">
+      <label><input type="checkbox" id="is_active" checked /> Actif</label>
+    </div>
+    <button id="saveBtn">Enregistrer</button>
+    <button id="cancelBtn">Annuler</button>
+  </div>
+
+  <script>
+    // Page servie par l'API (GET /locations-page) : API_BASE vide = même origine.
+    const API_BASE = '';
+    const tokenEl = document.getElementById('token');
+    const refreshBtn = document.getElementById('refreshBtn');
+    const newBtn = document.getElementById('newBtn');
+    const listError = document.getElementById('listError');
+    const listSuccess = document.getElementById('listSuccess');
+    const locationsTable = document.getElementById('locationsTable');
+    const locationsBody = document.getElementById('locationsBody');
+    const emptyList = document.getElementById('emptyList');
+    const formSection = document.getElementById('formSection');
+    const formTitle = document.getElementById('formTitle');
+    const formError = document.getElementById('formError');
+    const editId = document.getElementById('editId');
+    const nameEl = document.getElementById('name');
+    const locationTypeEl = document.getElementById('location_type');
+    const addressEl = document.getElementById('address');
+    const isActiveEl = document.getElementById('is_active');
+    const editActiveRow = document.getElementById('editActiveRow');
+    const saveBtn = document.getElementById('saveBtn');
+    const cancelBtn = document.getElementById('cancelBtn');
+
+    function headers() {
+      const t = tokenEl.value.trim();
+      const h = { 'Content-Type': 'application/json' };
+      if (t) h['Authorization'] = 'Bearer ' + t;
+      return h;
+    }
+
+    function showListError(msg) {
+      listError.textContent = msg || '';
+      listError.classList.toggle('hidden', !msg);
+    }
+    function showListSuccess(msg) {
+      listSuccess.textContent = msg || '';
+      listSuccess.classList.toggle('hidden', !msg);
+    }
+    function showFormError(msg) {
+      formError.textContent = msg || '';
+      formError.classList.toggle('hidden', !msg);
+    }
+
+    async function loadLocations() {
+      showListError('');
+      const res = await fetch(API_BASE + '/locations', { headers: headers() });
+      if (!res.ok) {
+        if (res.status === 401) showListError('Token manquant ou invalide.');
+        else showListError(await res.text().catch(() => res.statusText));
+        locationsTable.classList.add('hidden');
+        emptyList.classList.add('hidden');
+        return;
+      }
+      const data = await res.json();
+      const list = data.data || [];
+      const pagination = data.pagination || {};
+      if (list.length === 0) {
+        locationsTable.classList.add('hidden');
+        emptyList.classList.remove('hidden');
+      } else {
+        emptyList.classList.add('hidden');
+        locationsTable.classList.remove('hidden');
+        locationsBody.innerHTML = list.map(loc => `
+          <tr>
+            <td>${escapeHtml(loc.name)}</td>
+            <td>${escapeHtml(loc.location_type || '—')}</td>
+            <td>${escapeHtml(loc.address || '—')}</td>
+            <td>${Number(loc.total_quantity ?? 0)}</td>
+            <td>${loc.is_active ? 'Oui' : 'Non'}</td>
+            <td>
+              <button class="edit-btn" data-id="${loc.id}">Modifier</button>
+              <button class="delete-btn danger" data-id="${loc.id}" data-name="${escapeHtml(loc.name)}">Supprimer</button>
+            </td>
+          </tr>
+        `).join('');
+        locationsBody.querySelectorAll('.edit-btn').forEach(btn => {
+          btn.addEventListener('click', () => openEdit(btn.dataset.id));
+        });
+        locationsBody.querySelectorAll('.delete-btn').forEach(btn => {
+          btn.addEventListener('click', () => confirmDelete(btn.dataset.id, btn.dataset.name));
+        });
+      }
+    }
+
+    function escapeHtml(s) {
+      if (s == null) return '';
+      const div = document.createElement('div');
+      div.textContent = s;
+      return div.innerHTML;
+    }
+
+    function openNew() {
+      editId.value = '';
+      formTitle.textContent = 'Nouvel emplacement';
+      nameEl.value = '';
+      locationTypeEl.value = '';
+      addressEl.value = '';
+      editActiveRow.classList.add('hidden');
+      formSection.classList.remove('hidden');
+      showFormError('');
+    }
+
+    async function openEdit(id) {
+      const res = await fetch(API_BASE + '/locations/' + id, { headers: headers() });
+      if (!res.ok) {
+        showFormError('Impossible de charger l\'emplacement.');
+        return;
+      }
+      const data = await res.json();
+      const loc = data.data;
+      editId.value = loc.id;
+      formTitle.textContent = 'Modifier l\'emplacement';
+      nameEl.value = loc.name || '';
+      locationTypeEl.value = loc.location_type || '';
+      addressEl.value = loc.address || '';
+      isActiveEl.checked = loc.is_active !== false;
+      editActiveRow.classList.remove('hidden');
+      formSection.classList.remove('hidden');
+      showFormError('');
+    }
+
+    async function saveLocation() {
+      const id = editId.value.trim();
+      const name = nameEl.value.trim();
+      if (!name) {
+        showFormError('Le nom est obligatoire.');
+        return;
+      }
+      showFormError('');
+      saveBtn.disabled = true;
+      const body = { name, address: addressEl.value.trim() || null, location_type: locationTypeEl.value.trim() || null };
+      if (id) body.is_active = isActiveEl.checked;
+
+      const url = id ? API_BASE + '/locations/' + id : API_BASE + '/locations';
+      const method = id ? 'PUT' : 'POST';
+      const res = await fetch(url, { method, headers: headers(), body: JSON.stringify(body) });
+      const text = await res.text();
+      let errMsg = '';
+      try {
+        const j = JSON.parse(text);
+        errMsg = j.error || text;
+      } catch {
+        errMsg = text || res.statusText;
+      }
+      saveBtn.disabled = false;
+      if (!res.ok) {
+        showFormError(errMsg || 'Erreur ' + res.status);
+        return;
+      }
+      formSection.classList.add('hidden');
+      showListSuccess(id ? 'Emplacement mis à jour.' : 'Emplacement créé.');
+      loadLocations();
+      setTimeout(() => showListSuccess(''), 3000);
+    }
+
+    async function confirmDelete(id, name) {
+      if (!confirm('Supprimer l\'emplacement « ' + name + ' » ? (soft delete)')) return;
+      const res = await fetch(API_BASE + '/locations/' + id, { method: 'DELETE', headers: headers() });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        showListError(j.error || res.statusText);
+        return;
+      }
+      showListSuccess('Emplacement supprimé.');
+      loadLocations();
+      setTimeout(() => showListSuccess(''), 3000);
+    }
+
+    refreshBtn.addEventListener('click', () => loadLocations());
+    newBtn.addEventListener('click', openNew);
+    saveBtn.addEventListener('click', saveLocation);
+    cancelBtn.addEventListener('click', () => formSection.classList.add('hidden'));
+
+    loadLocations();
+  </script>
+</body>
+</html>

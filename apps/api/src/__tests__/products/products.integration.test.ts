@@ -57,6 +57,7 @@ describe('Products Integration Tests', () => {
   });
 
   afterAll(async () => {
+    await pool.query('DELETE FROM stock_movements');
     await pool.query('DELETE FROM products');
     await pool.query('DELETE FROM locations');
     await pool.query('DELETE FROM suppliers');
@@ -288,6 +289,66 @@ describe('Products Integration Tests', () => {
         .set('Authorization', `Bearer ${accessToken}`);
       expect(getRes.status).toBe(200);
       expect(getRes.body.data.id).toBe(productIdTenantA);
+    });
+  });
+
+  describe('Stock movements (Story 2.4)', () => {
+    let movementProductId: string;
+
+    it('should create product and log creation movement', async () => {
+      const createRes = await request(app)
+        .post('/products')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({ sku: 'SKU-MOV-1', name: 'Product for movements', quantity: 20 });
+      expect(createRes.status).toBe(201);
+      movementProductId = createRes.body.data.id;
+
+      const movRes = await request(app)
+        .get(`/products/${movementProductId}/movements`)
+        .set('Authorization', `Bearer ${accessToken}`);
+      expect(movRes.status).toBe(200);
+      expect(movRes.body.success).toBe(true);
+      expect(Array.isArray(movRes.body.data)).toBe(true);
+      expect(movRes.body.data.length).toBeGreaterThanOrEqual(1);
+      const creation = movRes.body.data.find((m: { movement_type: string }) => m.movement_type === 'creation' || m.movement_type === 'import');
+      expect(creation).toBeDefined();
+      expect(movRes.body.retention_days).toBeDefined();
+    });
+
+    it('should log quantity_update when quantity changes', async () => {
+      const updateRes = await request(app)
+        .put(`/products/${movementProductId}`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({ quantity: 15, reason: 'Inventaire' });
+      expect(updateRes.status).toBe(200);
+
+      const movRes = await request(app)
+        .get(`/products/${movementProductId}/movements`)
+        .set('Authorization', `Bearer ${accessToken}`);
+      expect(movRes.status).toBe(200);
+      const quantityUpdate = movRes.body.data.find((m: { movement_type: string }) => m.movement_type === 'quantity_update');
+      expect(quantityUpdate).toBeDefined();
+      expect(quantityUpdate.quantity_before).toBe(20);
+      expect(quantityUpdate.quantity_after).toBe(15);
+      expect(quantityUpdate.reason).toBe('Inventaire');
+    });
+
+    it('should return 404 for movements when product not found', async () => {
+      const fakeId = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11'; // valid UUID, no product
+      const res = await request(app)
+        .get(`/products/${fakeId}/movements`)
+        .set('Authorization', `Bearer ${accessToken}`);
+      expect(res.status).toBe(404);
+    });
+
+    it('should export movements as CSV', async () => {
+      const res = await request(app)
+        .get(`/products/${movementProductId}/movements/export?format=csv`)
+        .set('Authorization', `Bearer ${accessToken}`);
+      expect(res.status).toBe(200);
+      expect(res.headers['content-type']).toMatch(/text\/csv/);
+      expect(res.text).toContain('date');
+      expect(res.text).toContain('type');
     });
   });
 });

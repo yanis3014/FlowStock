@@ -57,6 +57,7 @@ describe('Product Import Integration Tests', () => {
   });
 
   afterAll(async () => {
+    await pool.query('DELETE FROM stock_movements');
     await pool.query('DELETE FROM products');
     await pool.query('DELETE FROM locations');
     await pool.query('DELETE FROM suppliers');

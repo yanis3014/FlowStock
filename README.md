@@ -51,7 +51,8 @@ bmad-stock-agent/
 3. **Configurer les variables d'environnement**
    ```bash
    cp .env.example .env
-   # Éditer .env avec vos configurations
+   # Éditer .env avec vos configurations (voir .env.example pour la liste complète)
+   # Les tests d'intégration utilisent la même base - Postgres doit être démarré
    ```
 
 4. **Démarrer les services avec Docker Compose**
@@ -168,6 +169,18 @@ npm run test:integration
 npm run test:e2e
 ```
 
+### Pièges connus (PostgreSQL & tests)
+
+Ces problèmes ont été rencontrés lors du développement (Epic 1-2). En cas de souci, consulter cette section :
+
+**Connexion PostgreSQL :**
+- **Pool de connexions :** En cas d'erreur "connection refused" ou timeouts, vérifier que Postgres est bien démarré (`docker-compose up -d postgres`) et que `DATABASE_URL` ou `POSTGRES_*` sont corrects dans `.env`.
+- **Contexte tenant :** Les requêtes métier doivent utiliser `queryWithTenant(tenantId, ...)` pour appliquer le RLS. Sans contexte tenant, les politiques RLS bloquent l'accès aux données.
+
+**Tests d'intégration :**
+- **Ordre d'exécution :** Les suites de tests partagent la base. L'ordre de nettoyage (`afterAll`) est important : `stock_movements` doit être vidé avant `products` (contrainte FK). Les suites `locations`, `products`, `product-import` nettoient `stock_movements` en dernier.
+- **Isolation :** Chaque test doit créer ses propres données (tenant, user, products) pour éviter les conflits entre suites.
+
 ## 🚢 Déploiement
 
 ### Infrastructure GCP
@@ -192,6 +205,7 @@ Le pipeline CI/CD utilise **GitHub Actions** pour :
 - [Architecture](./docs/architecture.md) - Documentation complète de l'architecture
 - [PRD](./docs/prd.md) - Product Requirements Document
 - [Epics](./planning-artifacts/epics.md) - Décomposition en épics et stories
+- [Rétrospectives](./implementation-artifacts/) - Rétrospectives d'épics et rapports de revue
 
 ## 🤝 Contribution
 

@@ -75,3 +75,97 @@ export interface ProductUpdateInput {
   selling_price?: number | null;
   lead_time_days?: number;
 }
+
+// Story 2.3: Locations (emplacements)
+export interface Location {
+  id: string;
+  name: string;
+  address: string | null;
+  location_type: string | null;
+  is_active: boolean;
+  total_quantity?: number; // computed: sum of products.quantity at this location
+  created_at: string;
+  updated_at: string;
+}
+
+export interface LocationCreateInput {
+  name: string;
+  address?: string | null;
+  location_type?: string | null;
+}
+
+export interface LocationUpdateInput {
+  name?: string;
+  address?: string | null;
+  location_type?: string | null;
+  is_active?: boolean;
+}
+
+// Story 2.5: Suppliers (fournisseurs)
+export interface Supplier {
+  id: string;
+  name: string;
+  contact_name: string | null;
+  email: string | null;
+  phone: string | null;
+  address: string | null;
+  notes: string | null;
+  is_active: boolean;
+  products_count?: number; // computed: count of products linked to this supplier
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SupplierCreateInput {
+  name: string;
+  contact_name?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  address?: string | null;
+  notes?: string | null;
+}
+
+export interface SupplierUpdateInput {
+  name?: string;
+  contact_name?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  address?: string | null;
+  notes?: string | null;
+  is_active?: boolean;
+}
+
+// Story 2.4: Stock movement history
+export type MovementType = 'creation' | 'quantity_update' | 'deletion' | 'import';
+
+export interface StockMovement {
+  id: string;
+  product_id: string;
+  movement_type: MovementType;
+  quantity_before: number | null;
+  quantity_after: number | null;
+  user_id: string | null;
+  user_email?: string | null;
+  reason: string | null;
+  created_at: string;
+}
+
+export interface StockMovementListFilters {
+  page?: number;
+  limit?: number;
+  movement_type?: MovementType;
+  user_id?: string;
+  date_from?: string;
+  date_to?: string;
+}
+
+export interface StockMovementListResult {
+  data: StockMovement[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    total_pages: number;
+  };
+  retention_days: number;
+}

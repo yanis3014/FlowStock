@@ -16,6 +16,8 @@ import swaggerUi from 'swagger-ui-express';
 import authRoutes from './routes/auth.routes';
 import subscriptionRoutes from './routes/subscription.routes';
 import productRoutes from './routes/product.routes';
+import locationRoutes from './routes/location.routes';
+import supplierRoutes from './routes/supplier.routes';
 import { openApiDocument } from './openapi/spec';
 import type { HealthResponse } from '@bmad/shared';
 
@@ -66,10 +68,27 @@ app.use((req, res, next) => {
 app.use('/auth', authRoutes);
 app.use('/subscriptions', subscriptionRoutes);
 app.use('/products', productRoutes);
+app.use('/locations', locationRoutes);
+app.use('/suppliers', supplierRoutes);
 
 // Story 2.2: Import stocks page
 app.get('/import-stocks', (_req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'import-stocks.html'));
+});
+
+// Story 2.3: Locations (emplacements) page
+app.get('/locations-page', (_req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'locations.html'));
+});
+
+// Story 2.4: Stock movements history page
+app.get('/movements-page', (_req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'movements.html'));
+});
+
+// Story 2.5: Suppliers (fournisseurs) page
+app.get('/suppliers-page', (_req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'suppliers.html'));
 });
 
 app.use(csrfErrorHandler);

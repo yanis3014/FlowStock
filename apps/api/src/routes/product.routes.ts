@@ -16,7 +16,12 @@ import {
   importProducts,
   CSV_TEMPLATE,
 } from '../services/product-import.service';
-import type { ProductCreateInput, ProductUpdateInput } from '@bmad/shared';
+import {
+  listMovements,
+  getMovementsForExport,
+  movementsToCsv,
+} from '../services/stockMovement.service';
+import type { ProductCreateInput, ProductUpdateInput, StockMovementListFilters } from '@bmad/shared';
 
 const router = Router();
 
@@ -100,7 +105,8 @@ router.post(
         req.user.tenantId,
         file.buffer,
         file.originalname,
-        mapping
+        mapping,
+        req.user?.userId
       );
       res.status(200).json({
         success: true,
@@ -210,6 +216,128 @@ router.get(
   }
 );
 
+/**
+ * GET /products/:id/movements
+ * List stock movements for a product (with retention by subscription tier)
+ */
+router.get(
+  '/:id/movements',
+  authenticateToken,
+  [
+    param('id').isUUID(),
+    query('page').optional().isInt({ min: 1 }).toInt(),
+    query('limit').optional().isInt({ min: 1, max: 100 }).toInt(),
+    query('movement_type').optional().isIn(['creation', 'quantity_update', 'deletion', 'import']),
+    query('user_id').optional().isUUID(),
+    query('date_from').optional().isISO8601(),
+    query('date_to').optional().isISO8601(),
+  ],
+  async (req: Request, res: Response) => {
+    if (!req.user?.tenantId) {
+      res.status(401).json({ success: false, error: 'Authentication required' });
+      return;
+    }
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      res.status(400).json({
+        success: false,
+        error: errors.array()[0]?.msg ?? 'Validation failed',
+        errors: errors.array(),
+      });
+      return;
+    }
+    const productId = req.params.id as string;
+    const product = await getProductById(req.user.tenantId, productId);
+    if (!product) {
+      res.status(404).json({ success: false, error: 'Product not found' });
+      return;
+    }
+    const filters: StockMovementListFilters = {
+      page: req.query.page != null ? Number(req.query.page) : undefined,
+      limit: req.query.limit != null ? Number(req.query.limit) : undefined,
+      movement_type: req.query.movement_type as StockMovementListFilters['movement_type'],
+      user_id: req.query.user_id as string | undefined,
+      date_from: req.query.date_from as string | undefined,
+      date_to: req.query.date_to as string | undefined,
+    };
+    try {
+      const result = await listMovements(req.user.tenantId, productId, filters);
+      res.status(200).json({
+        success: true,
+        data: result.data,
+        pagination: result.pagination,
+        retention_days: result.retention_days,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to list movements';
+      res.status(500).json({ success: false, error: message });
+    }
+  }
+);
+
+/**
+ * GET /products/:id/movements/export
+ * Export movements as CSV (same retention and filters, max 10k rows)
+ */
+router.get(
+  '/:id/movements/export',
+  authenticateToken,
+  [
+    param('id').isUUID(),
+    query('format').optional().isIn(['csv']),
+    query('movement_type').optional().isIn(['creation', 'quantity_update', 'deletion', 'import']),
+    query('user_id').optional().isUUID(),
+    query('date_from').optional().isISO8601(),
+    query('date_to').optional().isISO8601(),
+  ],
+  async (req: Request, res: Response) => {
+    if (!req.user?.tenantId) {
+      res.status(401).json({ success: false, error: 'Authentication required' });
+      return;
+    }
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      res.status(400).json({
+        success: false,
+        error: errors.array()[0]?.msg ?? 'Validation failed',
+        errors: errors.array(),
+      });
+      return;
+    }
+    const productId = req.params.id as string;
+    const product = await getProductById(req.user.tenantId, productId);
+    if (!product) {
+      res.status(404).json({ success: false, error: 'Product not found' });
+      return;
+    }
+    const filters: StockMovementListFilters = {
+      movement_type: req.query.movement_type as StockMovementListFilters['movement_type'],
+      user_id: req.query.user_id as string | undefined,
+      date_from: req.query.date_from as string | undefined,
+      date_to: req.query.date_to as string | undefined,
+    };
+    try {
+      const { movements, retention_days, truncated } = await getMovementsForExport(
+        req.user.tenantId,
+        productId,
+        filters
+      );
+      const csv = movementsToCsv(movements);
+      const filename = `movements-${productId.slice(0, 8)}-${new Date().toISOString().slice(0, 10)}.csv`;
+      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      if (truncated) {
+        res.setHeader('X-Export-Truncated', 'true');
+        res.setHeader('X-Export-Message', 'Export limited to 10000 rows');
+      }
+      res.send(csv);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to export movements';
+      res.status(500).json({ success: false, error: message });
+    }
+  }
+);
+
 const createProductValidation = [
   body('sku').trim().notEmpty().withMessage('SKU is required'),
   body('name').trim().notEmpty().withMessage('Name is required'),
@@ -260,7 +388,8 @@ router.post(
       lead_time_days: req.body.lead_time_days,
     };
     try {
-      const product = await createProduct(req.user.tenantId, input);
+      const context = req.user?.userId ? { userId: req.user.userId } : undefined;
+      const product = await createProduct(req.user.tenantId, input, context);
       res.status(201).json({ success: true, data: product });
     } catch (error) {
       const err = error as Error;
@@ -290,6 +419,7 @@ const updateProductValidation = [
   body('purchase_price').optional().isFloat({ min: 0 }).withMessage('Purchase price must be >= 0'),
   body('selling_price').optional().isFloat({ min: 0 }).withMessage('Selling price must be >= 0'),
   body('lead_time_days').optional().isInt({ min: 0 }).withMessage('Lead time days must be >= 0'),
+  body('reason').optional().trim(),
 ];
 
 /**
@@ -327,8 +457,12 @@ router.put(
     if (req.body.purchase_price !== undefined) input.purchase_price = req.body.purchase_price;
     if (req.body.selling_price !== undefined) input.selling_price = req.body.selling_price;
     if (req.body.lead_time_days !== undefined) input.lead_time_days = req.body.lead_time_days;
+    const context =
+      req.user?.userId || req.body.reason
+        ? { userId: req.user?.userId ?? null, reason: req.body.reason ?? null }
+        : undefined;
     try {
-      const product = await updateProduct(req.user.tenantId, productId, input);
+      const product = await updateProduct(req.user.tenantId, productId, input, context);
       if (!product) {
         res.status(404).json({ success: false, error: 'Product not found' });
         return;
@@ -372,8 +506,9 @@ router.delete(
       return;
     }
     const productId = req.params.id as string;
+    const context = req.user?.userId ? { userId: req.user.userId } : undefined;
     try {
-      const deleted = await deleteProduct(req.user.tenantId, productId);
+      const deleted = await deleteProduct(req.user.tenantId, productId, context);
       if (!deleted) {
         res.status(404).json({ success: false, error: 'Product not found' });
         return;

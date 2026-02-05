@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Historique des mouvements - bmad-stock-agent</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: system-ui, sans-serif; max-width: 1000px; margin: 2rem auto; padding: 0 1rem; }
+    h1 { margin-bottom: 0.5rem; }
+    .section { margin: 1.5rem 0; padding: 1rem; border: 1px solid #ddd; border-radius: 8px; }
+    label { display: block; margin-top: 0.5rem; font-weight: 500; }
+    input[type="text"], select { margin-top: 0.25rem; padding: 0.35rem; }
+    input, select { max-width: 100%; }
+    button { margin-top: 0.5rem; margin-right: 0.5rem; padding: 0.5rem 1rem; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 4px; }
+    button:hover { background: #0056b3; }
+    button:disabled { background: #ccc; cursor: not-allowed; }
+    .error { color: #c00; }
+    .success { color: #0a0; }
+    .muted { color: #666; font-size: 0.9rem; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+    th, td { border: 1px solid #ddd; padding: 0.5rem; text-align: left; }
+    th { background: #f5f5f5; }
+    .hidden { display: none; }
+    .filters { display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-end; margin-bottom: 1rem; }
+    .filters label { margin-right: 0.25rem; }
+  </style>
+</head>
+<body>
+  <h1>Historique des mouvements de stocks</h1>
+  <p>Consultez l'historique des mouvements (création, modification quantité, suppression) par produit. La rétention dépend de votre abonnement (30 / 90 / 365 jours).</p>
+
+  <div class="section">
+    <h2>Authentification</h2>
+    <label>Token JWT :</label>
+    <input type="text" id="token" placeholder="Collez votre access_token ici" style="width: 100%;" />
+  </div>
+
+  <div class="section">
+    <h2>Produit et filtres</h2>
+    <label>Produit</label>
+    <select id="productSelect">
+      <option value="">-- Choisir un produit --</option>
+    </select>
+    <div class="filters" style="margin-top: 1rem;">
+      <div>
+        <label>Type</label>
+        <select id="filterType">
+          <option value="">Tous</option>
+          <option value="creation">Création</option>
+          <option value="quantity_update">Modification quantité</option>
+          <option value="deletion">Suppression</option>
+          <option value="import">Import</option>
+        </select>
+      </div>
+      <div>
+        <label>Date début (ISO)</label>
+        <input type="datetime-local" id="dateFrom" />
+      </div>
+      <div>
+        <label>Date fin (ISO)</label>
+        <input type="datetime-local" id="dateTo" />
+      </div>
+      <div>
+        <button id="refreshBtn">Rafraîchir</button>
+        <button id="exportBtn">Exporter CSV</button>
+      </div>
+    </div>
+    <p id="retentionNotice" class="muted hidden"></p>
+    <div id="listError" class="error hidden"></div>
+    <table id="movementsTable" class="hidden">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Type</th>
+          <th>Utilisateur</th>
+          <th>Ancienne qté</th>
+          <th>Nouvelle qté</th>
+          <th>Raison</th>
+        </tr>
+      </thead>
+      <tbody id="movementsBody"></tbody>
+    </table>
+    <p id="emptyList" class="hidden">Sélectionnez un produit pour afficher l'historique.</p>
+    <p id="noMovements" class="hidden muted">Aucun mouvement pour ce produit sur la période (rétention appliquée).</p>
+  </div>
+
+  <script>
+    const API_BASE = '';
+    const tokenEl = document.getElementById('token');
+    const productSelect = document.getElementById('productSelect');
+    const filterType = document.getElementById('filterType');
+    const dateFrom = document.getElementById('dateFrom');
+    const dateTo = document.getElementById('dateTo');
+    const refreshBtn = document.getElementById('refreshBtn');
+    const exportBtn = document.getElementById('exportBtn');
+    const retentionNotice = document.getElementById('retentionNotice');
+    const listError = document.getElementById('listError');
+    const movementsTable = document.getElementById('movementsTable');
+    const movementsBody = document.getElementById('movementsBody');
+    const emptyList = document.getElementById('emptyList');
+    const noMovements = document.getElementById('noMovements');
+
+    function headers() {
+      const t = tokenEl.value.trim();
+      const h = { 'Content-Type': 'application/json' };
+      if (t) h['Authorization'] = 'Bearer ' + t;
+      return h;
+    }
+
+    function showError(msg) {
+      listError.textContent = msg || '';
+      listError.classList.toggle('hidden', !msg);
+    }
+
+    function toISOLocal(d) {
+      if (!d) return '';
+      const dt = new Date(d);
+      const pad = (n) => String(n).padStart(2, '0');
+      return `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}T${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
+    }
+
+    async function loadProducts() {
+      const res = await fetch(API_BASE + '/products?limit=500', { headers: headers() });
+      if (!res.ok) {
+        productSelect.innerHTML = '<option value="">-- Erreur chargement --</option>';
+        return;
+      }
+      const data = await res.json();
+      const list = data.data || [];
+      productSelect.innerHTML = '<option value="">-- Choisir un produit --</option>' +
+        list.map((p) => `<option value="${p.id}">${escapeHtml(p.name)} (${p.sku})</option>`).join('');
+    }
+
+    async function loadMovements() {
+      const productId = productSelect.value.trim();
+      if (!productId) {
+        movementsTable.classList.add('hidden');
+        noMovements.classList.add('hidden');
+        emptyList.classList.remove('hidden');
+        retentionNotice.classList.add('hidden');
+        return;
+      }
+      emptyList.classList.add('hidden');
+      showError('');
+      const params = new URLSearchParams({ page: '1', limit: '100' });
+      if (filterType.value) params.set('movement_type', filterType.value);
+      if (dateFrom.value) params.set('date_from', new Date(dateFrom.value).toISOString());
+      if (dateTo.value) params.set('date_to', new Date(dateTo.value).toISOString());
+      const res = await fetch(API_BASE + '/products/' + productId + '/movements?' + params, { headers: headers() });
+      if (!res.ok) {
+        if (res.status === 401) showError('Token manquant ou invalide.');
+        else showError(await res.text().catch(() => res.statusText));
+        movementsTable.classList.add('hidden');
+        noMovements.classList.add('hidden');
+        return;
+      }
+      const data = await res.json();
+      const list = data.data || [];
+      const retention = data.retention_days;
+      retentionNotice.textContent = retention != null
+        ? 'Historique affiché : ' + retention + ' derniers jours (selon abonnement).'
+        : '';
+      retentionNotice.classList.toggle('hidden', retention == null);
+      if (list.length === 0) {
+        movementsTable.classList.add('hidden');
+        noMovements.classList.remove('hidden');
+      } else {
+        noMovements.classList.add('hidden');
+        movementsTable.classList.remove('hidden');
+        movementsBody.innerHTML = list.map((m) => `
+          <tr>
+            <td>${escapeHtml(m.created_at.replace('T', ' ').slice(0, 19))}</td>
+            <td>${escapeHtml(m.movement_type)}</td>
+            <td>${escapeHtml(m.user_email || m.user_id || '—')}</td>
+            <td>${m.quantity_before != null ? m.quantity_before : '—'}</td>
+            <td>${m.quantity_after != null ? m.quantity_after : '—'}</td>
+            <td>${escapeHtml(m.reason || '—')}</td>
+          </tr>
+        `).join('');
+      }
+    }
+
+    function escapeHtml(s) {
+      if (s == null) return '';
+      const div = document.createElement('div');
+      div.textContent = s;
+      return div.innerHTML;
+    }
+
+    function exportCsv() {
+      const productId = productSelect.value.trim();
+      if (!productId) {
+        alert('Sélectionnez un produit.');
+        return;
+      }
+      const params = new URLSearchParams({ format: 'csv' });
+      if (filterType.value) params.set('movement_type', filterType.value);
+      if (dateFrom.value) params.set('date_from', new Date(dateFrom.value).toISOString());
+      if (dateTo.value) params.set('date_to', new Date(dateTo.value).toISOString());
+      const url = API_BASE + '/products/' + productId + '/movements/export?' + params;
+      const a = document.createElement('a');
+      a.href = url;
+      a.setAttribute('download', 'movements.csv');
+      const t = tokenEl.value.trim();
+      if (t) {
+        fetch(url, { headers: headers() })
+          .then((r) => r.blob())
+          .then((blob) => {
+            const u = URL.createObjectURL(blob);
+            a.href = u;
+            a.click();
+            URL.revokeObjectURL(u);
+          })
+          .catch(() => showError('Erreur export.'));
+      } else {
+        a.click();
+      }
+    }
+
+    productSelect.addEventListener('change', loadMovements);
+    refreshBtn.addEventListener('click', loadMovements);
+    exportBtn.addEventListener('click', exportCsv);
+    tokenEl.addEventListener('change', loadProducts);
+
+    loadProducts();
+  </script>
+</body>
+</html>

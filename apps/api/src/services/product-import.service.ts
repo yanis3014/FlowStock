@@ -293,13 +293,15 @@ export function getImportPreview(buffer: Buffer, originalName?: string): ImportP
 }
 
 /**
- * Import products from parsed rows with mapping
+ * Import products from parsed rows with mapping.
+ * Optional userId logs movements with user; reason "Import initial" is set for each created product.
  */
 export async function importProducts(
   tenantId: string,
   buffer: Buffer,
   originalName: string | undefined,
-  mappingOverride?: Record<string, string>
+  mappingOverride?: Record<string, string>,
+  userId?: string | null
 ): Promise<ImportResult> {
   const { headers, rows } = parseFile(buffer, originalName);
   const mapping = mappingOverride ?? suggestMapping(headers);
@@ -347,7 +349,8 @@ export async function importProducts(
     }
 
     try {
-      await createProduct(tenantId, input);
+      const context = { userId: userId ?? null, reason: 'Import initial' as const };
+      await createProduct(tenantId, input, context);
       result.imported++;
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Unknown error';
