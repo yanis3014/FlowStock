@@ -61,6 +61,8 @@ checkpoints/
 *.json
 !package.json
 !tsconfig*.json
+!package-lock.json
+!turbo.json
 
 # Logs
 logs/
