@@ -16,7 +16,7 @@
     "test:coverage": "jest --coverage"
   },
   "dependencies": {
-    "@bmad/shared": "*",
+    "@bmad/shared": "workspace:*",
     "@types/multer": "^2.0.0",
     "@types/pg": "^8.16.0",
     "bcrypt": "^6.0.0",
