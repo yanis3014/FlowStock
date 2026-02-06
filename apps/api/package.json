@@ -10,7 +10,7 @@
     "migrate": "powershell -ExecutionPolicy Bypass -File scripts/migrate-docker.ps1",
     "migrate:direct": "ts-node -r dotenv/config src/database/migrations.ts",
     "migrate:status": "ts-node -r dotenv/config -e \"import('./src/database/migrations').then(m => m.getMigrationStatus().then(s => console.log(JSON.stringify(s, null, 2))))\"",
-    "lint": "eslint src --ext .ts",
+    "lint": "eslint src",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage"
@@ -30,6 +30,7 @@
     "express-validator": "^7.3.1",
     "helmet": "^7.0.0",
     "jsonwebtoken": "^9.0.3",
+    "mathjs": "^15.1.0",
     "morgan": "^1.10.0",
     "multer": "^2.0.2",
     "pg": "^8.17.2",

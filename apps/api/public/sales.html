@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ventes - bmad-stock-agent</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: system-ui, sans-serif; max-width: 960px; margin: 2rem auto; padding: 0 1rem; }
+    h1 { margin-bottom: 0.5rem; }
+    .section { margin: 1.5rem 0; padding: 1rem; border: 1px solid #ddd; border-radius: 8px; }
+    label { display: block; margin-top: 0.5rem; font-weight: 500; }
+    input[type="text"], input[type="email"], input[type="number"], input[type="date"], select, textarea { margin-top: 0.25rem; width: 100%; max-width: 400px; padding: 0.35rem; }
+    button { margin-top: 0.5rem; margin-right: 0.5rem; padding: 0.5rem 1rem; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 4px; }
+    button:hover { background: #0056b3; }
+    button:disabled { background: #ccc; cursor: not-allowed; }
+    button.danger { background: #dc3545; }
+    button.danger:hover { background: #c82333; }
+    .error { color: #c00; }
+    .success { color: #0a0; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+    th, td { border: 1px solid #ddd; padding: 0.5rem; text-align: left; }
+    th { background: #f5f5f5; }
+    .hidden { display: none; }
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 1rem; margin: 0.5rem 0; }
+    .stat-box { padding: 0.5rem; border: 1px solid #eee; border-radius: 4px; }
+    .stat-box strong { display: block; font-size: 0.85rem; color: #666; }
+  </style>
+</head>
+<body>
+  <h1>Saisie des ventes</h1>
+  <p>Saisissez vos ventes quotidiennes (date, produit, quantité, prix optionnel). Consultez la liste et les statistiques.</p>
+
+  <div class="section">
+    <h2>Authentification</h2>
+    <label>Token JWT (après connexion via /auth/login) :</label>
+    <input type="text" id="token" placeholder="Collez votre access_token ici" style="width: 100%;" />
+  </div>
+
+  <div class="section">
+    <h2>Statistiques rapides</h2>
+    <div id="statsError" class="error hidden"></div>
+    <div class="stats-grid" id="statsGrid">
+      <div class="stat-box"><strong>Aujourd'hui</strong><span id="statToday">—</span></div>
+      <div class="stat-box"><strong>Hier</strong><span id="statYesterday">—</span></div>
+      <div class="stat-box"><strong>Cette semaine</strong><span id="statWeek">—</span></div>
+      <div class="stat-box"><strong>Ce mois</strong><span id="statMonth">—</span></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Liste des ventes</h2>
+    <button id="refreshBtn">Rafraîchir</button>
+    <button id="newBtn">Nouvelle vente</button>
+    <div style="margin-top: 0.5rem;">
+      <label>Filtres (optionnel)</label>
+      <input type="date" id="filterDateFrom" placeholder="Date début" />
+      <input type="date" id="filterDateTo" placeholder="Date fin" />
+      <button id="applyFilters">Appliquer</button>
+    </div>
+    <div id="listError" class="error hidden"></div>
+    <div id="listSuccess" class="success hidden"></div>
+    <table id="salesTable" class="hidden">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Produit</th>
+          <th>Quantité</th>
+          <th>Prix unit.</th>
+          <th>Total</th>
+          <th>Emplacement</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="salesBody"></tbody>
+    </table>
+    <p id="emptyList" class="hidden">Aucune vente. Cliquez sur "Nouvelle vente".</p>
+    <div id="pagination" class="hidden"></div>
+  </div>
+
+  <div class="section hidden" id="formSection">
+    <h2 id="formTitle">Nouvelle vente</h2>
+    <div id="formError" class="error hidden"></div>
+    <input type="hidden" id="editId" />
+    <label>Produit *</label>
+    <select id="productId" required>
+      <option value="">— Choisir un produit —</option>
+    </select>
+    <label>Date *</label>
+    <input type="date" id="saleDate" required />
+    <label>Quantité vendue *</label>
+    <input type="number" id="quantitySold" min="0.01" step="0.01" required placeholder="ex: 5" />
+    <label>Prix unitaire (optionnel)</label>
+    <input type="number" id="unitPrice" min="0" step="0.01" placeholder="ex: 12.50" />
+    <label>Total (calculé)</label>
+    <input type="text" id="totalAmount" readonly placeholder="—" style="background: #f5f5f5;" />
+    <label>Emplacement (optionnel)</label>
+    <select id="locationId">
+      <option value="">— Aucun —</option>
+    </select>
+    <button id="saveBtn">Enregistrer</button>
+    <button id="cancelBtn">Annuler</button>
+  </div>
+
+  <script>
+    const API_BASE = '';
+    const tokenEl = document.getElementById('token');
+    const refreshBtn = document.getElementById('refreshBtn');
+    const newBtn = document.getElementById('newBtn');
+    const listError = document.getElementById('listError');
+    const listSuccess = document.getElementById('listSuccess');
+    const salesTable = document.getElementById('salesTable');
+    const salesBody = document.getElementById('salesBody');
+    const emptyList = document.getElementById('emptyList');
+    const formSection = document.getElementById('formSection');
+    const formTitle = document.getElementById('formTitle');
+    const formError = document.getElementById('formError');
+    const editId = document.getElementById('editId');
+    const productIdEl = document.getElementById('productId');
+    const saleDateEl = document.getElementById('saleDate');
+    const quantitySoldEl = document.getElementById('quantitySold');
+    const unitPriceEl = document.getElementById('unitPrice');
+    const totalAmountEl = document.getElementById('totalAmount');
+    const locationIdEl = document.getElementById('locationId');
+    const saveBtn = document.getElementById('saveBtn');
+    const cancelBtn = document.getElementById('cancelBtn');
+    const filterDateFrom = document.getElementById('filterDateFrom');
+    const filterDateTo = document.getElementById('filterDateTo');
+    const applyFilters = document.getElementById('applyFilters');
+
+    function headers() {
+      const t = tokenEl.value.trim();
+      const h = { 'Content-Type': 'application/json' };
+      if (t) h['Authorization'] = 'Bearer ' + t;
+      return h;
+    }
+
+    function showListError(msg) {
+      listError.textContent = msg || '';
+      listError.classList.toggle('hidden', !msg);
+    }
+    function showListSuccess(msg) {
+      listSuccess.textContent = msg || '';
+      listSuccess.classList.toggle('hidden', !msg);
+    }
+    function showFormError(msg) {
+      formError.textContent = msg || '';
+      formError.classList.toggle('hidden', !msg);
+    }
+
+    function formatDate(iso) {
+      if (!iso) return '—';
+      const d = new Date(iso);
+      return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    }
+    function formatNum(n) {
+      if (n == null) return '—';
+      return Number(n).toLocaleString('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+    }
+
+    function updateTotal() {
+      const q = parseFloat(quantitySoldEl.value) || 0;
+      const p = parseFloat(unitPriceEl.value);
+      if (p >= 0 && q > 0) totalAmountEl.value = formatNum(q * p);
+      else totalAmountEl.value = '—';
+    }
+    quantitySoldEl.addEventListener('input', updateTotal);
+    unitPriceEl.addEventListener('input', updateTotal);
+
+    async function loadStats() {
+      const statsError = document.getElementById('statsError');
+      const res = await fetch(API_BASE + '/sales/stats', { headers: headers() });
+      if (!res.ok) {
+        if (res.status === 401) { statsError.textContent = 'Token manquant ou invalide.'; statsError.classList.remove('hidden'); }
+        else { statsError.textContent = ''; statsError.classList.add('hidden'); }
+        return;
+      }
+      statsError.classList.add('hidden');
+      const data = await res.json();
+      const s = data.data || {};
+      document.getElementById('statToday').textContent = (s.today?.count ?? 0) + ' vente(s) · ' + formatNum(s.today?.total_amount) + ' €';
+      document.getElementById('statYesterday').textContent = (s.yesterday?.count ?? 0) + ' vente(s) · ' + formatNum(s.yesterday?.total_amount) + ' €';
+      document.getElementById('statWeek').textContent = (s.this_week?.count ?? 0) + ' vente(s) · ' + formatNum(s.this_week?.total_amount) + ' €';
+      document.getElementById('statMonth').textContent = (s.this_month?.count ?? 0) + ' vente(s) · ' + formatNum(s.this_month?.total_amount) + ' €';
+    }
+
+    async function loadProducts() {
+      const res = await fetch(API_BASE + '/products?limit=500', { headers: headers() });
+      if (!res.ok) return;
+      const data = await res.json();
+      const list = data.data || [];
+      const opts = list.map(p => `<option value="${p.id}">${escapeHtml(p.name)} (${p.sku})</option>`).join('');
+      productIdEl.innerHTML = '<option value="">— Choisir un produit —</option>' + opts;
+    }
+
+    async function loadLocations() {
+      const res = await fetch(API_BASE + '/locations?limit=100', { headers: headers() });
+      if (!res.ok) return;
+      const data = await res.json();
+      const list = data.data || [];
+      const opts = list.map(l => `<option value="${l.id}">${escapeHtml(l.name)}</option>`).join('');
+      locationIdEl.innerHTML = '<option value="">— Aucun —</option>' + opts;
+    }
+
+    async function loadSales(page) {
+      showListError('');
+      let url = API_BASE + '/sales?limit=50&sort=sale_date&order=desc';
+      if (page) url += '&page=' + page;
+      if (filterDateFrom.value) url += '&date_from=' + filterDateFrom.value;
+      if (filterDateTo.value) url += '&date_to=' + filterDateTo.value;
+      const res = await fetch(url, { headers: headers() });
+      if (!res.ok) {
+        if (res.status === 401) showListError('Token manquant ou invalide.');
+        else showListError(await res.text().catch(() => res.statusText));
+        salesTable.classList.add('hidden');
+        emptyList.classList.add('hidden');
+        return;
+      }
+      const data = await res.json();
+      const list = data.data || [];
+      const pagination = data.pagination || {};
+      if (list.length === 0) {
+        salesTable.classList.add('hidden');
+        emptyList.classList.remove('hidden');
+      } else {
+        emptyList.classList.add('hidden');
+        salesTable.classList.remove('hidden');
+        salesBody.innerHTML = list.map(sale => `
+          <tr>
+            <td>${formatDate(sale.sale_date)}</td>
+            <td>${escapeHtml(sale.product_name || sale.product_id)}</td>
+            <td>${formatNum(sale.quantity_sold)}</td>
+            <td>${formatNum(sale.unit_price)}</td>
+            <td>${formatNum(sale.total_amount)}</td>
+            <td>${escapeHtml(sale.location_name || '—')}</td>
+            <td>
+              <button class="edit-btn" data-id="${sale.id}">Modifier</button>
+              <button class="delete-btn danger" data-id="${sale.id}">Supprimer</button>
+            </td>
+          </tr>
+        `).join('');
+        salesBody.querySelectorAll('.edit-btn').forEach(btn => {
+          btn.addEventListener('click', () => openEdit(btn.dataset.id));
+        });
+        salesBody.querySelectorAll('.delete-btn').forEach(btn => {
+          btn.addEventListener('click', () => confirmDelete(btn.dataset.id));
+        });
+      }
+      loadStats();
+    }
+
+    function escapeHtml(s) {
+      if (s == null) return '';
+      const div = document.createElement('div');
+      div.textContent = s;
+      return div.innerHTML;
+    }
+
+    function openNew() {
+      editId.value = '';
+      formTitle.textContent = 'Nouvelle vente';
+      productIdEl.value = '';
+      saleDateEl.value = new Date().toISOString().slice(0, 10);
+      quantitySoldEl.value = '';
+      unitPriceEl.value = '';
+      totalAmountEl.value = '—';
+      locationIdEl.value = '';
+      formSection.classList.remove('hidden');
+      showFormError('');
+    }
+
+    async function openEdit(id) {
+      const res = await fetch(API_BASE + '/sales/' + id, { headers: headers() });
+      if (!res.ok) {
+        showFormError('Impossible de charger la vente.');
+        return;
+      }
+      const data = await res.json();
+      const sale = data.data;
+      editId.value = sale.id;
+      formTitle.textContent = 'Modifier la vente';
+      productIdEl.value = sale.product_id;
+      saleDateEl.value = sale.sale_date ? sale.sale_date.slice(0, 10) : '';
+      quantitySoldEl.value = sale.quantity_sold ?? '';
+      unitPriceEl.value = sale.unit_price != null ? sale.unit_price : '';
+      totalAmountEl.value = formatNum(sale.total_amount) || '—';
+      locationIdEl.value = sale.location_id || '';
+      formSection.classList.remove('hidden');
+      showFormError('');
+    }
+
+    async function saveSale() {
+      const id = editId.value.trim();
+      const productId = productIdEl.value.trim();
+      const saleDate = saleDateEl.value;
+      const quantitySold = parseFloat(quantitySoldEl.value);
+      if (!productId) {
+        showFormError('Veuillez choisir un produit.');
+        return;
+      }
+      if (!saleDate) {
+        showFormError('La date est obligatoire.');
+        return;
+      }
+      if (!quantitySold || quantitySold <= 0) {
+        showFormError('La quantité doit être supérieure à 0.');
+        return;
+      }
+      showFormError('');
+      saveBtn.disabled = true;
+      const body = {
+        product_id: productId,
+        sale_date: new Date(saleDate).toISOString(),
+        quantity_sold: quantitySold,
+        unit_price: unitPriceEl.value ? parseFloat(unitPriceEl.value) : null,
+        location_id: locationIdEl.value || null,
+      };
+
+      const url = id ? API_BASE + '/sales/' + id : API_BASE + '/sales';
+      const method = id ? 'PUT' : 'POST';
+      const res = await fetch(url, { method, headers: headers(), body: JSON.stringify(body) });
+      const text = await res.text();
+      let errMsg = '';
+      try {
+        const j = JSON.parse(text);
+        errMsg = j.error || text;
+      } catch {
+        errMsg = text || res.statusText;
+      }
+      saveBtn.disabled = false;
+      if (!res.ok) {
+        showFormError(errMsg || 'Erreur ' + res.status);
+        return;
+      }
+      formSection.classList.add('hidden');
+      showListSuccess(id ? 'Vente mise à jour.' : 'Vente enregistrée.');
+      loadSales();
+      loadStats();
+      setTimeout(() => showListSuccess(''), 3000);
+    }
+
+    async function confirmDelete(id) {
+      if (!confirm('Supprimer cette vente ?')) return;
+      const res = await fetch(API_BASE + '/sales/' + id, { method: 'DELETE', headers: headers() });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        showListError(j.error || res.statusText);
+        return;
+      }
+      showListSuccess('Vente supprimée.');
+      loadSales();
+      loadStats();
+      setTimeout(() => showListSuccess(''), 3000);
+    }
+
+    refreshBtn.addEventListener('click', () => { loadSales(); loadProducts(); loadLocations(); });
+    newBtn.addEventListener('click', () => { openNew(); loadProducts(); loadLocations(); });
+    applyFilters.addEventListener('click', () => loadSales());
+    saveBtn.addEventListener('click', saveSale);
+    cancelBtn.addEventListener('click', () => formSection.classList.add('hidden'));
+
+    loadSales();
+    loadStats();
+    loadProducts();
+    loadLocations();
+  </script>
+</body>
+</html>

@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Formules personnalisées - bmad-stock-agent</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: system-ui, sans-serif; max-width: 1060px; margin: 2rem auto; padding: 0 1rem; color: #333; }
+    h1 { margin-bottom: 0.5rem; }
+    h2 { margin-top: 0; }
+    .section { margin: 1.5rem 0; padding: 1rem; border: 1px solid #ddd; border-radius: 8px; }
+    label { display: block; margin-top: 0.5rem; font-weight: 500; }
+    input[type="text"], input[type="number"], select, textarea { margin-top: 0.25rem; padding: 0.4rem; width: 100%; max-width: 500px; border: 1px solid #ccc; border-radius: 4px; font-family: inherit; font-size: 0.95rem; }
+    textarea { min-height: 60px; resize: vertical; font-family: 'Consolas', 'Monaco', monospace; }
+    button { margin-top: 0.5rem; margin-right: 0.5rem; padding: 0.5rem 1rem; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 4px; font-size: 0.95rem; }
+    button:hover { background: #0056b3; }
+    button:disabled { background: #ccc; cursor: not-allowed; }
+    button.secondary { background: #6c757d; }
+    button.secondary:hover { background: #5a6268; }
+    button.danger { background: #dc3545; }
+    button.danger:hover { background: #c82333; }
+    button.success { background: #28a745; }
+    button.success:hover { background: #218838; }
+    .error { color: #c00; margin-top: 0.25rem; }
+    .success-msg { color: #0a0; margin-top: 0.25rem; }
+    .hidden { display: none !important; }
+    .formula-card { padding: 0.75rem; border: 1px solid #eee; border-radius: 6px; margin-bottom: 0.5rem; background: #fafafa; }
+    .formula-card h3 { margin: 0 0 0.25rem 0; font-size: 1rem; }
+    .formula-card p { margin: 0 0 0.25rem 0; font-size: 0.9rem; color: #555; }
+    .formula-card code { background: #e9ecef; padding: 2px 6px; border-radius: 3px; font-size: 0.85rem; }
+    .formula-card .actions { margin-top: 0.5rem; }
+    .formula-card .actions button { font-size: 0.85rem; padding: 0.3rem 0.7rem; margin-top: 0; }
+    .result-box { padding: 1rem; background: #f0f7ff; border-radius: 6px; margin-top: 0.5rem; font-size: 1.1rem; border: 1px solid #b8daff; }
+    .result-box .value { font-weight: bold; color: #007bff; }
+    .validation-ok { color: #28a745; font-size: 0.9rem; margin-top: 0.25rem; }
+    .validation-err { color: #dc3545; font-size: 0.9rem; margin-top: 0.25rem; }
+    .autocomplete-container { position: relative; }
+    .autocomplete-dropdown { position: absolute; top: 100%; left: 0; right: 0; max-width: 500px; max-height: 200px; overflow-y: auto; background: white; border: 1px solid #ccc; border-radius: 0 0 4px 4px; z-index: 10; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+    .autocomplete-dropdown .item { padding: 6px 10px; cursor: pointer; font-size: 0.9rem; border-bottom: 1px solid #f0f0f0; }
+    .autocomplete-dropdown .item:hover { background: #e9ecef; }
+    .autocomplete-dropdown .item .label { font-weight: 600; font-family: monospace; }
+    .autocomplete-dropdown .item .desc { color: #666; font-size: 0.8rem; margin-left: 0.5rem; }
+    .vars-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 0.5rem; margin-top: 0.5rem; }
+    .var-item { background: #f8f9fa; padding: 0.4rem 0.6rem; border-radius: 4px; font-size: 0.85rem; border: 1px solid #e9ecef; }
+    .var-item code { background: #e2e6ea; padding: 1px 4px; border-radius: 2px; font-weight: 600; }
+    .tabs { display: flex; gap: 0; margin-bottom: -1px; position: relative; z-index: 1; }
+    .tab { padding: 0.5rem 1.2rem; cursor: pointer; border: 1px solid #ddd; border-bottom: none; border-radius: 6px 6px 0 0; background: #f5f5f5; font-size: 0.95rem; }
+    .tab.active { background: white; font-weight: 600; border-bottom: 1px solid white; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+  </style>
+</head>
+<body>
+  <h1>Formules personnalisées</h1>
+  <p>Créez vos propres formules de calcul comme dans Excel, en utilisant les variables de vos données stocks et ventes.</p>
+
+  <div class="section">
+    <h2>Authentification</h2>
+    <label>Token JWT :</label>
+    <input type="text" id="token" placeholder="Collez votre access_token ici" />
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" data-tab="editor">Éditeur de formule</div>
+    <div class="tab" data-tab="library">Bibliothèque</div>
+    <div class="tab" data-tab="docs">Variables & Fonctions</div>
+  </div>
+
+  <!-- Tab: Editor -->
+  <div class="section tab-content active" id="tab-editor">
+    <h2>Créer / Modifier une formule</h2>
+    <div id="editorError" class="error hidden"></div>
+    <div id="editorSuccess" class="success-msg hidden"></div>
+
+    <label>Nom de la formule *</label>
+    <input type="text" id="formulaName" placeholder="Ex: Bénéfice net par produit" maxlength="255" />
+
+    <label>Description (optionnel)</label>
+    <input type="text" id="formulaDesc" placeholder="Description courte de la formule" maxlength="1000" />
+
+    <label>Expression de la formule *</label>
+    <div class="autocomplete-container">
+      <textarea id="formulaExpr" placeholder="Ex: (PRIX_VENTE - PRIX_ACHAT) * QUANTITE" maxlength="2000"></textarea>
+      <div id="autocompleteDropdown" class="autocomplete-dropdown hidden"></div>
+    </div>
+    <div id="validationMsg"></div>
+
+    <div style="margin-top: 0.75rem;">
+      <label>Produit (pour prévisualisation)</label>
+      <select id="previewProductId">
+        <option value="">— Choisir un produit (optionnel) —</option>
+      </select>
+      <label>Portée</label>
+      <select id="previewScope">
+        <option value="product">Produit sélectionné</option>
+        <option value="all">Tous les produits</option>
+      </select>
+    </div>
+
+    <div style="margin-top: 0.75rem;">
+      <button id="previewBtn" class="secondary">Prévisualiser</button>
+      <button id="saveBtn" class="success">Sauvegarder</button>
+      <button id="resetBtn" class="secondary">Réinitialiser</button>
+    </div>
+
+    <div id="previewResult" class="hidden" style="margin-top: 0.75rem;"></div>
+    <input type="hidden" id="editingFormulaId" value="" />
+  </div>
+
+  <!-- Tab: Library -->
+  <div class="section tab-content" id="tab-library">
+    <h2>Mes formules sauvegardées</h2>
+    <div id="libraryError" class="error hidden"></div>
+    <div id="libraryList"><p>Chargement...</p></div>
+  </div>
+
+  <!-- Tab: Docs -->
+  <div class="section tab-content" id="tab-docs">
+    <h2>Variables disponibles</h2>
+    <p>Utilisez ces variables dans vos formules — elles seront automatiquement remplacées par les valeurs réelles de vos données.</p>
+    <div id="varsGrid" class="vars-grid"></div>
+
+    <h2 style="margin-top: 1.5rem;">Fonctions disponibles</h2>
+    <p>Vous pouvez utiliser ces fonctions mathématiques dans vos expressions.</p>
+    <div id="funcsGrid" class="vars-grid"></div>
+
+    <h2 style="margin-top: 1.5rem;">Exemples de formules</h2>
+    <div class="vars-grid">
+      <div class="var-item"><code>(PRIX_VENTE - PRIX_ACHAT) * QUANTITE</code><br>Bénéfice total en stock</div>
+      <div class="var-item"><code>(PRIX_VENTE - PRIX_ACHAT) / PRIX_VENTE * 100</code><br>Marge en pourcentage</div>
+      <div class="var-item"><code>STOCK_ACTUEL / MAX(CONSOMMATION_MOYENNE, 0.001)</code><br>Jours de stock restant (division sécurisée)</div>
+      <div class="var-item"><code>IF(STOCK_ACTUEL < VENTES_7J, 1, 0)</code><br>Alerte stock faible (1=oui)</div>
+      <div class="var-item"><code>CONSOMMATION_MOYENNE * DELAI_LIVRAISON * 1.5</code><br>Stock de sécurité</div>
+      <div class="var-item"><code>MAX(PRIX_VENTE - PRIX_ACHAT, 0)</code><br>Marge unitaire (min 0)</div>
+    </div>
+
+    <h2 style="margin-top: 1.5rem;">Note sur IF()</h2>
+    <p style="color: #856404; background: #fff3cd; padding: 0.5rem; border-radius: 4px; font-size: 0.9rem;">
+      <strong>Attention :</strong> La fonction IF évalue les deux branches (vrai et faux) avant de choisir.
+      <code>IF(CONSO > 0, STOCK / CONSO, 0)</code> provoquera une erreur si CONSO = 0.
+      Utilisez plutôt : <code>STOCK / MAX(CONSO, 0.001)</code> pour éviter les divisions par zéro.
+    </p>
+  </div>
+
+  <!-- Execute section -->
+  <div class="section hidden" id="executeSection">
+    <h2>Exécuter une formule</h2>
+    <p id="execFormulaName" style="font-weight: 600;"></p>
+    <label>Produit</label>
+    <select id="execProductId">
+      <option value="">— Choisir un produit —</option>
+    </select>
+    <label>Période (jours)</label>
+    <input type="number" id="execPeriodDays" value="30" min="1" max="365" style="max-width: 120px;" />
+    <label>Portée</label>
+    <select id="execScope">
+      <option value="product">Produit sélectionné</option>
+      <option value="all">Tous les produits</option>
+    </select>
+    <div style="margin-top: 0.5rem;">
+      <button id="execBtn">Calculer</button>
+      <button id="execCancelBtn" class="secondary">Fermer</button>
+    </div>
+    <div id="execResult" class="hidden" style="margin-top: 0.5rem;"></div>
+    <div id="execError" class="error hidden"></div>
+    <input type="hidden" id="execFormulaId" value="" />
+  </div>
+
+  <script>
+    const API_BASE = '';
+    const tokenEl = document.getElementById('token');
+    let csrfToken = '';
+    let allVariables = [];
+    let allFunctions = [];
+    let customFormulas = [];
+
+    function headers(includeCsrf = false) {
+      const t = tokenEl.value.trim();
+      const h = { 'Content-Type': 'application/json' };
+      if (t) h['Authorization'] = `Bearer ${t}`;
+      if (includeCsrf && csrfToken) h['X-CSRF-Token'] = csrfToken;
+      return h;
+    }
+
+    async function ensureCsrf() {
+      if (csrfToken) return;
+      const r = await fetch(API_BASE + '/csrf-token', { credentials: 'include' });
+      const j = await r.json();
+      csrfToken = j.csrfToken || '';
+    }
+
+    function escapeHtml(s) {
+      if (s == null || s === '') return '';
+      const div = document.createElement('div');
+      div.textContent = String(s);
+      return div.innerHTML;
+    }
+
+    // ---- Tabs ----
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+        if (tab.dataset.tab === 'library') loadLibrary();
+      });
+    });
+
+    // ---- Load variables & functions ----
+    async function loadVariablesAndFunctions() {
+      try {
+        const r = await fetch(API_BASE + '/formulas/custom/variables', { headers: headers() });
+        const json = await r.json();
+        if (json.success) {
+          allVariables = json.data.variables || [];
+          allFunctions = json.data.functions || [];
+          renderDocs();
+        }
+      } catch (e) { console.warn('Échec du chargement des variables/fonctions', e); }
+    }
+
+    function renderDocs() {
+      const varsGrid = document.getElementById('varsGrid');
+      varsGrid.innerHTML = allVariables.map(v =>
+        `<div class="var-item"><code>${escapeHtml(v.name)}</code> — ${escapeHtml(v.description)}${v.requiresProduct ? ' <em>(produit requis)</em>' : ''}</div>`
+      ).join('');
+
+      const funcsGrid = document.getElementById('funcsGrid');
+      const funcDescs = {
+        SUM: 'Somme de valeurs',
+        AVG: 'Moyenne de valeurs',
+        MAX: 'Valeur maximale',
+        MIN: 'Valeur minimale',
+        ABS: 'Valeur absolue',
+        ROUND: 'Arrondir au plus proche',
+        CEIL: 'Arrondir au supérieur',
+        FLOOR: 'Arrondir à l\'inférieur',
+        SQRT: 'Racine carrée',
+        POW: 'Puissance (POW(base, exp))',
+        IF: 'Condition (IF(cond, vrai, faux))',
+      };
+      funcsGrid.innerHTML = allFunctions.map(f =>
+        `<div class="var-item"><code>${escapeHtml(f)}</code> — ${escapeHtml(funcDescs[f] || '')}</div>`
+      ).join('');
+    }
+
+    // ---- Load products ----
+    async function loadProducts(selectEl) {
+      try {
+        const r = await fetch(API_BASE + '/products?limit=500', { headers: headers() });
+        const json = await r.json();
+        if (!json.success) return;
+        const products = json.data || [];
+        const opts = '<option value="">— Choisir un produit —</option>' +
+          products.map(p => `<option value="${escapeHtml(p.id)}">${escapeHtml(p.name)} (${escapeHtml(p.sku)})</option>`).join('');
+        selectEl.innerHTML = opts;
+      } catch (e) {
+        console.warn('Échec du chargement des produits', e);
+        selectEl.innerHTML = '<option value="">— Erreur chargement —</option>';
+      }
+    }
+
+    // ---- Autocomplete ----
+    const formulaExpr = document.getElementById('formulaExpr');
+    const dropdown = document.getElementById('autocompleteDropdown');
+    let autocompleteItems = [];
+
+    formulaExpr.addEventListener('input', () => {
+      handleAutocomplete();
+      debounceValidate();
+    });
+
+    formulaExpr.addEventListener('keydown', (e) => {
+      if (!dropdown.classList.contains('hidden') && autocompleteItems.length > 0) {
+        if (e.key === 'Escape') {
+          dropdown.classList.add('hidden');
+          e.preventDefault();
+        }
+      }
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!dropdown.contains(e.target) && e.target !== formulaExpr) {
+        dropdown.classList.add('hidden');
+      }
+    });
+
+    function handleAutocomplete() {
+      const value = formulaExpr.value;
+      const cursorPos = formulaExpr.selectionStart;
+      const textBeforeCursor = value.substring(0, cursorPos);
+      const match = textBeforeCursor.match(/([A-Z][A-Z0-9_]*)$/);
+      if (!match || match[1].length < 2) {
+        dropdown.classList.add('hidden');
+        return;
+      }
+      const partial = match[1].toUpperCase();
+      const varMatches = allVariables
+        .filter(v => v.name.startsWith(partial) && v.name !== partial)
+        .map(v => ({ label: v.name, desc: v.description, type: 'var' }));
+      const funcMatches = allFunctions
+        .filter(f => f.startsWith(partial) && f !== partial)
+        .map(f => ({ label: f, desc: 'Fonction', type: 'func' }));
+      autocompleteItems = [...varMatches, ...funcMatches].slice(0, 10);
+
+      if (autocompleteItems.length === 0) {
+        dropdown.classList.add('hidden');
+        return;
+      }
+
+      dropdown.innerHTML = autocompleteItems.map((item, i) =>
+        `<div class="item" data-idx="${i}"><span class="label">${escapeHtml(item.label)}</span><span class="desc">${escapeHtml(item.desc)}</span></div>`
+      ).join('');
+      dropdown.classList.remove('hidden');
+      dropdown.querySelectorAll('.item').forEach(el => {
+        el.addEventListener('click', () => insertAutocomplete(el.dataset.idx));
+      });
+    }
+
+    function insertAutocomplete(idx) {
+      const item = autocompleteItems[idx];
+      if (!item) return;
+      const value = formulaExpr.value;
+      const cursorPos = formulaExpr.selectionStart;
+      const textBefore = value.substring(0, cursorPos);
+      const match = textBefore.match(/([A-Z][A-Z0-9_]*)$/);
+      if (!match) return;
+      const start = cursorPos - match[1].length;
+      const suffix = item.type === 'func' ? '(' : '';
+      formulaExpr.value = value.substring(0, start) + item.label + suffix + value.substring(cursorPos);
+      formulaExpr.selectionStart = formulaExpr.selectionEnd = start + item.label.length + suffix.length;
+      formulaExpr.focus();
+      dropdown.classList.add('hidden');
+      debounceValidate();
+    }
+
+    // ---- Validation ----
+    let validateTimer = null;
+    function debounceValidate() {
+      clearTimeout(validateTimer);
+      validateTimer = setTimeout(doValidate, 500);
+    }
+
+    async function doValidate() {
+      const expr = formulaExpr.value.trim();
+      const msgEl = document.getElementById('validationMsg');
+      if (!expr) { msgEl.innerHTML = ''; return; }
+      try {
+        await ensureCsrf();
+        const r = await fetch(API_BASE + '/formulas/custom/validate', {
+          method: 'POST',
+          headers: headers(true),
+          body: JSON.stringify({ expression: expr }),
+          credentials: 'include',
+        });
+        const json = await r.json();
+        if (json.success && json.data) {
+          const d = json.data;
+          if (d.valid) {
+            const vars = d.variables_detected.length > 0 ? ` — Variables : ${d.variables_detected.join(', ')}` : '';
+            msgEl.innerHTML = `<span class="validation-ok">&#10003; Syntaxe valide${vars}</span>`;
+          } else {
+            msgEl.innerHTML = `<span class="validation-err">&#10007; ${escapeHtml(d.error)}</span>`;
+          }
+        }
+      } catch (e) { console.warn('Échec de la validation', e); msgEl.innerHTML = ''; }
+    }
+
+    // ---- Preview ----
+    document.getElementById('previewBtn').addEventListener('click', async () => {
+      const expr = formulaExpr.value.trim();
+      if (!expr) return;
+      const resultEl = document.getElementById('previewResult');
+      resultEl.classList.remove('hidden');
+      resultEl.innerHTML = '<p>Calcul en cours...</p>';
+      try {
+        await ensureCsrf();
+        const productId = document.getElementById('previewProductId').value || undefined;
+        const scope = document.getElementById('previewScope').value || 'all';
+        const r = await fetch(API_BASE + '/formulas/custom/preview', {
+          method: 'POST',
+          headers: headers(true),
+          body: JSON.stringify({ expression: expr, product_id: productId, scope }),
+          credentials: 'include',
+        });
+        const json = await r.json();
+        if (!json.success) throw new Error(json.error || 'Erreur');
+        const d = json.data;
+        const displayVal = typeof d.result === 'object' && d.result !== null
+          ? JSON.stringify(d.result, null, 2)
+          : String(d.result);
+        resultEl.innerHTML = `<div class="result-box"><span class="value">${escapeHtml(displayVal)}</span></div>`;
+      } catch (err) {
+        resultEl.innerHTML = `<p class="error">${escapeHtml(err.message)}</p>`;
+      }
+    });
+
+    // ---- Save ----
+    document.getElementById('saveBtn').addEventListener('click', async () => {
+      const name = document.getElementById('formulaName').value.trim();
+      const desc = document.getElementById('formulaDesc').value.trim();
+      const expr = formulaExpr.value.trim();
+      const editingId = document.getElementById('editingFormulaId').value;
+      const errEl = document.getElementById('editorError');
+      const succEl = document.getElementById('editorSuccess');
+      errEl.classList.add('hidden');
+      succEl.classList.add('hidden');
+
+      if (!name) { errEl.textContent = 'Le nom est requis'; errEl.classList.remove('hidden'); return; }
+      if (!expr) { errEl.textContent = "L'expression est requise"; errEl.classList.remove('hidden'); return; }
+
+      try {
+        await ensureCsrf();
+        let r;
+        if (editingId) {
+          r = await fetch(API_BASE + '/formulas/custom/' + editingId, {
+            method: 'PUT',
+            headers: headers(true),
+            body: JSON.stringify({ name, description: desc || undefined, formula_expression: expr }),
+            credentials: 'include',
+          });
+        } else {
+          r = await fetch(API_BASE + '/formulas/custom', {
+            method: 'POST',
+            headers: headers(true),
+            body: JSON.stringify({ name, description: desc || undefined, formula_expression: expr }),
+            credentials: 'include',
+          });
+        }
+        const json = await r.json();
+        if (!json.success) throw new Error(json.error || 'Erreur');
+        succEl.textContent = editingId ? 'Formule mise à jour !' : 'Formule sauvegardée !';
+        succEl.classList.remove('hidden');
+        if (!editingId) resetEditor();
+        setTimeout(() => succEl.classList.add('hidden'), 3000);
+      } catch (err) {
+        errEl.textContent = err.message;
+        errEl.classList.remove('hidden');
+      }
+    });
+
+    // ---- Reset ----
+    function resetEditor() {
+      document.getElementById('formulaName').value = '';
+      document.getElementById('formulaDesc').value = '';
+      formulaExpr.value = '';
+      document.getElementById('editingFormulaId').value = '';
+      document.getElementById('validationMsg').innerHTML = '';
+      document.getElementById('previewResult').classList.add('hidden');
+      document.getElementById('editorError').classList.add('hidden');
+      document.getElementById('editorSuccess').classList.add('hidden');
+    }
+    document.getElementById('resetBtn').addEventListener('click', resetEditor);
+
+    // ---- Library ----
+    async function loadLibrary() {
+      const listEl = document.getElementById('libraryList');
+      const errEl = document.getElementById('libraryError');
+      errEl.classList.add('hidden');
+      listEl.innerHTML = '<p>Chargement...</p>';
+      try {
+        const r = await fetch(API_BASE + '/formulas/custom', { headers: headers() });
+        const json = await r.json();
+        if (!json.success) throw new Error(json.error || 'Erreur');
+        customFormulas = json.data || [];
+        renderLibrary();
+      } catch (err) {
+        errEl.textContent = err.message;
+        errEl.classList.remove('hidden');
+        listEl.innerHTML = '';
+      }
+    }
+
+    function renderLibrary() {
+      const listEl = document.getElementById('libraryList');
+      if (customFormulas.length === 0) {
+        listEl.innerHTML = '<p>Aucune formule personnalisée sauvegardée. Créez-en une dans l\'onglet Éditeur !</p>';
+        return;
+      }
+      listEl.innerHTML = customFormulas.map(f => `
+        <div class="formula-card">
+          <h3>${escapeHtml(f.name)}</h3>
+          <p>${escapeHtml(f.description || 'Pas de description')}</p>
+          <p><code>${escapeHtml(f.formula_expression)}</code></p>
+          <p style="font-size: 0.8rem; color: #888;">Variables : ${escapeHtml((f.variables_used || []).join(', ') || 'aucune')}</p>
+          <div class="actions">
+            <button data-action="edit" data-id="${escapeHtml(f.id)}">Modifier</button>
+            <button data-action="exec" data-id="${escapeHtml(f.id)}" data-name="${escapeHtml(f.name)}" class="success">Exécuter</button>
+            <button data-action="delete" data-id="${escapeHtml(f.id)}" class="danger">Supprimer</button>
+          </div>
+        </div>
+      `).join('');
+      // Bind events via delegation (no inline onclick — XSS-safe)
+      listEl.querySelectorAll('[data-action]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const action = btn.dataset.action;
+          const id = btn.dataset.id;
+          if (action === 'edit') editFormula(id);
+          else if (action === 'exec') execFormula(id, btn.dataset.name);
+          else if (action === 'delete') deleteFormulaById(id);
+        });
+      });
+    }
+
+    function editFormula(id) {
+      const f = customFormulas.find(x => x.id === id);
+      if (!f) return;
+      // Switch to editor tab
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      document.querySelector('[data-tab="editor"]').classList.add('active');
+      document.getElementById('tab-editor').classList.add('active');
+      // Fill editor
+      document.getElementById('formulaName').value = f.name;
+      document.getElementById('formulaDesc').value = f.description || '';
+      formulaExpr.value = f.formula_expression;
+      document.getElementById('editingFormulaId').value = f.id;
+      doValidate();
+    }
+
+    async function deleteFormulaById(id) {
+      if (!confirm('Supprimer cette formule ?')) return;
+      try {
+        await ensureCsrf();
+        const r = await fetch(API_BASE + '/formulas/custom/' + id, {
+          method: 'DELETE',
+          headers: headers(true),
+          credentials: 'include',
+        });
+        const json = await r.json();
+        if (!json.success) throw new Error(json.error || 'Erreur');
+        loadLibrary();
+      } catch (err) {
+        alert('Erreur : ' + err.message);
+      }
+    }
+
+    function execFormula(id, name) {
+      const section = document.getElementById('executeSection');
+      document.getElementById('execFormulaId').value = id;
+      document.getElementById('execFormulaName').textContent = name;
+      document.getElementById('execResult').classList.add('hidden');
+      document.getElementById('execError').classList.add('hidden');
+      section.classList.remove('hidden');
+      loadProducts(document.getElementById('execProductId'));
+    }
+
+    document.getElementById('execCancelBtn').addEventListener('click', () => {
+      document.getElementById('executeSection').classList.add('hidden');
+    });
+
+    document.getElementById('execBtn').addEventListener('click', async () => {
+      const formulaId = document.getElementById('execFormulaId').value;
+      const resultEl = document.getElementById('execResult');
+      const errEl = document.getElementById('execError');
+      resultEl.classList.add('hidden');
+      errEl.classList.add('hidden');
+      try {
+        await ensureCsrf();
+        const productId = document.getElementById('execProductId').value || undefined;
+        const periodDays = parseInt(document.getElementById('execPeriodDays').value, 10) || 30;
+        const scope = document.getElementById('execScope').value || 'all';
+        const r = await fetch(API_BASE + '/formulas/' + formulaId + '/execute', {
+          method: 'POST',
+          headers: headers(true),
+          body: JSON.stringify({ product_id: productId, period_days: periodDays, scope }),
+          credentials: 'include',
+        });
+        const json = await r.json();
+        if (!json.success) throw new Error(json.error || 'Erreur');
+        const d = json.data;
+        const displayVal = typeof d.result === 'object' && d.result !== null
+          ? JSON.stringify(d.result, null, 2)
+          : String(d.result);
+        resultEl.innerHTML = `<div class="result-box"><span class="value">${escapeHtml(displayVal)}</span></div>`;
+        resultEl.classList.remove('hidden');
+      } catch (err) {
+        errEl.textContent = err.message;
+        errEl.classList.remove('hidden');
+      }
+    });
+
+    // ---- Init ----
+    tokenEl.addEventListener('change', () => {
+      loadVariablesAndFunctions();
+      loadProducts(document.getElementById('previewProductId'));
+    });
+    loadVariablesAndFunctions();
+    loadProducts(document.getElementById('previewProductId'));
+  </script>
+</body>
+</html>

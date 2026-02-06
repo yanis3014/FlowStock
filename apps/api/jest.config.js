@@ -14,14 +14,13 @@ module.exports = {
   coverageDirectory: 'coverage',
   coverageReporters: ['text', 'lcov', 'html'],
   moduleNameMapper: {
+    '^@bmad/shared$': '<rootDir>/../../packages/shared/src',
+    '^@bmad/shared/(.*)$': '<rootDir>/../../packages/shared/src/$1',
     '^(\\.{1,2}/.*)\\.js$': '$1',
   },
   transform: {
     '^.+\\.ts$': ['ts-jest', {
-      tsconfig: {
-        esModuleInterop: true,
-        allowSyntheticDefaultImports: true,
-      },
+      tsconfig: 'tsconfig.jest.json',
     }],
   },
 };

@@ -16,6 +16,7 @@ export const openApiDocument = {
     { name: 'Products', description: 'CRUD produits' },
     { name: 'Locations', description: 'Emplacements (entrepôts, magasins) - Story 2.3' },
     { name: 'Suppliers', description: 'Fournisseurs - Story 2.5' },
+    { name: 'Sales', description: 'Ventes (saisie manuelle) - Story 3.1' },
     { name: 'Subscriptions', description: 'Abonnements tenant' },
   ],
   paths: {
@@ -600,6 +601,114 @@ export const openApiDocument = {
         tags: ['Suppliers'],
         summary: 'Supprimer (soft) un fournisseur',
         description: 'Met is_active à false. Les produits conservent leur supplier_id.',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+        responses: { '204': { description: 'Supprimé' }, '404': { description: 'Non trouvé' }, '401': { description: 'Non authentifié' } },
+      },
+    },
+    '/sales/stats': {
+      get: {
+        tags: ['Sales'],
+        summary: 'Statistiques rapides ventes',
+        description: 'Quantités et montants : aujourd\'hui, hier, cette semaine, ce mois.',
+        security: [{ bearerAuth: [] }],
+        responses: { '200': { description: 'OK' }, '401': { description: 'Non authentifié' } },
+      },
+    },
+    '/sales/summary': {
+      get: {
+        tags: ['Sales'],
+        summary: 'Agrégations ventes',
+        description: 'Ventes groupées par jour, produit ou emplacement.',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'date_from', in: 'query', schema: { type: 'string', format: 'date-time' } },
+          { name: 'date_to', in: 'query', schema: { type: 'string', format: 'date-time' } },
+          { name: 'product_id', in: 'query', schema: { type: 'string', format: 'uuid' } },
+          { name: 'location_id', in: 'query', schema: { type: 'string', format: 'uuid' } },
+          { name: 'group_by', in: 'query', schema: { type: 'string', enum: ['day', 'product', 'location'] } },
+        ],
+        responses: { '200': { description: 'OK' }, '401': { description: 'Non authentifié' } },
+      },
+    },
+    '/sales': {
+      get: {
+        tags: ['Sales'],
+        summary: 'Liste des ventes',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'page', in: 'query', schema: { type: 'integer', minimum: 1 } },
+          { name: 'limit', in: 'query', schema: { type: 'integer', minimum: 1, maximum: 100 } },
+          { name: 'product_id', in: 'query', schema: { type: 'string', format: 'uuid' } },
+          { name: 'date_from', in: 'query', schema: { type: 'string', format: 'date-time' } },
+          { name: 'date_to', in: 'query', schema: { type: 'string', format: 'date-time' } },
+          { name: 'location_id', in: 'query', schema: { type: 'string', format: 'uuid' } },
+          { name: 'sort', in: 'query', schema: { type: 'string', enum: ['sale_date', 'created_at', 'quantity_sold', 'total_amount'] } },
+          { name: 'order', in: 'query', schema: { type: 'string', enum: ['asc', 'desc'] } },
+        ],
+        responses: { '200': { description: 'Liste paginée' }, '401': { description: 'Non authentifié' } },
+      },
+      post: {
+        tags: ['Sales'],
+        summary: 'Créer une vente (saisie manuelle)',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['product_id', 'quantity_sold'],
+                properties: {
+                  product_id: { type: 'string', format: 'uuid' },
+                  sale_date: { type: 'string', format: 'date-time' },
+                  quantity_sold: { type: 'number', minimum: 0.01 },
+                  unit_price: { type: 'number', minimum: 0 },
+                  location_id: { type: 'string', format: 'uuid' },
+                  metadata: { type: 'object' },
+                },
+              },
+            },
+          },
+        },
+        responses: { '201': { description: 'Créé' }, '400': { description: 'Validation' }, '404': { description: 'Produit ou emplacement non trouvé' }, '401': { description: 'Non authentifié' } },
+      },
+    },
+    '/sales/{id}': {
+      get: {
+        tags: ['Sales'],
+        summary: 'Détail d\'une vente',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+        responses: { '200': { description: 'OK' }, '404': { description: 'Non trouvé' }, '401': { description: 'Non authentifié' } },
+      },
+      put: {
+        tags: ['Sales'],
+        summary: 'Modifier une vente',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+        requestBody: {
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  product_id: { type: 'string', format: 'uuid' },
+                  sale_date: { type: 'string', format: 'date-time' },
+                  quantity_sold: { type: 'number', minimum: 0.01 },
+                  unit_price: { type: 'number', minimum: 0 },
+                  location_id: { type: 'string', format: 'uuid' },
+                  metadata: { type: 'object' },
+                },
+              },
+            },
+          },
+        },
+        responses: { '200': { description: 'OK' }, '404': { description: 'Non trouvé' }, '400': { description: 'Validation' }, '401': { description: 'Non authentifié' } },
+      },
+      delete: {
+        tags: ['Sales'],
+        summary: 'Supprimer une vente',
         security: [{ bearerAuth: [] }],
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
         responses: { '204': { description: 'Supprimé' }, '404': { description: 'Non trouvé' }, '401': { description: 'Non authentifié' } },

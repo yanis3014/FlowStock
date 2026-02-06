@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Estimations temps stock - bmad-stock-agent</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: system-ui, sans-serif; max-width: 1100px; margin: 2rem auto; padding: 0 1rem; color: #333; }
+    h1 { margin-bottom: 0.5rem; }
+    .section { margin: 1.5rem 0; padding: 1rem; border: 1px solid #ddd; border-radius: 8px; }
+    label { display: block; margin-top: 0.5rem; font-weight: 500; }
+    input[type="text"], input[type="number"], select { margin-top: 0.25rem; padding: 0.35rem; max-width: 300px; }
+    button { margin-top: 0.5rem; margin-right: 0.5rem; padding: 0.5rem 1rem; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 4px; }
+    button:hover { background: #0056b3; }
+    button:disabled { background: #ccc; cursor: not-allowed; }
+    .error { color: #c00; }
+    .success { color: #0a0; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+    th, td { border: 1px solid #ddd; padding: 0.5rem; text-align: left; }
+    th { background: #f5f5f5; cursor: pointer; user-select: none; white-space: nowrap; }
+    th:hover { background: #e9e9e9; }
+    .hidden { display: none; }
+    /* Urgency colors */
+    .urgency-critical { background: #fce4e4; color: #c0392b; font-weight: bold; }
+    .urgency-warning  { background: #fef5e7; color: #e67e22; font-weight: bold; }
+    .urgency-watch    { background: #fef9e7; color: #f1c40f; font-weight: bold; }
+    .urgency-ok       { background: #eafaf1; color: #27ae60; }
+    .urgency-unknown  { background: #f2f3f4; color: #95a5a6; }
+    /* Confidence badges */
+    .badge { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 10px; font-size: 0.8rem; font-weight: 500; }
+    .badge-high   { background: #d5f5e3; color: #1e8449; }
+    .badge-medium { background: #fef9e7; color: #b7950b; }
+    .badge-low    { background: #fdebd0; color: #ca6f1e; }
+    .badge-insufficient { background: #fadbd8; color: #c0392b; }
+    /* Banner */
+    .banner { padding: 0.75rem 1rem; background: #eaf2f8; border-left: 4px solid #3498db; border-radius: 4px; margin-bottom: 1rem; font-size: 0.9rem; }
+    .banner strong { color: #2980b9; }
+    /* Search */
+    .controls { display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap; margin-bottom: 0.75rem; }
+    .controls label { margin-top: 0; }
+    .controls input[type="text"] { max-width: 250px; }
+    .sort-arrow { font-size: 0.7rem; margin-left: 0.25rem; }
+    .tooltip { position: relative; cursor: help; }
+    .tooltip:hover::after {
+      content: attr(data-tip);
+      position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%);
+      background: #333; color: #fff; padding: 0.25rem 0.5rem; border-radius: 4px;
+      font-size: 0.75rem; white-space: nowrap; z-index: 10;
+    }
+    .empty-state { text-align: center; padding: 2rem; color: #888; }
+  </style>
+</head>
+<body>
+  <h1>Estimations temps stock</h1>
+  <p>Vue d'ensemble du temps de stock disponible pour chaque produit, basée sur la consommation moyenne.</p>
+
+  <div class="section">
+    <label>Token JWT (après connexion via /auth/login) :</label>
+    <input type="text" id="token" placeholder="Collez votre access_token ici" style="width: 100%;" />
+    <button id="loadBtn" style="margin-top: 0.5rem;">Charger les estimations</button>
+  </div>
+
+  <div class="banner">
+    <strong>&#x1F4CA; Estimations basiques</strong> — Ces calculs sont basés sur la consommation moyenne sur la période sélectionnée. Les estimations s'amélioreront avec le moteur IA (disponible avec l'abonnement Premium).
+  </div>
+
+  <div class="section">
+    <div class="controls">
+      <div>
+        <label>Période d'analyse</label>
+        <select id="periodDays">
+          <option value="7">7 jours</option>
+          <option value="14">14 jours</option>
+          <option value="30" selected>30 jours</option>
+          <option value="60">60 jours</option>
+          <option value="90">90 jours</option>
+        </select>
+      </div>
+      <div>
+        <label>Rechercher</label>
+        <input type="text" id="searchInput" placeholder="Nom du produit..." />
+      </div>
+    </div>
+
+    <div id="errorMsg" class="error hidden"></div>
+    <div id="tableContainer">
+      <div class="empty-state" id="emptyState">Cliquez sur « Charger les estimations » pour afficher les données.</div>
+    </div>
+  </div>
+
+<script>
+(function () {
+  'use strict';
+
+  // --- State ---
+  let allEstimates = [];
+  let sortCol = 'days_remaining';
+  let sortDir = 'asc'; // asc or desc
+
+  // --- DOM refs ---
+  const tokenInput = document.getElementById('token');
+  const loadBtn = document.getElementById('loadBtn');
+  const periodSelect = document.getElementById('periodDays');
+  const searchInput = document.getElementById('searchInput');
+  const errorMsg = document.getElementById('errorMsg');
+  const tableContainer = document.getElementById('tableContainer');
+  const emptyState = document.getElementById('emptyState');
+
+  // --- Helpers ---
+  function getToken() {
+    return (tokenInput.value || '').trim();
+  }
+
+  function showError(msg) {
+    errorMsg.textContent = msg;
+    errorMsg.classList.remove('hidden');
+  }
+
+  function clearError() {
+    errorMsg.textContent = '';
+    errorMsg.classList.add('hidden');
+  }
+
+  function urgencyClass(days) {
+    if (days === null || days === undefined) return 'urgency-unknown';
+    if (days < 7) return 'urgency-critical';
+    if (days <= 14) return 'urgency-warning';
+    if (days <= 30) return 'urgency-watch';
+    return 'urgency-ok';
+  }
+
+  function urgencyLabel(days) {
+    if (days === null || days === undefined) return '—';
+    return days.toFixed(1);
+  }
+
+  function confidenceBadge(level) {
+    const map = {
+      high: { cls: 'badge-high', label: 'Fiable' },
+      medium: { cls: 'badge-medium', label: 'Modéré' },
+      low: { cls: 'badge-low', label: 'Peu fiable' },
+      insufficient: { cls: 'badge-insufficient', label: 'Données insuffisantes' },
+    };
+    const info = map[level] || map.insufficient;
+    return '<span class="badge ' + info.cls + '">' + info.label + '</span>';
+  }
+
+  function formatDate(dateStr) {
+    if (!dateStr) return '—';
+    const d = new Date(dateStr);
+    return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  }
+
+  function formatConsumption(val) {
+    if (val === null || val === undefined) return '<span class="tooltip" data-tip="Aucune vente enregistrée sur cette période">—</span>';
+    return val.toFixed(3);
+  }
+
+  function formatDaysRemaining(val) {
+    if (val === null || val === undefined) return '<span class="tooltip" data-tip="Aucune vente enregistrée sur cette période">—</span>';
+    return val.toFixed(1);
+  }
+
+  // --- Sort ---
+  function sortEstimates(data) {
+    const sorted = [...data];
+    sorted.sort(function (a, b) {
+      let aVal = a[sortCol];
+      let bVal = b[sortCol];
+
+      // Nulls last
+      if (aVal === null && bVal === null) return 0;
+      if (aVal === null) return 1;
+      if (bVal === null) return -1;
+
+      // String compare for product_name/sku
+      if (typeof aVal === 'string' && typeof bVal === 'string') {
+        const cmp = aVal.localeCompare(bVal, 'fr');
+        return sortDir === 'asc' ? cmp : -cmp;
+      }
+
+      // Numeric compare
+      const diff = aVal - bVal;
+      return sortDir === 'asc' ? diff : -diff;
+    });
+    return sorted;
+  }
+
+  // --- Filter ---
+  function filterEstimates(data) {
+    const q = (searchInput.value || '').trim().toLowerCase();
+    if (!q) return data;
+    return data.filter(function (e) {
+      return e.product_name.toLowerCase().indexOf(q) !== -1 || e.sku.toLowerCase().indexOf(q) !== -1;
+    });
+  }
+
+  // --- Render ---
+  function renderTable() {
+    const filtered = filterEstimates(allEstimates);
+    const sorted = sortEstimates(filtered);
+
+    if (sorted.length === 0 && allEstimates.length === 0) {
+      tableContainer.innerHTML = '<div class="empty-state">Aucun produit trouvé. Ajoutez des produits et des ventes pour voir les estimations.</div>';
+      return;
+    }
+    if (sorted.length === 0) {
+      tableContainer.innerHTML = '<div class="empty-state">Aucun produit ne correspond à votre recherche.</div>';
+      return;
+    }
+
+    const cols = [
+      { key: 'product_name', label: 'Produit' },
+      { key: 'sku', label: 'SKU' },
+      { key: 'current_stock', label: 'Stock actuel' },
+      { key: 'avg_daily_consumption', label: 'Conso. moy./jour' },
+      { key: 'days_remaining', label: 'Jours restants' },
+      { key: 'estimated_stockout_date', label: 'Date rupture est.' },
+      { key: 'confidence_level', label: 'Fiabilité' },
+    ];
+
+    let html = '<table><thead><tr>';
+    for (var i = 0; i < cols.length; i++) {
+      var arrow = '';
+      if (cols[i].key === sortCol) {
+        arrow = ' <span class="sort-arrow">' + (sortDir === 'asc' ? '▲' : '▼') + '</span>';
+      }
+      html += '<th data-col="' + cols[i].key + '">' + cols[i].label + arrow + '</th>';
+    }
+    html += '</tr></thead><tbody>';
+
+    for (var j = 0; j < sorted.length; j++) {
+      var e = sorted[j];
+      var uc = urgencyClass(e.days_remaining);
+      html += '<tr>';
+      html += '<td>' + escapeHtml(e.product_name) + '</td>';
+      html += '<td>' + escapeHtml(e.sku) + '</td>';
+      html += '<td>' + e.current_stock + ' ' + escapeHtml(e.unit) + '</td>';
+      html += '<td>' + formatConsumption(e.avg_daily_consumption) + '</td>';
+      html += '<td class="' + uc + '">' + formatDaysRemaining(e.days_remaining) + '</td>';
+      html += '<td>' + formatDate(e.estimated_stockout_date) + '</td>';
+      html += '<td>' + confidenceBadge(e.confidence_level) + '</td>';
+      html += '</tr>';
+    }
+
+    html += '</tbody></table>';
+    tableContainer.innerHTML = html;
+
+    // Attach sort handlers to headers
+    var ths = tableContainer.querySelectorAll('th[data-col]');
+    for (var k = 0; k < ths.length; k++) {
+      ths[k].addEventListener('click', handleSort);
+    }
+  }
+
+  function handleSort(evt) {
+    var col = evt.currentTarget.getAttribute('data-col');
+    if (sortCol === col) {
+      sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+    } else {
+      sortCol = col;
+      sortDir = 'asc';
+    }
+    renderTable();
+  }
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  // --- Load data ---
+  async function loadEstimates() {
+    clearError();
+    var token = getToken();
+    if (!token) {
+      showError('Veuillez saisir un token JWT.');
+      return;
+    }
+
+    var period = periodSelect.value || '30';
+    loadBtn.disabled = true;
+    loadBtn.textContent = 'Chargement...';
+
+    try {
+      var res = await fetch('/stock-estimates?period_days=' + encodeURIComponent(period), {
+        headers: { 'Authorization': 'Bearer ' + token },
+      });
+      var body = await res.json();
+      if (!res.ok || !body.success) {
+        showError(body.error || 'Erreur lors du chargement');
+        return;
+      }
+      allEstimates = body.data || [];
+      renderTable();
+    } catch (err) {
+      showError('Erreur réseau : ' + err.message);
+    } finally {
+      loadBtn.disabled = false;
+      loadBtn.textContent = 'Charger les estimations';
+    }
+  }
+
+  // --- Events ---
+  loadBtn.addEventListener('click', loadEstimates);
+
+  periodSelect.addEventListener('change', function () {
+    if (allEstimates.length > 0 || getToken()) {
+      loadEstimates();
+    }
+  });
+
+  searchInput.addEventListener('input', function () {
+    if (allEstimates.length > 0) {
+      renderTable();
+    }
+  });
+
+  // Restore token from localStorage
+  var saved = localStorage.getItem('jwt_token');
+  if (saved) {
+    tokenInput.value = saved;
+  }
+  tokenInput.addEventListener('change', function () {
+    localStorage.setItem('jwt_token', tokenInput.value);
+  });
+})();
+</script>
+</body>
+</html>
