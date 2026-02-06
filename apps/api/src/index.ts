@@ -110,6 +110,11 @@ app.get('/formulas-page', (_req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'formulas.html'));
 });
 
+// Story 3.4: Custom formulas (formules personnalisées) page
+app.get('/custom-formulas-page', (_req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'custom-formulas.html'));
+});
+
 app.use(csrfErrorHandler);
 
 // Global error handler (multer fileFilter, etc.) — returns JSON for API clients
