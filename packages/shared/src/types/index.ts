@@ -169,3 +169,59 @@ export interface StockMovementListResult {
   };
   retention_days: number;
 }
+
+// Story 3.1: Sales (ventes)
+export type SaleSource = 'manual' | 'csv_import' | 'pos_terminal' | 'api';
+
+export interface Sale {
+  id: string;
+  product_id: string;
+  product_name?: string;
+  sale_date: string;
+  quantity_sold: number;
+  unit_price: number | null;
+  total_amount: number | null;
+  location_id: string | null;
+  location_name?: string | null;
+  source: SaleSource;
+  user_id: string | null;
+  created_at: string;
+}
+
+export interface SaleCreateInput {
+  product_id: string;
+  /** Optionnel côté API : défaut = aujourd'hui */
+  sale_date?: string;
+  quantity_sold: number;
+  unit_price?: number | null;
+  location_id?: string | null;
+  metadata?: Record<string, unknown>;
+}
+
+export interface SaleUpdateInput {
+  product_id?: string;
+  sale_date?: string;
+  quantity_sold?: number;
+  unit_price?: number | null;
+  location_id?: string | null;
+  metadata?: Record<string, unknown>;
+}
+
+export interface SaleListFilters {
+  page?: number;
+  limit?: number;
+  product_id?: string;
+  date_from?: string;
+  date_to?: string;
+  location_id?: string;
+  sort?: string;
+  order?: 'asc' | 'desc';
+}
+
+export interface SaleSummaryFilters {
+  date_from?: string;
+  date_to?: string;
+  product_id?: string;
+  location_id?: string;
+  group_by?: 'day' | 'product' | 'location';
+}
