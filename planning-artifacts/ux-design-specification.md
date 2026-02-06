@@ -876,7 +876,7 @@ Professionnel, efficace et lisible. Optimisé pour la gestion de données et la 
 - Zones de touche suffisamment grandes
 - Navigation accessible au doigt (pas seulement à la souris)
 
-## Design Direction Decision
+oui cela ## Design Direction Decision
 
 ### Design Directions Explored
 
