@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import multer from 'multer';
 import { authenticateToken } from '../middleware/auth';
 import { body, query, param, validationResult } from 'express-validator';
 import {
@@ -10,9 +11,25 @@ import {
   getSalesSummary,
   getSalesStats,
 } from '../services/sales.service';
+import {
+  getImportPreview,
+  importSales,
+  CSV_TEMPLATE,
+} from '../services/sales-import.service';
 import type { SaleCreateInput, SaleUpdateInput, SaleListFilters, SaleSummaryFilters } from '@bmad/shared';
 
 const router = Router();
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB
+  fileFilter: (_req, file, cb) => {
+    const allowed = ['.csv'];
+    const ext = (file.originalname || '').toLowerCase().slice(file.originalname.lastIndexOf('.'));
+    if (allowed.includes(ext)) cb(null, true);
+    else cb(new Error('Only CSV files are allowed'));
+  },
+});
 
 /**
  * GET /sales/stats
@@ -123,6 +140,109 @@ router.get(
       res.status(200).json({ success: true, data: result.data, pagination: result.pagination });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to list sales';
+      res.status(500).json({ success: false, error: message });
+    }
+  }
+);
+
+/** Valid sale field names for import mapping */
+const VALID_SALE_MAPPING_FIELDS = ['sale_date', 'product_sku', 'quantity_sold', 'unit_price', 'location_name', 'metadata'];
+
+/**
+ * GET /sales/import/template
+ * Download CSV template for sales import
+ */
+router.get('/import/template', authenticateToken, (_req: Request, res: Response) => {
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', 'attachment; filename="sales-import-template.csv"');
+  res.send(CSV_TEMPLATE);
+});
+
+/**
+ * POST /sales/import/preview
+ * Parse file and return columns, sample rows, suggested mapping
+ */
+router.post(
+  '/import/preview',
+  authenticateToken,
+  upload.single('file'),
+  async (req: Request, res: Response) => {
+    if (!req.user?.tenantId) {
+      res.status(401).json({ success: false, error: 'Authentication required' });
+      return;
+    }
+    const file = req.file;
+    if (!file) {
+      res.status(400).json({ success: false, error: 'No file uploaded' });
+      return;
+    }
+    try {
+      const preview = getImportPreview(file.buffer, file.originalname);
+      res.status(200).json({ success: true, data: preview });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to parse file';
+      res.status(400).json({ success: false, error: message });
+    }
+  }
+);
+
+/**
+ * POST /sales/import
+ * Execute import with optional mapping
+ */
+router.post(
+  '/import',
+  authenticateToken,
+  upload.single('file'),
+  async (req: Request, res: Response) => {
+    if (!req.user?.tenantId) {
+      res.status(401).json({ success: false, error: 'Authentication required' });
+      return;
+    }
+    const file = req.file;
+    if (!file) {
+      res.status(400).json({ success: false, error: 'No file uploaded' });
+      return;
+    }
+    let mapping: Record<string, string> | undefined;
+    if (typeof req.body.mapping === 'string') {
+      try {
+        mapping = JSON.parse(req.body.mapping) as Record<string, string>;
+      } catch {
+        res.status(400).json({ success: false, error: 'Invalid mapping JSON' });
+        return;
+      }
+      // Validate mapping values are allowed sale fields
+      if (mapping && typeof mapping === 'object') {
+        const invalidValues = Object.values(mapping).filter((v) => !VALID_SALE_MAPPING_FIELDS.includes(v));
+        if (invalidValues.length > 0) {
+          res.status(400).json({
+            success: false,
+            error: `Invalid mapping field(s): ${invalidValues.join(', ')}. Allowed: ${VALID_SALE_MAPPING_FIELDS.join(', ')}`,
+          });
+          return;
+        }
+      }
+    }
+    try {
+      const result = await importSales(
+        req.user.tenantId,
+        file.buffer,
+        file.originalname,
+        mapping,
+        req.user?.userId
+      );
+      res.status(200).json({
+        success: true,
+        data: {
+          imported: result.imported,
+          errors: result.errors,
+          ignored: result.ignored,
+          totalRows: result.totalRows,
+        },
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Import failed';
       res.status(500).json({ success: false, error: message });
     }
   }

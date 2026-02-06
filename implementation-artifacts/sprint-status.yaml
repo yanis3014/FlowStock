@@ -56,9 +56,9 @@ development_status:
   epic-2-retrospective: done
 
   epic-3: in-progress
-  3-1-saisie-manuelle-ventes: review
-  3-2-import-csv-ventes: backlog
-  3-3-formules-predéfinies: backlog
+  3-1-saisie-manuelle-ventes: done
+  3-2-import-csv-ventes: review
+  3-3-formules-predéfinies: review
   3-4-saisie-manuelle-formules-personnalisees: backlog
   3-5-calculs-basiques-temps-stock-sans-ia: backlog
   epic-3-retrospective: optional

@@ -1,6 +1,7 @@
 import { getDatabase } from '../database/connection';
 import { getProductById } from './product.service';
 import { getLocationById } from './location.service';
+import { computeTotalAmount } from '../utils/sales.utils';
 import type {
   Sale,
   SaleCreateInput,
@@ -158,13 +159,9 @@ export async function getSaleById(tenantId: string, saleId: string): Promise<Sal
   return rowToSale(result.rows[0]);
 }
 
-function computeTotalAmount(quantitySold: number, unitPrice: number | null | undefined): number | null {
-  if (unitPrice == null || unitPrice < 0) return null;
-  return Math.round(quantitySold * unitPrice * 100) / 100;
-}
-
 export interface SaleServiceContext {
   userId?: string | null;
+  source?: 'manual' | 'csv' | 'terminal';
 }
 
 /**
@@ -209,10 +206,11 @@ export async function createSale(
 
   const totalAmount = computeTotalAmount(input.quantity_sold, input.unit_price);
 
+  const source = context?.source ?? 'manual';
   const result = await db.queryWithTenant<SaleRow>(
     tenantId,
     `INSERT INTO sales (tenant_id, product_id, sale_date, quantity_sold, unit_price, total_amount, location_id, source, user_id, metadata)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, 'manual', $8, $9::jsonb)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb)
      RETURNING id, product_id, sale_date, quantity_sold::text, unit_price::text, total_amount::text, location_id, source, user_id, created_at`,
     [
       tenantId,
@@ -222,6 +220,7 @@ export async function createSale(
       input.unit_price ?? null,
       totalAmount,
       input.location_id ?? null,
+      source,
       context?.userId ?? null,
       JSON.stringify(input.metadata ?? {}),
     ]

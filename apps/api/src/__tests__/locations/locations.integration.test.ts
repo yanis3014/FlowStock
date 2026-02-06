@@ -60,7 +60,7 @@ describe('Locations Integration Tests', () => {
       .set('Authorization', `Bearer ${otherAccessToken}`)
       .send({ name: 'Other Tenant Loc For 404' });
     otherTenantLocationId = otherLoc.body.data.id;
-  });
+  }, 30_000);
 
   afterAll(async () => {
     await pool.query('DELETE FROM stock_movements');

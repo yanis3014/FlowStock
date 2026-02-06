@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Import ventes - bmad-stock-agent</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: system-ui, sans-serif; max-width: 900px; margin: 2rem auto; padding: 0 1rem; }
+    h1 { margin-bottom: 0.5rem; }
+    .section { margin: 1.5rem 0; padding: 1rem; border: 1px solid #ddd; border-radius: 8px; }
+    label { display: block; margin-top: 0.5rem; font-weight: 500; }
+    input[type="text"], input[type="file"] { margin-top: 0.25rem; }
+    button { margin-top: 0.5rem; padding: 0.5rem 1rem; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 4px; }
+    button:hover { background: #0056b3; }
+    button:disabled { background: #ccc; cursor: not-allowed; }
+    .error { color: #c00; }
+    .success { color: #0a0; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.9rem; overflow-x: auto; }
+    th, td { border: 1px solid #ddd; padding: 0.5rem; text-align: left; }
+    th { background: #f5f5f5; }
+    .mapping-grid { display: grid; grid-template-columns: 1fr auto 1fr; gap: 0.5rem; align-items: center; }
+    .mapping-grid label { margin: 0; }
+    select { padding: 0.25rem; }
+    a { color: #007bff; }
+  </style>
+</head>
+<body>
+  <h1>Import ventes</h1>
+  <p>Importez vos ventes depuis un fichier CSV.</p>
+
+  <div class="section">
+    <h2>1. Authentification</h2>
+    <label>Token JWT (après connexion via /auth/login) :</label>
+    <input type="text" id="token" placeholder="Collez votre access_token ici" style="width: 100%;" />
+  </div>
+
+  <div class="section">
+    <h2>2. Télécharger le template</h2>
+    <a href="#" id="templateLink">Télécharger le template CSV</a>
+  </div>
+
+  <div class="section">
+    <h2>3. Sélectionner un fichier</h2>
+    <input type="file" id="file" accept=".csv" />
+    <button id="previewBtn">Prévisualiser</button>
+  </div>
+
+  <div class="section" id="mappingSection" style="display: none;">
+    <h2>4. Mapping des colonnes</h2>
+    <div id="mappingContainer"></div>
+  </div>
+
+  <div class="section" id="previewSection" style="display: none;">
+    <h2>5. Aperçu des données</h2>
+    <div id="previewTable"></div>
+    <button id="importBtn">Importer</button>
+  </div>
+
+  <div class="section" id="resultSection" style="display: none;">
+    <h2>Résultat de l'import</h2>
+    <div id="resultContent"></div>
+  </div>
+
+  <script>
+    const API_BASE = '';
+    const tokenEl = document.getElementById('token');
+    const fileEl = document.getElementById('file');
+    const previewBtn = document.getElementById('previewBtn');
+    const templateLink = document.getElementById('templateLink');
+    const mappingSection = document.getElementById('mappingSection');
+    const mappingContainer = document.getElementById('mappingContainer');
+    const previewSection = document.getElementById('previewSection');
+    const previewTable = document.getElementById('previewTable');
+    const importBtn = document.getElementById('importBtn');
+    const resultSection = document.getElementById('resultSection');
+    const resultContent = document.getElementById('resultContent');
+
+    let previewData = null;
+    let currentMapping = {};
+    let csrfToken = '';
+
+    async function ensureCsrf() {
+      if (csrfToken) return;
+      const r = await fetch(API_BASE + '/csrf-token', { credentials: 'include' });
+      const j = await r.json();
+      csrfToken = j.csrfToken || '';
+    }
+
+    function headers(includeCsrf = false) {
+      const t = tokenEl.value.trim();
+      const h = { 'Authorization': t ? `Bearer ${t}` : '' };
+      if (includeCsrf && csrfToken) h['X-CSRF-Token'] = csrfToken;
+      return h;
+    }
+
+    templateLink.addEventListener('click', async (e) => {
+      e.preventDefault();
+      try {
+        const r = await fetch(API_BASE + '/sales/import/template', { headers: headers(false) });
+        if (!r.ok) throw new Error('Authentification requise');
+        const blob = await r.blob();
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'sales-import-template.csv';
+        a.click();
+      } catch (err) {
+        alert('Erreur: ' + (err.message || err));
+      }
+    });
+
+    previewBtn.addEventListener('click', async () => {
+      const file = fileEl.files[0];
+      if (!file) { alert('Sélectionnez un fichier'); return; }
+      previewBtn.disabled = true;
+      try {
+        await ensureCsrf();
+        const fd = new FormData();
+        fd.append('file', file);
+        const r = await fetch(API_BASE + '/sales/import/preview', {
+          method: 'POST',
+          headers: headers(true),
+          body: fd,
+          credentials: 'include',
+        });
+        const json = await r.json();
+        if (!json.success) throw new Error(json.error || 'Erreur prévisualisation');
+        previewData = json.data;
+        currentMapping = { ...json.data.suggestedMapping };
+        renderMapping();
+        renderPreview();
+        mappingSection.style.display = 'block';
+        previewSection.style.display = 'block';
+      } catch (err) {
+        alert('Erreur: ' + (err.message || err));
+      } finally {
+        previewBtn.disabled = false;
+      }
+    });
+
+    const SALE_FIELDS = ['sale_date', 'product_sku', 'quantity_sold', 'unit_price', 'location_name', 'metadata'];
+
+    function escapeHtml(s) {
+      if (s == null || s === '') return '';
+      const div = document.createElement('div');
+      div.textContent = String(s);
+      return div.innerHTML;
+    }
+
+    function renderMapping() {
+      if (!previewData) return;
+      mappingContainer.innerHTML = previewData.columns.map(col => {
+        const opts = SALE_FIELDS.map(f =>
+          `<option value="${escapeHtml(f)}" ${currentMapping[col] === f ? 'selected' : ''}>${escapeHtml(f)}</option>`
+        ).join('');
+        return `<div class="mapping-grid"><label>${escapeHtml(col)}</label><span>→</span><select data-column="${escapeHtml(col)}"><option value="">-- Non mappé --</option>${opts}</select></div>`;
+      }).join('');
+      mappingContainer.querySelectorAll('select').forEach(sel => {
+        sel.addEventListener('change', () => {
+          const col = sel.dataset.column;
+          if (sel.value) currentMapping[col] = sel.value;
+          else delete currentMapping[col];
+          renderPreview();
+        });
+      });
+    }
+
+    function renderPreview() {
+      if (!previewData) return;
+      const mappedCols = Object.entries(currentMapping).filter(([, f]) => f);
+      if (mappedCols.length === 0) { previewTable.innerHTML = '<p>Aucune colonne mappée</p>'; return; }
+      const headers = mappedCols.map(([, f]) => f);
+      const rows = previewData.sampleRows.map(row => {
+        return headers.map(f => {
+          const col = Object.entries(currentMapping).find(([, v]) => v === f)?.[0];
+          return col ? (row[col] ?? '') : '';
+        });
+      });
+      previewTable.innerHTML = '<table><thead><tr>' + headers.map(h => `<th>${escapeHtml(h)}</th>`).join('') + '</tr></thead><tbody>' +
+        rows.map(r => '<tr>' + r.map(c => `<td>${escapeHtml(c)}</td>`).join('') + '</tr>').join('') + '</tbody></table>';
+    }
+
+    importBtn.addEventListener('click', async () => {
+      const file = fileEl.files[0];
+      if (!file) { alert('Sélectionnez un fichier'); return; }
+      importBtn.disabled = true;
+      try {
+        await ensureCsrf();
+        const fd = new FormData();
+        fd.append('file', file);
+        fd.append('mapping', JSON.stringify(currentMapping));
+        const r = await fetch(API_BASE + '/sales/import', {
+          method: 'POST',
+          headers: headers(true),
+          body: fd,
+          credentials: 'include',
+        });
+        const json = await r.json();
+        if (!json.success) throw new Error(json.error || 'Erreur import');
+        const d = json.data;
+        let html = `<p class="success"><strong>${escapeHtml(d.imported)}</strong> ventes importées sur ${escapeHtml(d.totalRows)} lignes.${d.ignored != null ? ` <strong>${escapeHtml(d.ignored)}</strong> lignes ignorées.` : ''}</p>`;
+        if (d.errors && d.errors.length) {
+          html += '<p class="error"><strong>Erreurs:</strong></p><ul>';
+          d.errors.slice(0, 20).forEach(e => { html += `<li>Ligne ${escapeHtml(e.row)}: ${escapeHtml(e.message)}${e.value != null && e.value !== '' ? ` (${escapeHtml(e.value)})` : ''}</li>`; });
+          if (d.errors.length > 20) html += `<li>... et ${d.errors.length - 20} autres</li>`;
+          html += '</ul>';
+        }
+        resultContent.innerHTML = html;
+        resultSection.style.display = 'block';
+      } catch (err) {
+        alert('Erreur: ' + (err.message || err));
+      } finally {
+        importBtn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

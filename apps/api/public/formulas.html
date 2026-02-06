@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Formules de calcul - bmad-stock-agent</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: system-ui, sans-serif; max-width: 960px; margin: 2rem auto; padding: 0 1rem; }
+    h1 { margin-bottom: 0.5rem; }
+    .section { margin: 1.5rem 0; padding: 1rem; border: 1px solid #ddd; border-radius: 8px; }
+    label { display: block; margin-top: 0.5rem; font-weight: 500; }
+    input[type="text"], input[type="number"], select { margin-top: 0.25rem; padding: 0.35rem; max-width: 300px; }
+    button { margin-top: 0.5rem; margin-right: 0.5rem; padding: 0.5rem 1rem; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 4px; }
+    button:hover { background: #0056b3; }
+    button:disabled { background: #ccc; cursor: not-allowed; }
+    button.secondary { background: #6c757d; }
+    button.secondary:hover { background: #5a6268; }
+    .error { color: #c00; }
+    .success { color: #0a0; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+    th, td { border: 1px solid #ddd; padding: 0.5rem; text-align: left; }
+    th { background: #f5f5f5; }
+    .formula-card { padding: 0.75rem; border: 1px solid #eee; border-radius: 6px; margin-bottom: 0.5rem; }
+    .formula-card h3 { margin: 0 0 0.25rem 0; font-size: 1rem; }
+    .formula-card p { margin: 0; font-size: 0.9rem; color: #555; }
+    .result-box { padding: 1rem; background: #f8f9fa; border-radius: 6px; margin-top: 0.5rem; font-size: 1.2rem; }
+    .result-box .value { font-weight: bold; color: #007bff; }
+    .copy-btn { font-size: 0.85rem; padding: 0.25rem 0.5rem; }
+    .doc-section { font-size: 0.9rem; color: #666; margin-top: 0.5rem; }
+  </style>
+</head>
+<body>
+  <h1>Formules de calcul prédéfinies</h1>
+  <p>Utilisez les 8 formules prédéfinies pour des calculs standards (consommation moyenne, stock de sécurité, point de commande, etc.).</p>
+
+  <div class="section">
+    <h2>Authentification</h2>
+    <label>Token JWT (après connexion via /auth/login) :</label>
+    <input type="text" id="token" placeholder="Collez votre access_token ici" style="width: 100%;" />
+  </div>
+
+  <div class="section">
+    <h2>Formules disponibles</h2>
+    <div id="formulasError" class="error hidden"></div>
+    <div id="formulasList"></div>
+  </div>
+
+  <div class="section hidden" id="paramsSection">
+    <h2>Paramètres du calcul</h2>
+    <label>Formule sélectionnée</label>
+    <p id="selectedFormulaName" style="font-weight: 500;"></p>
+    <label>Produit (requis pour certaines formules)</label>
+    <select id="productId">
+      <option value="">— Choisir un produit (optionnel) —</option>
+    </select>
+    <label>Période (jours)</label>
+    <input type="number" id="periodDays" value="30" min="1" max="365" placeholder="30" />
+    <label>Portée</label>
+    <select id="scope">
+      <option value="all">Tous les produits</option>
+      <option value="product">Produit sélectionné</option>
+    </select>
+    <br />
+    <button id="executeBtn">Calculer</button>
+    <button id="cancelBtn" class="secondary">Annuler</button>
+  </div>
+
+  <div class="section hidden" id="resultSection">
+    <h2>Résultat</h2>
+    <div id="resultError" class="error hidden"></div>
+    <div id="resultContent"></div>
+  </div>
+
+  <div class="section">
+    <h2>Documentation des formules</h2>
+    <div class="doc-section">
+      <p><strong>1. Consommation moyenne</strong> — Moyenne des ventes quotidiennes sur la période. Nécessite un produit.</p>
+      <p><strong>2. Stock de sécurité</strong> — CONSOMMATION_MOYENNE × DELAI_LIVRAISON × 1,5. Nécessite un produit.</p>
+      <p><strong>3. Point de commande</strong> — STOCK_SECURITE + (CONSOMMATION_MOYENNE × DELAI_LIVRAISON). Nécessite un produit.</p>
+      <p><strong>4. Taux de rotation</strong> — VENTES_PERIODE / STOCK_MOYEN.</p>
+      <p><strong>5. Jours de stock restant</strong> — STOCK_ACTUEL / CONSOMMATION_QUOTIDIENNE. Nécessite un produit.</p>
+      <p><strong>6. Coût stock moyen</strong> — SOMME(quantité × prix_achat) / SOMME(quantité).</p>
+      <p><strong>7. Valeur stock</strong> — SOMME(quantité × prix_achat).</p>
+      <p><strong>8. Marge bénéficiaire</strong> — (prix_vente - prix_achat) / prix_vente × 100.</p>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = '';
+    const tokenEl = document.getElementById('token');
+    const formulasList = document.getElementById('formulasList');
+    const formulasError = document.getElementById('formulasError');
+    const paramsSection = document.getElementById('paramsSection');
+    const selectedFormulaName = document.getElementById('selectedFormulaName');
+    const productIdEl = document.getElementById('productId');
+    const periodDaysEl = document.getElementById('periodDays');
+    const scopeEl = document.getElementById('scope');
+    const executeBtn = document.getElementById('executeBtn');
+    const cancelBtn = document.getElementById('cancelBtn');
+    const resultSection = document.getElementById('resultSection');
+    const resultContent = document.getElementById('resultContent');
+    const resultError = document.getElementById('resultError');
+
+    let formulas = [];
+    let selectedFormula = null;
+    let csrfToken = '';
+
+    function headers(includeCsrf = false) {
+      const t = tokenEl.value.trim();
+      const h = { 'Content-Type': 'application/json' };
+      if (t) h['Authorization'] = `Bearer ${t}`;
+      if (includeCsrf && csrfToken) h['X-CSRF-Token'] = csrfToken;
+      return h;
+    }
+
+    async function ensureCsrf() {
+      if (csrfToken) return;
+      const r = await fetch(API_BASE + '/csrf-token', { credentials: 'include' });
+      const j = await r.json();
+      csrfToken = j.csrfToken || '';
+    }
+
+    async function loadFormulas() {
+      formulasError.classList.add('hidden');
+      formulasError.textContent = '';
+      try {
+        const r = await fetch(API_BASE + '/formulas/predefined', { headers: headers() });
+        const json = await r.json();
+        if (!json.success) throw new Error(json.error || 'Erreur chargement formules');
+        formulas = json.data || [];
+        renderFormulas();
+      } catch (err) {
+        formulasError.textContent = 'Erreur: ' + (err.message || err);
+        formulasError.classList.remove('hidden');
+        formulasList.innerHTML = '';
+      }
+    }
+
+    function escapeHtml(s) {
+      if (s == null || s === '') return '';
+      const div = document.createElement('div');
+      div.textContent = String(s);
+      return div.innerHTML;
+    }
+
+    const NAME_LABELS = {
+      consommation_moyenne: 'Consommation moyenne',
+      stock_securite: 'Stock de sécurité',
+      point_commande: 'Point de commande',
+      taux_rotation: 'Taux de rotation',
+      jours_stock_restant: 'Jours de stock restant',
+      cout_stock_moyen: 'Coût stock moyen',
+      valeur_stock: 'Valeur stock',
+      marge_beneficiaire: 'Marge bénéficiaire',
+    };
+
+    function renderFormulas() {
+      if (formulas.length === 0) {
+        formulasList.innerHTML = '<p>Aucune formule disponible. Vérifiez la migration V011.</p>';
+        return;
+      }
+      formulasList.innerHTML = formulas.map(f => `
+        <div class="formula-card">
+          <h3>${escapeHtml(NAME_LABELS[f.name] || f.name)}</h3>
+          <p>${escapeHtml(f.description || '')}</p>
+          <button class="calculate-btn" data-id="${escapeHtml(f.id)}" data-name="${escapeHtml(f.name)}">Calculer</button>
+        </div>
+      `).join('');
+      formulasList.querySelectorAll('.calculate-btn').forEach(btn => {
+        btn.addEventListener('click', () => selectFormula(btn.dataset.id, btn.dataset.name));
+      });
+    }
+
+    async function loadProducts() {
+      try {
+        const r = await fetch(API_BASE + '/products?limit=500', { headers: headers() });
+        const json = await r.json();
+        if (!json.success) throw new Error(json.error || 'Erreur produits');
+        const products = json.data || [];
+        productIdEl.innerHTML = '<option value="">— Choisir un produit (optionnel) —</option>' +
+          products.map(p => `<option value="${escapeHtml(p.id)}">${escapeHtml(p.name)} (${escapeHtml(p.sku)})</option>`).join('');
+      } catch {
+        productIdEl.innerHTML = '<option value="">— Erreur chargement produits —</option>';
+      }
+    }
+
+    function selectFormula(id, name) {
+      selectedFormula = formulas.find(f => f.id === id);
+      if (!selectedFormula) return;
+      selectedFormulaName.textContent = NAME_LABELS[name] || name;
+      paramsSection.classList.remove('hidden');
+      resultSection.classList.add('hidden');
+      loadProducts();
+    }
+
+    cancelBtn.addEventListener('click', () => {
+      selectedFormula = null;
+      paramsSection.classList.add('hidden');
+      resultSection.classList.add('hidden');
+    });
+
+    executeBtn.addEventListener('click', async () => {
+      if (!selectedFormula) return;
+      resultError.classList.add('hidden');
+      resultError.textContent = '';
+      resultContent.innerHTML = '';
+      executeBtn.disabled = true;
+      try {
+        await ensureCsrf();
+        const productId = productIdEl.value || undefined;
+        const periodDays = parseInt(periodDaysEl.value, 10) || 30;
+        const scope = scopeEl.value || 'all';
+        const body = JSON.stringify({
+          product_id: productId || undefined,
+          period_days: periodDays,
+          scope,
+        });
+        const r = await fetch(API_BASE + '/formulas/' + selectedFormula.id + '/execute', {
+          method: 'POST',
+          headers: headers(true),
+          body,
+          credentials: 'include',
+        });
+        const json = await r.json();
+        if (!json.success) throw new Error(json.error || 'Erreur exécution');
+        const d = json.data;
+        const displayVal = d.result == null && d.formula_name === 'jours_stock_restant' ? '∞' : (typeof d.result === 'object' ? JSON.stringify(d.result, null, 2) : String(d.result));
+        const val = escapeHtml(displayVal);
+        const unit = d.unit ? ` ${escapeHtml(d.unit)}` : '';
+        const copyVal = typeof d.result === 'object' ? JSON.stringify(d.result) : String(d.result);
+        resultContent.innerHTML = `
+          <div class="result-box">
+            <span class="value">${val}${unit}</span>
+            <button class="copy-btn" id="copyResultBtn">Copier</button>
+          </div>
+        `;
+        document.getElementById('copyResultBtn').addEventListener('click', () => {
+          navigator.clipboard.writeText(copyVal).then(() => alert('Copié !')).catch(() => {});
+        });
+        resultSection.classList.remove('hidden');
+      } catch (err) {
+        resultError.textContent = 'Erreur: ' + (err.message || err);
+        resultError.classList.remove('hidden');
+      } finally {
+        executeBtn.disabled = false;
+      }
+    });
+
+    document.getElementById('token').addEventListener('change', loadFormulas);
+    loadFormulas();
+  </script>
+</body>
+</html>

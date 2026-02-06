@@ -19,6 +19,7 @@ import productRoutes from './routes/product.routes';
 import locationRoutes from './routes/location.routes';
 import supplierRoutes from './routes/supplier.routes';
 import salesRoutes from './routes/sales.routes';
+import formulaRoutes from './routes/formula.routes';
 import { openApiDocument } from './openapi/spec';
 import type { HealthResponse } from '@bmad/shared';
 
@@ -72,6 +73,7 @@ app.use('/products', productRoutes);
 app.use('/locations', locationRoutes);
 app.use('/suppliers', supplierRoutes);
 app.use('/sales', salesRoutes);
+app.use('/formulas', formulaRoutes);
 
 // Story 2.2: Import stocks page
 app.get('/import-stocks', (_req, res) => {
@@ -96,6 +98,16 @@ app.get('/suppliers-page', (_req, res) => {
 // Story 3.1: Sales (ventes) page
 app.get('/sales-page', (_req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'sales.html'));
+});
+
+// Story 3.2: Import sales page
+app.get('/import-sales', (_req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'import-sales.html'));
+});
+
+// Story 3.3: Formulas (formules prédéfinies) page
+app.get('/formulas-page', (_req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'formulas.html'));
 });
 
 app.use(csrfErrorHandler);
