@@ -5,7 +5,8 @@ import { config } from '../config';
 const csrfOptions: csrf.CookieOptions = {
   httpOnly: true,
   secure: config.NODE_ENV === 'production',
-  sameSite: 'strict',
+  sameSite: config.NODE_ENV === 'production' ? 'strict' : 'lax',
+  path: '/',
 };
 
 export const csrfProtection = csrf({ cookie: csrfOptions });

@@ -3,7 +3,7 @@ stepsCompleted: [1, 2, 3]
 inputDocuments:
   - docs/prd.md
   - docs/architecture.md
-  - planning-artifacts/ux-design-specification.md
+  - docs/front-end-spec.md
 ---
 
 # bmad-stock-agent - Epic Breakdown
@@ -16,9 +16,9 @@ This document provides the complete epic and story breakdown for bmad-stock-agen
 
 ### Functional Requirements
 
-FR1: Le système doit permettre aux utilisateurs de créer, lire, mettre à jour et supprimer des stocks avec quantités, emplacements, et informations produits de base.
+FR1: Le système doit permettre aux utilisateurs de créer, lire, mettre à jour et supprimer des stocks avec quantités, emplacements, et informations produits de base. Le moteur doit gérer les **unités discrètes** (pièces, steaks, pains) et les **volumes** (cl, L ; fractions de bouteilles pour bars/clubs).
 
-FR2: Le système doit afficher une vision globale des stocks en temps réel dans un tableau de bord centralisé avec distinction visuelle par couleurs pour faciliter la lecture rapide.
+FR2: Le système doit afficher un **Dashboard de Rush "Traffic Light"** : interface ultra-lisible avec produits critiques en jauges Vert (OK) / Orange (à surveiller) / Rouge (rupture imminente), mise à jour 5 à 10 secondes, utilisable en cuisine et au bar (mobile/tablette, high-contrast).
 
 FR3: Le système doit calculer et afficher des estimations de temps de stock disponible pour chaque produit. Pour MVP, ces estimations peuvent être basiques (calcul simple consommation moyenne) et s'améliorer avec l'IA une fois disponible.
 
@@ -26,7 +26,7 @@ FR4: Le moteur IA doit analyser les données historiques de ventes (si disponibl
 
 FR5: Le moteur IA doit apprendre progressivement à partir des ventes quotidiennes même en l'absence de données historiques initiales, avec amélioration continue de la précision au fil du temps.
 
-FR6: Le moteur IA doit prédire les ruptures de stocks avec une précision cible de 85% après 3 mois d'apprentissage par entreprise. Le système doit afficher le niveau de confiance actuel des prédictions.
+FR6: Le moteur IA doit prédire les ruptures de stocks avec une précision cible de >90% après 2 semaines d'historique de ventes (cold start avec modèles de base). Le système doit afficher le niveau de confiance actuel des prédictions.
 
 FR7: Le système doit générer des recommandations de commande avec rapport explicatif détaillant pourquoi chaque commande est recommandée (tendance, stock actuel, prévision rupture).
 
@@ -60,7 +60,7 @@ FR21: Le système doit permettre la saisie manuelle des données de ventes (date
 
 FR22: Le système doit permettre l'import de données de ventes via fichier CSV avec validation et mapping des colonnes.
 
-FR23: Le système doit permettre l'intégration basique avec terminaux de paiement pour capture automatique des ventes (scope MVP limité aux intégrations principales).
+FR23: Le système doit fournir un **Connecteur Universel API (POS Sync)** : couche d'abstraction (Adapter Pattern) pour recevoir les flux de ventes en temps réel des logiciels de caisse (Lightspeed, L'Addition, Square) via webhooks/API, et traduire chaque commande validée en décrémentation de stock. Mode dégradé : saisie manuelle d'urgence si perte de synchro.
 
 FR24: Le système doit permettre l'import initial des stocks existants via fichier CSV ou Excel pour faciliter l'onboarding des nouveaux clients.
 
@@ -84,15 +84,23 @@ FR33: Le système doit fournir une interface de chat conversationnel avec agent 
 
 FR34: Le système doit permettre au chat IA de générer des recommandations de commande directement depuis la conversation lorsque l'IA détecte une rupture de stock imminente, avec possibilité de validation en un clic depuis le chat.
 
+FR35: Le système doit offrir un **Scan-to-Recipe** : à partir d'une photo de menu ou de carte, l'IA (vision + NLP) doit générer automatiquement des fiches techniques théoriques (plats/cocktails décomposés en ingrédients avec quantités suggérées). Validation humaine simple après le scan ; apprentissage par correction (feedback loop). Cible : ≥90% de reconnaissance des ingrédients dès le premier essai.
+
+FR36: Le système doit gérer un **moteur de stock hybride** : unités solides (pièces) et volumes liquides (cl, L), avec gestion des fractions de bouteilles (bars/nightlife) et des modificateurs de plats (cuisine). Décrémentation automatique à partir des ventes POS mappées aux recettes.
+
+FR37: Le système doit générer des **commandes prédictives de clôture** : en fin de service, panier de commande fournisseur proposé automatiquement à partir du stock théorique restant et des prédictions de vente du lendemain, avec validation en un clic par le gérant.
+
+FR38: Le système doit proposer un **module de déclaration de perte "Express"** (ex. 2 clics) pour enregistrer bouteilles cassées, verres offerts, pertes cuisine, et doit permettre l'analyse des écarts théorique/réel (détection d'anomalies / coulage) avec alertes sur écarts suspects.
+
 ### NonFunctional Requirements
 
-NFR1: Le système doit répondre aux requêtes de visualisation de stocks en moins de 2 secondes pour garantir une expérience utilisateur fluide.
+NFR1: Le système doit répondre aux requêtes de visualisation de stocks en moins de 2 secondes. En mode rush, le dashboard doit se mettre à jour en moins de 10 secondes après une vente en caisse (cible : <5 secondes).
 
 NFR2: Le système doit générer les prédictions IA en moins de 5 secondes pour maintenir l'engagement utilisateur.
 
 NFR3: Le système doit supporter un minimum de 100 utilisateurs simultanés sans dégradation de performance.
 
-NFR4: Le système doit garantir une disponibilité de 99% (uptime) pour MVP, avec plan d'amélioration vers 99.5% en V2 pour assurer l'accès continu aux données critiques de stocks.
+NFR4: Le système doit garantir une disponibilité de 99% (uptime) pour MVP, avec 99.9% pour le Connecteur Universel (dashboard de rush opérationnel pendant le service). Plan d'amélioration vers 99.5% global en V2.
 
 NFR5: Toutes les données de stocks doivent être chiffrées en transit (HTTPS) et au repos (encryption at rest) pour conformité sécurité.
 
@@ -110,7 +118,7 @@ NFR11: Le système doit être scalable horizontalement pour supporter la croissa
 
 NFR12: Le moteur IA doit être capable de fonctionner avec un minimum de données (cold start) en utilisant des modèles de base et apprentissage progressif.
 
-NFR13: Le système doit garantir la précision minimale de 85% des prédictions IA après 3 mois d'apprentissage par entreprise.
+NFR13: Le système doit garantir une précision minimale de 90% des prédictions de rupture après 2 semaines d'historique de ventes (cold start). Précision Scan-to-Recipe : ≥90% de reconnaissance des ingrédients dès le premier essai (objectif taux d'ajustement manuel des recettes vers <10%).
 
 NFR14: Le système doit gérer les erreurs gracieusement avec messages d'erreur clairs et possibilité de récupération sans perte de données.
 
@@ -124,11 +132,17 @@ NFR18: Le système doit maintenir un système de validation des prédictions IA 
 
 NFR19: Le système doit gérer les erreurs spécifiques à l'IA (fausses prédictions, modèles défaillants) avec mécanismes de correction manuelle et communication transparente aux utilisateurs.
 
+NFR20: Le système doit permettre un **onboarding complet** (connexion POS + scan carte/menu) en moins de 15 minutes pour un établissement standard (cible : 80% des utilisateurs).
+
+NFR21: Le système doit fournir un **mode dégradé** (saisie manuelle, offline-first) si la connectivité ou l'API POS est indisponible, sans perte de données.
+
 ### Additional Requirements
 
 #### Requirements from Architecture Document
 
-- **Projet Greenfield** : Aucun starter template ou projet existant. Le projet sera développé from scratch. Cela impacte Epic 1 Story 1 (Project Setup & Infrastructure Foundation).
+- **Projet Greenfield** : Aucun starter template ou projet existant (ou évolution monorepo). Stack recommandée : monorepo (Turborepo/Nx), API RESTful + Connecteur Universel (Adapter Pattern), Next.js/React + Tailwind, Node.js (TypeScript) ou FastAPI pour ML, PostgreSQL + Redis, Clerk/Auth0.
+- **Connecteur Universel POS** : Webhooks (Lightspeed, L'Addition, Square) pour réception ventes en temps réel ; traduction en décrémentation de stock ; schéma de données agnostique Orders ; alerte perte de synchro ; mode dégradé saisie manuelle. Uptime Connecteur 99.9%.
+- **Temps réel** : WebSockets (ou Socket.io) pour mise à jour du Dashboard de Rush sans rafraîchissement ; Redis pour état stock "live" pendant le rush (latence <100 ms).
 - **Architecture Microservices Modulaire** : Services séparés pour API Gateway, Service Stocks, Service IA/ML, Service Commandes, Service Factures, Service Analytics. Communication via APIs RESTful avec possibilité d'ajout de message queue pour tâches asynchrones (entraînement IA).
 - **Infrastructure Cloud** : Google Cloud Platform (GCP) recommandé avec Cloud Run pour déploiement containerisé, Vertex AI pour ML, Cloud SQL (PostgreSQL), InfluxDB/TimescaleDB pour time-series.
 - **Containerisation Docker** : Tous les services doivent être containerisés avec Docker pour reproductibilité et maintenance long terme. Docker Compose pour développement local.
@@ -157,15 +171,16 @@ NFR19: Le système doit gérer les erreurs spécifiques à l'IA (fausses prédic
 - **Progressive Disclosure Mobile** : Masquer la complexité sur mobile, exposer seulement l'essentiel pour une utilisation rapide.
 - **Actions Rapides Mobile** : Permettre des actions critiques depuis mobile (validation commande, consultation stocks, réception notifications).
 - **Synchronisation Temps Réel** : Garantir la cohérence des données entre desktop et mobile pour une expérience fluide multi-utilisateurs.
+- **Flowstock / Rush** : Dashboard de Rush "Traffic Light" comme premier écran ; jauges Vert/Orange/Rouge ; Mobile-First (tablette, smartphone) ; design High-Contrast (cuisine, bars) ; contraste ≥ 4,5:1 ; cibles tactiles ≥ 44 px ; onboarding <15 min (connexion POS + Scan-to-Recipe) ; déclaration de perte en 2 clics.
 
 ### FR Coverage Map
 
-FR1: Epic 2 - CRUD stocks de base
-FR2: Epic 4 - Dashboard principal avec vue globale
+FR1: Epic 3 - CRUD stocks + moteur hybride (unités/volumes)
+FR2: Epic 4 - Dashboard de Rush Traffic Light
 FR3: Epic 3 - Estimations basiques temps de stock
-FR4: Epic 5 - Analyse tendances IA
-FR5: Epic 5 - Apprentissage progressif IA
-FR6: Epic 5 - Prédiction ruptures avec précision 85%
+FR4: Epic 6 - Analyse tendances IA
+FR5: Epic 6 - Apprentissage progressif IA
+FR6: Epic 6 - Prédiction ruptures >90% (2 semaines)
 FR7: Epic 6 - Recommandations commande avec explications
 FR8: Epic 6 - Limites décision IA par défaut
 FR9: Epic 6 - Modes commande (auto/validation)
@@ -177,14 +192,14 @@ FR14: Epic 4 - Courbes de prévision
 FR15: Epic 4 - Alertes visuelles
 FR16: Epic 4 - Statistiques essentielles
 FR17: *(Retiré de MVP)*
-FR18: Epic 2 - Historique mouvements stocks
+FR18: Epic 3 - Historique mouvements stocks
 FR19: Epic 1 - Authentification sécurisée
-FR20: Epic 5 - Réentraînement automatique quotidien
+FR20: Epic 6 - Réentraînement automatique quotidien
 FR21: Epic 3 - Saisie manuelle ventes
 FR22: Epic 3 - Import CSV ventes
-FR23: Epic 3 - Intégration terminaux paiement
-FR24: Epic 2 - Import initial stocks
-FR25: Epic 2 - Gestion fournisseurs
+FR23: Epic 2 - Connecteur Universel POS Sync (webhooks, Adapter, décrémentation temps réel)
+FR24: Epic 3 - Import initial stocks
+FR25: Epic 3 - Gestion fournisseurs
 FR26: Epic 7 - Saisie manuelle facture (fallback)
 FR27: Epic 3 - Formules prédéfinies
 FR28: Epic 3 - Formules personnalisées
@@ -194,8 +209,46 @@ FR31: Epic 1 - Restriction fonctionnalités par niveau
 FR32: Epic 1 - Gestion abonnements (souscription/upgrade/downgrade)
 FR33: Epic 4 - Chat IA conversationnel avec mémoire contextuelle
 FR34: Epic 6 - Génération commandes depuis chat IA
+FR35: Epic 5 - Scan-to-Recipe (photo menu/carte → fiches techniques IA)
+FR36: Epic 3 - Moteur hybride (unités + volumes, fractions bouteilles, décrémentation POS)
+FR37: Epic 6 - Commandes prédictives de clôture (panier fin de service, validation 1 clic)
+FR38: Epic 8 - Anti-Coulage & déclaration de perte express (2 clics), alertes anomalies
 
 ## Epic List
+
+### Epic 1: Foundation & Infrastructure
+Permettre aux utilisateurs de s'inscrire, se connecter et gérer leur abonnement (Normal / Premium / Premium Plus), établissant les fondations techniques et l'authentification multi-tenant (Clerk/Auth0).
+**FRs couverts :** FR19, FR30, FR31, FR32
+
+### Epic 2: Connecteur Universel API (POS Sync) — Must-Have #1
+Permettre la réception des ventes en temps réel depuis les caisses (Lightspeed, L'Addition, Square) via webhooks et la décrémentation automatique du stock sans saisie manuelle ; mode dégradé si perte de synchro.
+**FRs couverts :** FR23
+
+### Epic 3: Gestion Stocks de Base & Moteur Hybride
+Permettre la gestion complète des stocks (CRUD), des unités et des volumes (liquides, fractions de bouteilles), l'historique des mouvements, l'import initial, les fournisseurs, la saisie/import des ventes et les formules de calcul (prédéfinies et personnalisées).
+**FRs couverts :** FR1, FR3, FR18, FR21, FR22, FR24, FR25, FR27, FR28, FR29, FR36
+
+### Epic 4: Dashboard de Rush "Traffic Light"
+Permettre une vision ultra-lisible des produits critiques (jauges Vert/Orange/Rouge), mise à jour en temps réel (5–10 s), courbes de prévision, alertes, statistiques et chat IA contextuel ; mobile-first, high-contrast.
+**FRs couverts :** FR2, FR14, FR15, FR16, FR33
+
+### Epic 5: Scan-to-Recipe (IA Vision/NLP)
+Permettre de générer des fiches techniques à partir d'une photo de menu ou de carte (IA vision + NLP), avec validation humaine et feedback loop ; cible ≥90 % de reconnaissance des ingrédients.
+**FRs couverts :** FR35
+
+### Epic 6: Moteur IA Prédictif & Commandes de Clôture
+Permettre les prédictions de rupture (>90 % après 2 semaines), les recommandations de commande avec explications, la validation en 1 clic, les commandes prédictives de clôture (panier fin de service) et la génération de commandes depuis le chat IA.
+**FRs couverts :** FR4, FR5, FR6, FR7, FR8, FR9, FR20, FR34, FR37
+
+### Epic 7: Photo Facture IA & Réconciliation
+Permettre l'upload de photos de factures, l'extraction IA, la vérification vs commande, l'intégration automatique en base et la saisie manuelle en fallback.
+**FRs couverts :** FR10, FR11, FR12, FR13, FR26
+
+### Epic 8: Anti-Coulage & Déclaration de perte
+Permettre la déclaration de perte express (2 clics), l'analyse des écarts théorique/réel et les alertes sur anomalies (bars/clubs).
+**FRs couverts :** FR38
+
+---
 
 ## Epic 1: Foundation & Infrastructure
 
@@ -280,15 +333,104 @@ so that **les fonctionnalités sont correctement restreintes selon le plan de l'
 
 ---
 
-## Epic 2: Gestion Stocks de Base
+## Epic 2: Connecteur Universel API (POS Sync)
 
-Permettre aux utilisateurs de gérer leur inventaire (créer, modifier, supprimer des stocks), importer leurs stocks existants, gérer les fournisseurs et consulter l'historique des mouvements.
+Permettre la réception des ventes en temps réel depuis les caisses (Lightspeed, L'Addition, Square) via webhooks et la décrémentation automatique du stock sans saisie manuelle ; mode dégradé si perte de synchro.
 
-**FRs couverts:** FR1, FR18, FR24, FR25
+**FRs couverts:** FR23
+
+### Story 2.1: Endpoint Webhook POS & validation des payloads
+
+As a **système POS (Lightspeed, L'Addition, Square)**,
+I want **envoyer les événements de vente à une URL webhook sécurisée**,
+so that **Flowstock reçoit les ventes en temps réel sans polling**.
+
+**Acceptance Criteria:**
+
+**Given** le connecteur POS est configuré pour un tenant  
+**When** une vente est enregistrée en caisse  
+**Then** le POS envoie un POST vers l'endpoint webhook Flowstock (configurable par tenant)  
+**And** l'endpoint valide la signature / token selon le type de POS  
+**And** le payload est validé (champs obligatoires : id externe, ligne(s) de vente, date/heure)  
+**And** en cas de succès, l'API retourne 200 pour éviter les retries inutiles  
+**And** les requêtes sont idempotentes (même id externe = pas de double décrémentation)  
+**And** les erreurs 4xx/5xx sont loguées avec tenant_id pour diagnostic
+
+### Story 2.2: Décrémentation automatique du stock à partir d'un événement vente
+
+As a **restaurateur**,
+I want **que chaque vente enregistrée en caisse décrémente automatiquement mon stock**,
+so that **je n'ai pas à saisir manuellement les sorties**.
+
+**Acceptance Criteria:**
+
+**Given** un événement vente validé (Story 2.1) et un mapping produit POS → produit Flowstock  
+**When** le service traite l'événement  
+**Then** les quantités vendues sont déduites des stocks concernés (unités et/ou volumes)  
+**And** un mouvement de type "vente POS" est enregistré dans l'historique (FR18)  
+**And** les produits non mappés sont listés dans un rapport ou alerte (pas de silencieux drop)  
+**And** la cohérence multi-tenant est garantie (isolation par tenant_id)  
+**And** en cas d'erreur (stock insuffisant, produit inconnu), l'événement est mis en file pour retry ou manuel
+
+### Story 2.3: Adapteur POS — Lightspeed
+
+As a **utilisateur ayant des caisses Lightspeed**,
+I want **connecter mon compte Lightspeed à Flowstock**,
+so that **mes ventes sont synchronisées automatiquement**.
+
+**Acceptance Criteria:**
+
+**Given** un tenant avec abonnement incluant le connecteur POS  
+**When** l'utilisateur configure la connexion Lightspeed (clé API / webhook)  
+**Then** l'adapteur transforme les payloads Lightspeed en événements internes (Adapter Pattern)  
+**And** le mapping catalogue Lightspeed → produits Flowstock est configurable (écran ou import)  
+**And** les ventes sont traitées en temps réel après réception du webhook  
+**And** la documentation des champs mappés et des limites (rate, format) est disponible
+
+### Story 2.4: Adapteurs POS — L'Addition & Square
+
+As a **utilisateur ayant des caisses L'Addition ou Square**,
+I want **connecter ma caisse à Flowstock**,
+so that **mes ventes sont synchronisées sans saisie manuelle**.
+
+**Acceptance Criteria:**
+
+**Given** un tenant ayant choisi L'Addition ou Square  
+**When** l'utilisateur configure la connexion (webhook / API selon fournisseur)  
+**Then** un adapteur dédié transforme les payloads en événements internes (même format que Story 2.2)  
+**And** le mapping produits POS → Flowstock est configurable  
+**And** le comportement (décrémentation, idempotence) est identique à Lightspeed  
+**And** les deux connecteurs peuvent coexister (même code métier, adapters différents)
+
+### Story 2.5: Mode dégradé et alertes perte de synchro
+
+As a **restaurateur**,
+I want **être alerté si la synchro POS est perdue et pouvoir basculer en saisie manuelle**,
+so that **je ne perds pas la traçabilité en cas de panne**.
+
+**Acceptance Criteria:**
+
+**Given** un connecteur POS actif pour le tenant  
+**When** aucun événement n'est reçu pendant une durée configurée (ex. 15 min) ou les webhooks renvoient des erreurs  
+**Then** le système passe en mode dégradé (indicateur visible sur le Dashboard)  
+**And** l'utilisateur est notifié (alerte in-app ou optionnellement email)  
+**And** la saisie manuelle des ventes reste disponible (FR21) pour continuer à mettre à jour le stock  
+**And** lorsque les webhooks reprennent, le mode dégradé est levé et l'utilisateur est informé  
+**And** les métriques (dernier événement reçu, nombre d'échecs) sont exposées pour le support
+
+---
+
+## Epic 3: Gestion Stocks de Base & Moteur Hybride
+
+Permettre la gestion complète des stocks (CRUD), des unités et des volumes (liquides, fractions de bouteilles), l'historique des mouvements, l'import initial, les fournisseurs, la saisie/import des ventes et les formules de calcul (prédéfinies et personnalisées).
+
+**FRs couverts:** FR1, FR3, FR18, FR21, FR22, FR24, FR25, FR27, FR28, FR29, FR36
 
 **Valeur utilisateur:** Remplacement d'Excel avec gestion complète des stocks, import initial pour faciliter l'onboarding, et traçabilité complète via l'historique.
 
-### Story 2.1: CRUD Stocks de Base
+**Valeur utilisateur:** Remplacement d'Excel avec gestion complète des stocks, import initial pour faciliter l'onboarding, et traçabilité complète via l'historique.
+
+### Story 3.1: CRUD Stocks de Base
 
 As a **gérant de PME**,  
 I want **créer, voir, modifier et supprimer mes stocks**,  
@@ -313,7 +455,7 @@ so that **je peux gérer mon inventaire de base**.
 **And** les erreurs sont gérées gracieusement (produit inexistant, validation échouée)  
 **And** les tests unitaires et integration pour CRUD sont passants
 
-### Story 2.2: Import Initial Stocks (Onboarding)
+### Story 3.2: Import Initial Stocks (Onboarding)
 
 As a **nouvel utilisateur**,  
 I want **importer mes stocks existants depuis Excel/CSV**,  
@@ -332,7 +474,7 @@ so that **je n'ai pas à tout saisir manuellement au démarrage**.
 **And** un rapport d'import est généré (succès, erreurs, lignes ignorées)  
 **And** un template CSV/Excel est fourni en téléchargement
 
-### Story 2.3: Gestion Emplacements
+### Story 3.3: Gestion Emplacements
 
 As a **gérant de PME**,  
 I want **associer mes stocks à des emplacements (entrepôts, magasins)**,  
@@ -351,7 +493,7 @@ so that **je peux gérer des stocks multi-emplacements**.
 **And** je peux filtrer les stocks par emplacement dans l'interface  
 **And** le système supporte les multi-emplacements (un produit peut avoir des quantités dans plusieurs emplacements)
 
-### Story 2.4: Historique Mouvements Stocks
+### Story 3.4: Historique Mouvements Stocks
 
 As a **gérant de PME**,  
 I want **voir l'historique des mouvements de mes stocks**,  
@@ -369,7 +511,7 @@ so that **je peux tracer toutes les modifications et comprendre l'évolution**.
 **And** l'historique est limité selon le niveau d'abonnement (30 jours Normal, 90 jours Premium, illimité Premium Plus)  
 **And** je peux exporter l'historique en CSV (selon niveau abonnement)
 
-### Story 2.5: Gestion Fournisseurs
+### Story 3.5: Gestion Fournisseurs
 
 As a **gérant de PME**,  
 I want **créer et gérer mes fournisseurs**,  
@@ -389,7 +531,7 @@ so that **je peux les associer à mes produits et commandes**.
 
 ---
 
-## Epic 3: Capture Données Ventes & Calculs Personnalisables
+### Suite Epic 3 — Capture Données Ventes & Formules
 
 Permettre aux utilisateurs de capturer leurs données de ventes (manuelle, CSV, terminaux), utiliser des formules de calcul prédéfinies ou créer leurs propres formules, et obtenir des estimations basiques de temps de stock.
 
@@ -397,7 +539,7 @@ Permettre aux utilisateurs de capturer leurs données de ventes (manuelle, CSV, 
 
 **Valeur utilisateur:** Alimentation du système avec données de ventes et calculs personnalisables pour répondre aux besoins spécifiques de chaque PME, avec estimations basiques même sans IA.
 
-### Story 3.1: Saisie Manuelle Ventes
+### Story 3.6: Saisie Manuelle Ventes
 
 As a **gérant de PME**,  
 I want **saisir manuellement mes ventes quotidiennes**,  
@@ -414,7 +556,7 @@ so that **je peux alimenter le système avec mes données de ventes**.
 **And** le calcul automatique des ventes totales par jour/produit fonctionne  
 **And** les tests unitaires pour la logique de saisie sont passants
 
-### Story 3.2: Import CSV Ventes
+### Story 3.7: Import CSV Ventes
 
 As a **gérant de PME**,  
 I want **importer mes ventes depuis un fichier CSV**,  
@@ -433,7 +575,7 @@ so that **je peux importer mes données historiques ou mes exports d'autres syst
 **And** un rapport d'import est généré (succès, erreurs)  
 **And** un template CSV est fourni en téléchargement
 
-### Story 3.3: Formules Prédéfinies
+### Story 3.8: Formules Prédéfinies
 
 As a **gérant de PME**,  
 I want **utiliser des formules de calcul prédéfinies communes**,  
@@ -451,7 +593,7 @@ so that **je peux faire des calculs standards sans avoir à les créer**.
 **And** la documentation de chaque formule est disponible  
 **And** les tests unitaires pour chaque formule sont passants
 
-### Story 3.4: Saisie Manuelle Formules Personnalisées
+### Story 3.9: Saisie Manuelle Formules Personnalisées
 
 As a **gérant de PME**,  
 I want **créer mes propres formules de calcul personnalisées**,  
@@ -472,7 +614,7 @@ so that **je peux répondre à mes besoins spécifiques comme dans Excel**.
 **And** la bibliothèque de formules sauvegardées est accessible  
 **And** les tests unitaires pour le parser et évaluateur de formules sont passants
 
-### Story 3.5: Calculs Basiques Temps Stock (Sans IA)
+### Story 3.10: Calculs Basiques Temps Stock (Sans IA)
 
 As a **gérant de PME**,  
 I want **voir une estimation basique du temps de stock disponible**,  
@@ -490,7 +632,7 @@ so that **je peux avoir une idée même sans IA encore calibrée**.
 
 ---
 
-## Epic 4: Interface Visuelle & Dashboard avec Chat IA
+## Epic 4: Dashboard de Rush "Traffic Light"
 
 Permettre aux utilisateurs d'accéder rapidement aux informations sur leurs stocks via un chat IA conversationnel, visualiser un dashboard avec vue d'ensemble, consulter des courbes de prévision, recevoir des alertes visuelles et voir des statistiques essentielles.
 
@@ -588,15 +730,68 @@ so that **je peux comprendre mes tendances basiques**.
 
 ---
 
-## Epic 5: Moteur IA de Prédictions
+## Epic 5: Scan-to-Recipe (IA Vision/NLP)
 
-Permettre aux utilisateurs Premium/Premium Plus de recevoir des prédictions précises de rupture de stocks basées sur l'analyse IA des tendances, avec apprentissage progressif et réentraînement automatique.
+Permettre de générer des fiches techniques à partir d'une photo de menu ou de carte (IA vision + NLP), avec validation humaine et feedback loop ; cible ≥90 % de reconnaissance des ingrédients.
 
-**FRs couverts:** FR4, FR5, FR6, FR20
+**FRs couverts:** FR35
+
+### Story 5.1: Upload photo menu/carte et extraction IA (vision + NLP)
+
+As a **chef ou gérant**,
+I want **prendre en photo un menu ou une carte et obtenir une proposition de fiche technique**,
+so that **je gagne du temps sur la création des fiches et réduis les oublis d'ingrédients**.
+
+**Acceptance Criteria:**
+
+**Given** je suis authentifié (niveau incluant Scan-to-Recipe)  
+**When** j'upload une photo de menu ou de carte (format image accepté)  
+**Then** le système envoie l'image au service IA (vision + NLP)  
+**And** une liste d'items reconnus (plats, boissons) avec ingrédients proposés est retournée  
+**And** chaque item affiche un niveau de confiance (ex. pourcentage)  
+**And** je peux corriger ou compléter les ingrédients avant validation  
+**And** les erreurs courantes (OCR, langue) sont documentées et si possible limitées par heuristiques
+
+### Story 5.2: Validation humaine et enregistrement fiche technique
+
+As a **chef**,
+I want **valider ou modifier la fiche technique proposée puis l'enregistrer**,
+so that **mes fiches sont exactes et reliées à mon catalogue**.
+
+**Acceptance Criteria:**
+
+**Given** une proposition de fiche technique (Story 5.1)  
+**When** je valide ou modifie les champs (nom plat, ingrédients, quantités, unités)  
+**Then** la fiche technique est enregistrée et reliée au produit/catalogue du tenant  
+**And** je peux associer la fiche à un produit existant ou en créer un nouveau  
+**And** l'historique des versions (optionnel) est tracé pour audit  
+**And** après enregistrement, la fiche est utilisable pour les calculs de décrementation (moteur hybride)
+
+### Story 5.3: Feedback loop et amélioration du modèle
+
+As a **système**,
+I want **collecter les corrections utilisateur sur les fiches générées**,
+so that **le modèle IA s'améliore (reconnaissance ingrédients ≥90 %)**.
+
+**Acceptance Criteria:**
+
+**Given** un utilisateur a modifié une fiche technique générée par l'IA  
+**When** les différences (ajouts/suppressions/corrections) sont enregistrées de façon anonymisée et agrégée  
+**Then** ces données alimentent un pipeline de réentraînement ou fine-tuning (batch)  
+**And** les métriques de reconnaissance (précision, rappel par catégorie) sont suivies  
+**And** la cible ≥90 % de reconnaissance des ingrédients est mesurée et documentée
+
+---
+
+## Epic 6: Moteur IA Prédictif & Commandes de Clôture
+
+Permettre les prédictions de rupture (>90 % après 2 semaines), les recommandations de commande avec explications, la validation en 1 clic, les commandes prédictives de clôture (panier fin de service) et la génération de commandes depuis le chat IA.
+
+**FRs couverts:** FR4, FR5, FR6, FR7, FR8, FR9, FR20, FR34, FR37
 
 **Valeur utilisateur:** Différenciation principale du produit avec prédictions IA précises pour anticiper les ruptures et optimiser les stocks, cœur de la valeur du produit.
 
-### Story 5.1: Infrastructure ML & Modèles de Base
+### Story 6.1: Infrastructure ML & Modèles de Base
 
 As a **système**,  
 I want **une infrastructure ML opérationnelle avec modèles de base**,  
@@ -613,7 +808,7 @@ so that **l'IA peut fonctionner même sans données historiques (cold start)**.
 **And** le monitoring infrastructure ML fonctionne (ressources, latence)  
 **And** la documentation architecture ML est créée
 
-### Story 5.2: Analyse Tendances & Apprentissage Progressif
+### Story 6.2: Analyse Tendances & Apprentissage Progressif
 
 As a **système**,  
 I want **analyser les tendances de consommation à partir des données de ventes**,  
@@ -630,7 +825,7 @@ so that **je peux comprendre les patterns et améliorer les prédictions**.
 **And** l'amélioration précision au fil du temps fonctionne  
 **And** les logs apprentissage pour debugging sont disponibles
 
-### Story 5.3: Prédiction Ruptures Stocks
+### Story 6.3: Prédiction Ruptures Stocks
 
 As a **gérant de PME Premium/Premium Plus**,  
 I want **recevoir des prédictions de rupture de stocks**,  
@@ -648,7 +843,7 @@ so that **je peux anticiper les problèmes et commander à temps**.
 **And** un indicateur visuel s'affiche si prédiction non fiable (pas assez de données)  
 **And** les tests validation précision prédictions sont passants
 
-### Story 5.4: Réentraînement Automatique Quotidien
+### Story 6.4: Réentraînement Automatique Quotidien
 
 As a **système**,  
 I want **réentraîner automatiquement les modèles IA quotidiennement**,  
@@ -665,7 +860,7 @@ so that **les prédictions s'améliorent continuellement avec les nouvelles donn
 **And** le monitoring coûts infrastructure ML fonctionne  
 **And** le batch processing pour optimiser ressources fonctionne
 
-### Story 5.5: Monitoring Performance IA
+### Story 6.5: Monitoring Performance IA
 
 As a **administrateur**,  
 I want **monitorer la performance de l'IA**,  
@@ -685,15 +880,11 @@ so that **je peux garantir la qualité des prédictions et détecter les problè
 
 ---
 
-## Epic 6: Système de Commandes Intelligentes
+### Suite Epic 6 — Commandes intelligentes & clôture
 
-Permettre aux utilisateurs Premium/Premium Plus de recevoir des recommandations de commande intelligentes avec explications détaillées, valider les commandes en un clic, et gérer l'autonomie graduelle de l'IA.
+**FRs couverts (suite):** FR7, FR8, FR9, FR34, FR37
 
-**FRs couverts:** FR7, FR8, FR9, FR34 + Exigences UX (réapprovisionnement transparent)
-
-**Valeur utilisateur:** Automatisation intelligente des commandes avec transparence totale et contrôle utilisateur, réduisant le temps passé sur la gestion des commandes.
-
-### Story 6.1: Génération Recommandations Commande
+### Story 6.6: Génération Recommandations Commande
 
 As a **gérant de PME Premium/Premium Plus**,  
 I want **recevoir des recommandations de commande avec explications**,  
@@ -711,7 +902,7 @@ so that **je comprends pourquoi commander et je peux prendre des décisions écl
 **And** les filtres recommandations fonctionnent (produit, fournisseur, urgence)  
 **And** les explications détaillées incluent cause/explication rupture, prix, quantité, fournisseur, date estimée arrivée, pourcentage fiabilité
 
-### Story 6.2: Validation Commande en Un Clic
+### Story 6.7: Validation Commande en Un Clic
 
 As a **gérant de PME Premium/Premium Plus**,  
 I want **valider une commande recommandée en un clic**,  
@@ -729,7 +920,7 @@ so that **je peux commander rapidement sans ressaisir les informations**.
 **And** la commande est enregistrée en base de données  
 **And** l'historique commandes est disponible
 
-### Story 6.3: Gestion Autonomie IA (Limites par Défaut)
+### Story 6.8: Gestion Autonomie IA (Limites par Défaut)
 
 As a **système**,  
 I want **appliquer des limites de décision par défaut pour l'IA**,  
@@ -746,7 +937,7 @@ so that **les commandes automatiques sont contrôlées et sécurisées**.
 **And** un message explicatif s'affiche si recommandation bloquée  
 **And** les logs toutes les décisions IA sont enregistrés (recommandations générées, bloquées, validées)
 
-### Story 6.4: Progression Autonomie Graduelle (Premium Plus)
+### Story 6.9: Progression Autonomie Graduelle (Premium Plus)
 
 As a **gérant de PME Premium Plus**,  
 I want **activer les commandes automatiques après calibration IA**,  
@@ -764,7 +955,7 @@ so that **je peux automatiser complètement mes commandes une fois que j'ai conf
 **And** je peux désactiver automatisation à tout moment  
 **And** les logs détaillés commandes automatiques sont disponibles
 
-### Story 6.5: Intégration Chat IA avec Génération Commandes
+### Story 6.10: Intégration Chat IA avec Génération Commandes
 
 As a **gérant de PME Premium/Premium Plus**,  
 I want **générer des recommandations de commande directement depuis le chat IA**,  
@@ -880,3 +1071,48 @@ so that **je ne suis pas bloqué si la photo est illisible**.
 **And** je peux choisir saisie manuelle même si extraction réussie  
 **And** un message clair explique pourquoi extraction a échoué (si applicable)  
 **And** le workflow photo facture est fluide : récapitulatif après chaque photo, possibilité modifier si erreur détectée, ne s'ajoute pas automatiquement (demande autorisation), plusieurs photos possibles mais pas de répétition d'articles
+
+---
+
+## Epic 8: Anti-Coulage & Déclaration de perte
+
+Permettre la déclaration de perte express (2 clics), l'analyse des écarts théorique/réel et les alertes sur anomalies (bars/clubs).
+
+**FRs couverts:** FR38
+
+### Story 8.1: Déclaration de perte express (2 clics)
+
+As a **restaurateur ou barman**,
+I want **déclarer une perte (coulage, casse, erreur) en très peu de clics**,
+so that **je garde une traçabilité sans perdre de temps en rush**.
+
+**Acceptance Criteria:**
+
+**Given** je suis authentifié et un produit a une perte à déclarer  
+**When** j'ouvre l'écran (ou le widget) de déclaration de perte  
+**Then** je peux sélectionner le produit (autocomplete ou liste courte) en 1 clic  
+**And** je peux saisir la quantité perdue (et optionnellement la raison : coulage, casse, autre) en 1 clic ou 2  
+**And** la perte est enregistrée et le stock est mis à jour immédiatement  
+**And** un mouvement "perte" est visible dans l'historique (FR18)  
+**And** le flux est utilisable sur mobile/tablette (cibles tactiles ≥ 44 px, NFR/UX)
+
+### Story 8.2: Analyse des écarts théorique vs réel et alertes anomalies
+
+As a **gérant ou responsable bar**,
+I want **voir les écarts entre stock théorique (calculé) et stock réel (inventaire / pertes)**,
+so that **je détecte les anomalies (vol, erreurs répétées) et peux agir**.
+
+**Acceptance Criteria:**
+
+**Given** des mouvements (ventes POS, pertes déclarées, réceptions) sont enregistrés  
+**When** le système calcule le stock théorique (entrées − sorties − pertes)  
+**Then** une vue ou rapport "écarts théorique / réel" est disponible (par produit ou global)  
+**And** les alertes sont déclenchées lorsque l'écart dépasse un seuil configurable (ex. % ou valeur)  
+**And** les alertes sont visibles sur le Dashboard (badge ou section dédiée) et optionnellement par notification  
+**And** l'historique des écarts et alertes est consultable pour audit
+
+---
+
+## (Post-MVP) Épics optionnels
+
+Les épics suivants (ex. Professionalisation UI/UX Tailwind, Migration Next.js) restent dans le backlog pour une phase post–Rush Edition. Les exigences UX (front-end-spec) et NFR restent référencées dans l'inventaire et la FR Coverage Map.

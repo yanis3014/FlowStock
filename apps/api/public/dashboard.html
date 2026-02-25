@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - bmad-stock-agent</title>
+  <link rel="stylesheet" href="/css/design-system.css">
+  <script src="/api-client.js"></script>
+</head>
+<body>
+  <div id="layout-nav"></div>
+  <div id="layout-header"></div>
+  <main class="page-container" data-page-title="Dashboard">
+  <!-- Story 8.1 Tailwind: validation charte (bg-primary #3b82f6) — retirer en 8.5 si souhaité -->
+  <div class="bg-primary text-white p-4 rounded-lg mb-4 text-sm" role="status" aria-live="polite">Tailwind charte OK — primary #3b82f6</div>
+  <input type="text" id="tokenInput" class="mb-4 p-2 w-full max-w-md border border-gray-300 rounded-md" placeholder="Token JWT (ou laissez vide si déjà connecté)" />
+  <a href="/login-page" class="ml-2 text-primary text-sm font-medium hover:underline">Se connecter</a>
+  
+  <div id="errorContainer"></div>
+  <div id="loadingContainer" class="text-center py-8 text-gray-500">Chargement des données...</div>
+  
+  <div id="dashboardContent" class="hidden">
+    <!-- Statistics Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div class="rounded-lg border border-gray-200 bg-white shadow p-5 border-l-4 border-l-success">
+        <div class="text-sm text-gray-500 mb-2">Ventes hier</div>
+        <div class="text-2xl font-semibold text-gray-800" id="salesAmount">-</div>
+        <div class="text-sm mt-1" id="salesChange"></div>
+        <div class="text-sm text-gray-500 mt-2">Transactions: <span id="salesCount">-</span></div>
+      </div>
+      <div class="rounded-lg border border-gray-200 bg-white shadow p-5 border-l-4 border-l-primary">
+        <div class="text-sm text-gray-500 mb-2">Stock total</div>
+        <div class="text-2xl font-semibold text-gray-800" id="stockValue">-</div>
+        <div class="text-sm text-gray-500 mt-2">Produits: <span id="productCount">-</span></div>
+      </div>
+      <div class="rounded-lg border border-gray-200 bg-white shadow p-5 border-l-4 border-l-error">
+        <div class="text-sm text-gray-500 mb-2">Alertes</div>
+        <div class="text-2xl font-semibold text-gray-800" id="alertCount">-</div>
+        <div class="text-sm text-gray-500 mt-2">Faible: <span id="lowStockCount">-</span> | Critique: <span id="criticalStockCount">-</span></div>
+      </div>
+      <div class="rounded-lg border border-gray-200 bg-white shadow p-5 border-l-4 border-l-warning">
+        <div class="text-sm text-gray-500 mb-2">Actions recommandées</div>
+        <div class="text-2xl font-semibold text-gray-800" id="pendingOrders">-</div>
+        <div class="text-sm text-gray-500 mt-2">Commandes en attente</div>
+      </div>
+    </div>
+    
+    <!-- Alerts Section -->
+    <div class="rounded-lg border border-gray-200 bg-white shadow p-5 my-6">
+      <div class="flex flex-wrap justify-between items-center gap-4 mb-4">
+        <div class="text-xl font-semibold text-gray-800">Alertes récentes</div>
+        <div class="flex flex-wrap gap-2 items-center">
+          <label class="flex items-center gap-2 text-sm text-gray-500 cursor-pointer">
+            <input type="checkbox" id="notificationsEnabled" checked />
+            <span>Notifications alertes critiques</span>
+          </label>
+          <div id="alertsFilters" class="flex gap-2 flex-wrap"></div>
+          <div class="flex gap-2 items-center text-sm">
+            <label for="alertThreshold" class="text-gray-500">Seuil:</label>
+            <input type="number" id="alertThreshold" min="50" max="500" step="10" class="w-20 px-2 py-1 border border-gray-300 rounded text-sm" />
+            <span class="text-gray-500">%</span>
+            <button type="button" onclick="updateAlertThreshold()" class="px-4 py-2 min-h-[44px] sm:min-h-0 bg-primary text-white border-0 rounded cursor-pointer text-sm font-medium hover:opacity-90">
+              Mettre à jour
+            </button>
+          </div>
+        </div>
+      </div>
+      <ul class="list-none p-0 m-0" id="alertsList"></ul>
+      <p id="alertsLimitNote" class="hidden text-sm text-gray-500 mt-2"></p>
+      <div id="noAlerts" class="hidden text-center py-8 text-gray-500">✅ Aucune alerte pour le moment</div>
+      <div id="alertsFooter" class="mt-2 text-sm text-gray-500"></div>
+    </div>
+    
+    <!-- Recommended Actions Section -->
+    <div class="rounded-lg border border-gray-200 bg-white shadow p-5 my-6">
+      <div class="text-xl font-semibold text-gray-800 mb-4">Actions recommandées</div>
+      <ul class="list-none p-0 m-0" id="actionsList"></ul>
+      <div id="noActions" class="hidden text-center py-8 text-gray-500">Aucune action recommandée</div>
+    </div>
+    
+    <!-- Products Overview Section -->
+    <div class="rounded-lg border border-gray-200 bg-white shadow p-5 my-6">
+      <div class="text-xl font-semibold text-gray-800 mb-4">Vue d'ensemble des stocks</div>
+      <div class="mb-4">
+        <a href="/forecast-page" class="text-primary font-medium hover:underline">📊 Courbes de prévision</a>
+        <span class="mx-2">·</span>
+        <a href="/stats-page" class="text-primary font-medium hover:underline">📈 Statistiques</a>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4" id="productsGrid"></div>
+      <div id="noProducts" class="hidden text-center py-8 text-gray-500">Aucun produit trouvé</div>
+    </div>
+  </div>
+  </main>
+
+  <script>
+    'use strict';
+    
+    let dashboardData = null;
+    let productsData = [];
+    
+    function getToken() {
+      const input = document.getElementById('tokenInput');
+      if (input && input.value.trim()) {
+        return input.value.trim();
+      }
+      return localStorage.getItem('bmad_jwt_token') || '';
+    }
+    
+    function setToken(token) {
+      if (token) {
+        localStorage.setItem('bmad_jwt_token', token);
+        const input = document.getElementById('tokenInput');
+        if (input) input.value = token;
+      }
+    }
+    
+    function showError(msg) {
+      const container = document.getElementById('errorContainer');
+      if (container) {
+        container.innerHTML = '<div class="bg-red-100 text-red-800 p-4 rounded-md mb-4">' + escapeHtml(msg) + '</div>';
+      }
+    }
+    
+    function clearError() {
+      const container = document.getElementById('errorContainer');
+      if (container) container.innerHTML = '';
+    }
+    
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+    
+    function formatCurrency(amount) {
+      return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(amount);
+    }
+    
+    function formatNumber(num) {
+      return new Intl.NumberFormat('fr-FR').format(num);
+    }
+    
+    function getStockBadgeClass(status) {
+      if (status === 'critical') return 'rounded-full px-3 py-1 text-xs font-semibold uppercase bg-error text-white';
+      if (status === 'low') return 'rounded-full px-3 py-1 text-xs font-semibold uppercase bg-warning text-gray-900';
+      return 'rounded-full px-3 py-1 text-xs font-semibold uppercase bg-success text-white';
+    }
+    
+    function getStockBadgeLabel(status) {
+      if (status === 'critical') return 'Critique';
+      if (status === 'low') return 'Faible';
+      return 'OK';
+    }
+    
+    // Alert helper functions
+    function getAlertIcon(type, severity) {
+      if (type === 'rupture_imminente') return '⚠️';
+      if (severity === 'high') return '🔴';
+      if (severity === 'medium') return '🟠';
+      return '🔵';
+    }
+    
+    function getAlertTypeLabel(type) {
+      const labels = {
+        'low_stock': 'Stock faible',
+        'critical_stock': 'Stock critique',
+        'rupture_imminente': 'Rupture imminente'
+      };
+      return labels[type] || type;
+    }
+    
+    function formatAlertTime(isoString) {
+      const date = new Date(isoString);
+      const now = new Date();
+      const diffMs = now - date;
+      const diffMins = Math.floor(diffMs / 60000);
+      const diffHours = Math.floor(diffMs / 3600000);
+      const diffDays = Math.floor(diffMs / 86400000);
+      
+      if (diffMins < 1) return 'À l\'instant';
+      if (diffMins < 60) return `Il y a ${diffMins} min`;
+      if (diffHours < 24) return `Il y a ${diffHours}h`;
+      if (diffDays < 7) return `Il y a ${diffDays}j`;
+      return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+    }
+    
+    // Alert status management (localStorage for MVP)
+    function getAlertStatus(alertId) {
+      const stored = localStorage.getItem('bmad_alert_status_' + alertId);
+      return stored ? JSON.parse(stored) : { status: 'new', seenAt: null, resolvedAt: null };
+    }
+    
+    function markAlertSeen(alertId) {
+      const status = getAlertStatus(alertId);
+      status.status = 'seen';
+      status.seenAt = new Date().toISOString();
+      localStorage.setItem('bmad_alert_status_' + alertId, JSON.stringify(status));
+    }
+    
+    function markAlertResolved(alertId) {
+      const status = getAlertStatus(alertId);
+      status.status = 'resolved';
+      status.resolvedAt = new Date().toISOString();
+      localStorage.setItem('bmad_alert_status_' + alertId, JSON.stringify(status));
+    }
+    
+    // Alert filtering (persisted in sessionStorage for refresh/share)
+    const ALERT_FILTERS_KEY = 'bmad_alert_filters';
+    let alertFilters = (function() {
+      try {
+        const s = sessionStorage.getItem(ALERT_FILTERS_KEY);
+        if (s) {
+          const o = JSON.parse(s);
+          if (o && typeof o.type === 'string' && typeof o.severity === 'string' && typeof o.status === 'string')
+            return { type: o.type, severity: o.severity, status: o.status };
+        }
+      } catch (e) { /* ignore */ }
+      return { type: 'all', severity: 'all', status: 'active' };
+    })();
+    
+    function saveAlertFilters() {
+      try {
+        sessionStorage.setItem(ALERT_FILTERS_KEY, JSON.stringify(alertFilters));
+      } catch (e) { /* ignore */ }
+    }
+    
+    function applyAlertFilters(alerts) {
+      return alerts.filter(alert => {
+        const alertStatus = getAlertStatus(alert.id || alert.product.id + '_' + alert.type);
+        
+        if (alertFilters.type !== 'all' && alert.type !== alertFilters.type) return false;
+        if (alertFilters.severity !== 'all' && alert.severity !== alertFilters.severity) return false;
+        if (alertFilters.status === 'active' && alertStatus.status === 'resolved') return false;
+        if (alertFilters.status === 'resolved' && alertStatus.status !== 'resolved') return false;
+        
+        return true;
+      });
+    }
+    
+    function initNotificationsPreference() {
+      const cb = document.getElementById('notificationsEnabled');
+      if (!cb) return;
+      cb.checked = localStorage.getItem('bmad_notifications_enabled') !== 'false';
+      cb.addEventListener('change', function() {
+        localStorage.setItem('bmad_notifications_enabled', this.checked ? 'true' : 'false');
+      });
+    }
+    
+    function renderAlertFilters() {
+      const container = document.getElementById('alertsFilters');
+      if (!container) return;
+      
+      container.innerHTML = 
+        '<select id="filterType" class="px-2 py-1 border border-gray-300 rounded text-sm">' +
+        '<option value="all">Tous les types</option>' +
+        '<option value="low_stock">Stock faible</option>' +
+        '<option value="critical_stock">Stock critique</option>' +
+        '<option value="rupture_imminente">Rupture imminente</option>' +
+        '</select>' +
+        '<select id="filterSeverity" class="px-2 py-1 border border-gray-300 rounded text-sm">' +
+        '<option value="all">Toutes sévérités</option>' +
+        '<option value="high">Haute</option>' +
+        '<option value="medium">Moyenne</option>' +
+        '<option value="low">Basse</option>' +
+        '</select>' +
+        '<select id="filterStatus" class="px-2 py-1 border border-gray-300 rounded text-sm">' +
+        '<option value="active">Actives</option>' +
+        '<option value="resolved">Résolues</option>' +
+        '<option value="all">Toutes</option>' +
+        '</select>';
+      
+      document.getElementById('filterType').value = alertFilters.type;
+      document.getElementById('filterSeverity').value = alertFilters.severity;
+      document.getElementById('filterStatus').value = alertFilters.status;
+      
+      document.getElementById('filterType').addEventListener('change', (e) => {
+        alertFilters.type = e.target.value;
+        saveAlertFilters();
+        renderAlerts();
+      });
+      document.getElementById('filterSeverity').addEventListener('change', (e) => {
+        alertFilters.severity = e.target.value;
+        saveAlertFilters();
+        renderAlerts();
+      });
+      document.getElementById('filterStatus').addEventListener('change', (e) => {
+        alertFilters.status = e.target.value;
+        saveAlertFilters();
+        renderAlerts();
+      });
+    }
+    
+    function renderAlerts() {
+      const alertsList = document.getElementById('alertsList');
+      const noAlerts = document.getElementById('noAlerts');
+      if (!alertsList || !noAlerts) return;
+      
+      const allAlerts = dashboardData.alerts || [];
+      const filteredAlerts = applyAlertFilters(allAlerts);
+      
+      // Sort by severity (high first) then by date (newest first)
+      filteredAlerts.sort((a, b) => {
+        const severityOrder = { high: 3, medium: 2, low: 1 };
+        const severityDiff = severityOrder[b.severity] - severityOrder[a.severity];
+        if (severityDiff !== 0) return severityDiff;
+        return new Date(b.created_at) - new Date(a.created_at);
+      });
+      
+        if (filteredAlerts.length === 0) {
+        alertsList.innerHTML = '';
+        noAlerts.classList.remove('hidden');
+        var footer = document.getElementById('alertsFooter');
+        if (footer) footer.classList.add('hidden');
+      } else {
+        noAlerts.classList.add('hidden');
+        var totalFromApi = (dashboardData.alerts || []).length;
+        var footer = document.getElementById('alertsFooter');
+        if (footer) {
+          footer.innerHTML = 'Affichage des ' + Math.min(10, totalFromApi) + ' alertes les plus prioritaires. ' +
+            '<a href="/movements.html" class="text-primary font-medium hover:underline">Voir les mouvements</a> · ' +
+            '<a href="/forecast-page" class="text-primary font-medium hover:underline">Courbes de prévision</a>';
+          footer.classList.remove('hidden');
+        }
+        var limitNote = document.getElementById('alertsLimitNote');
+        if (limitNote) limitNote.classList.add('hidden');
+        var alertItemBase = 'flex flex-wrap items-start gap-2 sm:gap-3 p-3 mb-2 rounded-md border-l-4 min-h-0 ';
+        var alertItemHigh = alertItemBase + 'bg-red-50 border-l-error';
+        var alertItemMedium = alertItemBase + 'bg-amber-50 border-l-warning';
+        var alertItemLow = alertItemBase + 'bg-blue-50 border-l-primary';
+        var badgeHigh = 'rounded-full px-2 py-0.5 text-xs font-semibold uppercase bg-error text-white';
+        var badgeMedium = 'rounded-full px-2 py-0.5 text-xs font-semibold uppercase bg-warning text-gray-900';
+        var badgeLow = 'rounded-full px-2 py-0.5 text-xs font-semibold uppercase bg-blue-800 text-white';
+        var btnWrapClasses = 'flex gap-1 flex-shrink-0 items-center min-h-[44px] sm:min-h-0';
+        var btnClasses = 'p-2 sm:p-1.5 border-0 bg-gray-200 rounded cursor-pointer text-xs hover:bg-gray-300 min-h-[44px] sm:min-h-0 flex items-center justify-center';
+        alertsList.innerHTML = filteredAlerts.map(alert => {
+          const alertId = alert.id || alert.product.id + '_' + alert.type;
+          const alertStatus = getAlertStatus(alertId);
+          const severityClass = alert.severity === 'high' ? 'high' : alert.severity === 'medium' ? 'medium' : 'low';
+          const itemClass = severityClass === 'high' ? alertItemHigh : severityClass === 'medium' ? alertItemMedium : alertItemLow;
+          const badgeClass = severityClass === 'high' ? badgeHigh : severityClass === 'medium' ? badgeMedium : badgeLow;
+          const icon = getAlertIcon(alert.type, alert.severity);
+          const typeLabel = getAlertTypeLabel(alert.type);
+          const timeAgo = formatAlertTime(alert.created_at);
+          const isResolved = alertStatus.status === 'resolved';
+          const resolvedClass = isResolved ? ' opacity-60' : '';
+          
+          return '<li class="' + itemClass + resolvedClass + '" data-alert-id="' + escapeHtml(alertId) + '">' +
+            '<span class="text-xl flex-shrink-0 mt-0.5" aria-label="' + escapeHtml(typeLabel) + '">' + icon + '</span>' +
+            '<div class="flex-1 min-w-0">' +
+            '<div class="flex items-center gap-2 mb-1 flex-wrap">' +
+            '<span class="font-semibold text-gray-800 break-words">' + escapeHtml(alert.product.name) + '</span>' +
+            '<span class="' + badgeClass + '">' + escapeHtml(alert.severity === 'high' ? 'Haute' : alert.severity === 'medium' ? 'Moyenne' : 'Basse') + '</span>' +
+            '<span class="rounded-full px-2 py-0.5 text-xs font-medium bg-gray-200 text-gray-600">' + escapeHtml(typeLabel) + '</span>' +
+            '</div>' +
+            '<div class="text-sm text-gray-500 mt-1 break-words">' + escapeHtml(alert.message) + '</div>' +
+            '<div class="text-xs text-gray-400 mt-1">' + escapeHtml(timeAgo) + '</div>' +
+            '<div class="mt-2 text-xs flex flex-wrap gap-x-2 gap-y-1">' +
+            '<a href="/movements.html?product_id=' + escapeHtml(alert.product.id) + '" class="text-primary font-medium hover:underline">Voir le produit</a>' +
+            '<a href="/forecast-page" class="text-primary font-medium hover:underline">Courbe prévision</a>' +
+            '</div>' +
+            '</div>' +
+            '<div class="' + btnWrapClasses + '">' +
+            (isResolved ? 
+              '<button type="button" class="' + btnClasses + '" onclick="markAlertUnresolved(\'' + escapeHtml(alertId) + '\')" title="Marquer non résolue">↩️</button>' :
+              '<button type="button" class="' + btnClasses + '" onclick="markAlertSeen(\'' + escapeHtml(alertId) + '\')" title="Marquer comme vue">✓</button>' +
+              '<button type="button" class="' + btnClasses + '" onclick="markAlertResolved(\'' + escapeHtml(alertId) + '\')" title="Résoudre">✓✓</button>'
+            ) +
+            '</div>' +
+            '</li>';
+        }).join('');
+      }
+    }
+    
+    // Global functions for onclick handlers
+    window.markAlertSeen = function(alertId) {
+      const status = getAlertStatus(alertId);
+      status.status = 'seen';
+      status.seenAt = new Date().toISOString();
+      localStorage.setItem('bmad_alert_status_' + alertId, JSON.stringify(status));
+      renderAlerts();
+    };
+    
+    window.markAlertResolved = function(alertId) {
+      const status = getAlertStatus(alertId);
+      status.status = 'resolved';
+      status.resolvedAt = new Date().toISOString();
+      localStorage.setItem('bmad_alert_status_' + alertId, JSON.stringify(status));
+      renderAlerts();
+      // Show notification toast for critical alerts
+      const alert = (dashboardData.alerts || []).find(a => (a.id || a.product.id + '_' + a.type) === alertId);
+      if (alert && alert.severity === 'high') {
+        showNotification('Alerte résolue : ' + alert.product.name, 'success');
+      }
+    };
+    
+    window.markAlertUnresolved = function(alertId) {
+      const status = getAlertStatus(alertId);
+      status.status = 'new';
+      status.resolvedAt = null;
+      localStorage.setItem('bmad_alert_status_' + alertId, JSON.stringify(status));
+      renderAlerts();
+    };
+    
+    // Notification system (in-app toast for MVP)
+    function showNotification(message, type = 'info') {
+      const toast = document.createElement('div');
+      const borderClass = type === 'success' ? 'border-l-success' : type === 'error' ? 'border-l-error' : 'border-l-primary';
+      toast.className = 'fixed top-4 right-4 p-4 bg-white rounded-lg shadow-lg z-[10000] max-w-[300px] border-l-4 ' + borderClass;
+      toast.textContent = message;
+      document.body.appendChild(toast);
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'transition-opacity', 'duration-300');
+        setTimeout(() => toast.remove(), 300);
+      }, 3000);
+    }
+    
+    // Check for critical alerts and show notifications (if enabled)
+    function checkCriticalAlerts() {
+      const notificationsEnabled = localStorage.getItem('bmad_notifications_enabled') !== 'false';
+      if (!notificationsEnabled) return;
+      
+      const criticalAlerts = (dashboardData.alerts || []).filter(a => 
+        a.severity === 'high' && 
+        getAlertStatus(a.id || a.product.id + '_' + a.type).status === 'new'
+      );
+      
+      criticalAlerts.forEach(alert => {
+        showNotification('🚨 ' + alert.product.name + ' : ' + alert.message, 'error');
+        markAlertSeen(alert.id || alert.product.id + '_' + alert.type);
+      });
+    }
+    
+    // Load and display alert threshold
+    async function loadAlertThreshold() {
+      const token = getToken();
+      if (!token) return;
+      
+      try {
+        const res = await BmadApiClient.fetch('/dashboard/alert-threshold', {
+          headers: { 'Authorization': 'Bearer ' + token },
+        });
+        const body = await res.json();
+        if (body.success && body.data) {
+          const thresholdInput = document.getElementById('alertThreshold');
+          if (thresholdInput) {
+            thresholdInput.value = body.data.thresholdPercent || 120;
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to load alert threshold:', err);
+        // Set default
+        const thresholdInput = document.getElementById('alertThreshold');
+        if (thresholdInput) thresholdInput.value = 120;
+      }
+    }
+    
+    // Update alert threshold
+    window.updateAlertThreshold = async function() {
+      const thresholdInput = document.getElementById('alertThreshold');
+      if (!thresholdInput) return;
+      
+      const thresholdPercent = parseFloat(thresholdInput.value);
+      if (isNaN(thresholdPercent) || thresholdPercent < 50 || thresholdPercent > 500) {
+        showNotification('Le seuil doit être entre 50% et 500%', 'error');
+        return;
+      }
+      
+      const token = getToken();
+      if (!token) {
+        showError('Veuillez saisir un token JWT.');
+        return;
+      }
+      
+      try {
+        const res = await BmadApiClient.fetch('/dashboard/alert-threshold', {
+          method: 'PUT',
+          headers: { 
+            'Authorization': 'Bearer ' + token,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ thresholdPercent }),
+        });
+        
+        const body = await res.json();
+        if (body.success) {
+          showNotification('Seuil d\'alerte mis à jour : ' + thresholdPercent + '%', 'success');
+          // Reload dashboard to reflect new threshold
+          loadDashboard(false);
+        } else {
+          showNotification('Erreur : ' + (body.error || 'Échec de la mise à jour'), 'error');
+        }
+      } catch (err) {
+        showNotification('Erreur réseau : ' + (err instanceof Error ? err.message : String(err)), 'error');
+      }
+    };
+    
+    // Simple cache to avoid unnecessary requests
+    let cache = { data: null, timestamp: 0 };
+    const CACHE_TTL = 5000; // 5 seconds cache
+    
+    async function loadDashboard(useCache = true) {
+      clearError();
+      const token = getToken();
+      if (!token) {
+        showError('Veuillez saisir un token JWT.');
+        return;
+      }
+      
+      // Check cache
+      const now = Date.now();
+      if (useCache && cache.data && (now - cache.timestamp) < CACHE_TTL) {
+        dashboardData = cache.data.summary;
+        productsData = cache.data.products || [];
+        renderDashboard();
+        return;
+      }
+      
+      const loadingContainer = document.getElementById('loadingContainer');
+      const dashboardContent = document.getElementById('dashboardContent');
+      if (loadingContainer) { loadingContainer.classList.remove('hidden'); loadingContainer.style.display = ''; }
+      if (dashboardContent) dashboardContent.classList.add('hidden');
+      
+      const startTime = performance.now();
+      
+      try {
+        // Load dashboard summary and products in parallel for better performance
+        const [summaryRes, productsRes] = await Promise.all([
+          BmadApiClient.fetch('/dashboard/summary', {
+            headers: { 'Authorization': 'Bearer ' + token },
+          }),
+          BmadApiClient.fetch('/products?limit=50&sort=created_at&order=desc', {
+            headers: { 'Authorization': 'Bearer ' + token },
+          })
+        ]);
+        
+        const summaryBody = await summaryRes.json();
+        if (!summaryRes.ok || !summaryBody.success) {
+          showError(summaryBody.error || 'Erreur lors du chargement du dashboard');
+          return;
+        }
+        dashboardData = summaryBody.data;
+        
+        const productsBody = await productsRes.json();
+        if (productsRes.ok && productsBody.success) {
+          productsData = productsBody.data || [];
+        }
+        
+        // Update cache
+        cache = {
+          data: { summary: dashboardData, products: productsData },
+          timestamp: Date.now()
+        };
+        
+        renderDashboard();
+        
+        // Log performance
+        const loadTime = performance.now() - startTime;
+        if (loadTime > 2000) {
+          console.warn('Dashboard load time:', loadTime.toFixed(2), 'ms (target: < 2000ms)');
+        }
+      } catch (err) {
+        showError('Erreur réseau : ' + err.message);
+      } finally {
+        if (loadingContainer) loadingContainer.classList.add('hidden');
+        if (dashboardContent) dashboardContent.classList.remove('hidden');
+      }
+    }
+    
+    function renderDashboard() {
+      if (!dashboardData) return;
+      
+      // Render statistics
+      const sales = dashboardData.sales_yesterday || {};
+      document.getElementById('salesAmount').textContent = formatCurrency(sales.total_amount || 0);
+      document.getElementById('salesCount').textContent = formatNumber(sales.transaction_count || 0);
+      
+      const changeEl = document.getElementById('salesChange');
+      if (sales.change_percent != null) {
+        const change = sales.change_percent;
+        changeEl.textContent = (change >= 0 ? '+' : '') + change.toFixed(1) + '%';
+        changeEl.className = 'text-sm mt-1 ' + (change >= 0 ? 'text-success' : 'text-error');
+      } else {
+        changeEl.textContent = '';
+      }
+      
+      const stock = dashboardData.current_stock || {};
+      document.getElementById('stockValue').textContent = formatCurrency(stock.total_value || 0);
+      document.getElementById('productCount').textContent = formatNumber(stock.product_count || 0);
+      document.getElementById('lowStockCount').textContent = formatNumber(stock.low_stock_count || 0);
+      document.getElementById('criticalStockCount').textContent = formatNumber(stock.critical_stock_count || 0);
+      
+      document.getElementById('alertCount').textContent = formatNumber((dashboardData.alerts || []).length);
+      document.getElementById('pendingOrders').textContent = formatNumber(dashboardData.pending_orders || 0);
+      
+      // Notifications preference and alert filters
+      initNotificationsPreference();
+      renderAlertFilters();
+      renderAlerts();
+      
+      // Check for critical alerts and show notifications
+      checkCriticalAlerts();
+      
+      // Render recommended actions
+      const actionsList = document.getElementById('actionsList');
+      const noActions = document.getElementById('noActions');
+      if (actionsList && noActions) {
+        const actions = [];
+        if (stock.low_stock_count > 0) {
+          actions.push({ text: stock.low_stock_count + ' produit(s) avec stock faible', link: '/products?low_stock=true' });
+        }
+        if (stock.critical_stock_count > 0) {
+          actions.push({ text: stock.critical_stock_count + ' produit(s) en rupture', link: '/products?low_stock=true' });
+        }
+        if (dashboardData.pending_orders > 0) {
+          actions.push({ text: dashboardData.pending_orders + ' commande(s) en attente', link: '#' });
+        }
+        
+        if (actions.length === 0) {
+          actionsList.innerHTML = '';
+          noActions.classList.remove('hidden');
+        } else {
+          noActions.classList.add('hidden');
+          actionsList.innerHTML = actions.map(action => {
+            return '<li class="flex flex-wrap justify-between items-center gap-2 sm:gap-3 p-3 mb-2 bg-gray-50 rounded-md">' +
+              '<span class="min-w-0 break-words">' + escapeHtml(action.text) + '</span>' +
+              '<a href="' + escapeHtml(action.link) + '" class="text-primary font-medium text-sm hover:underline flex-shrink-0 min-h-[44px] flex items-center">Voir →</a>' +
+              '</li>';
+          }).join('');
+        }
+      }
+      
+      // Render products grid (optimized with DocumentFragment to avoid reflows)
+      const productsGrid = document.getElementById('productsGrid');
+      const noProducts = document.getElementById('noProducts');
+      if (productsGrid && noProducts) {
+        if (productsData.length === 0) {
+          productsGrid.innerHTML = '';
+          noProducts.classList.remove('hidden');
+        } else {
+          noProducts.classList.add('hidden');
+          // Use DocumentFragment for better performance
+          const fragment = document.createDocumentFragment();
+          const tempDiv = document.createElement('div');
+          tempDiv.innerHTML = productsData.map(product => {
+            const badgeClass = getStockBadgeClass(product.stock_status);
+            const badgeLabel = getStockBadgeLabel(product.stock_status);
+            return '<div class="rounded-lg border border-gray-200 bg-white p-4 shadow hover:shadow-md transition-shadow">' +
+              '<div class="flex justify-between items-start mb-3">' +
+              '<div class="font-semibold text-gray-800 text-base">' + escapeHtml(product.name) + '</div>' +
+              '<span class="' + badgeClass + '">' + escapeHtml(badgeLabel) + '</span>' +
+              '</div>' +
+              '<div class="text-lg font-semibold text-gray-800 mt-2">' + formatNumber(product.quantity) + ' ' + escapeHtml(product.unit) + '</div>' +
+              '<div class="text-sm text-gray-500 mt-1">SKU: ' + escapeHtml(product.sku) + '</div>' +
+              (product.min_quantity != null ? '<div class="text-sm text-gray-500 mt-1">Min: ' + formatNumber(product.min_quantity) + ' ' + escapeHtml(product.unit) + '</div>' : '') +
+              '</div>';
+          }).join('');
+          // Move nodes to fragment
+          while (tempDiv.firstChild) {
+            fragment.appendChild(tempDiv.firstChild);
+          }
+          productsGrid.innerHTML = '';
+          productsGrid.appendChild(fragment);
+        }
+      }
+    }
+    
+    // Initialize
+    if (typeof BmadApiClient !== 'undefined') {
+      BmadApiClient.setTokenGetter(() => getToken());
+      const savedToken = localStorage.getItem('bmad_jwt_token');
+      if (savedToken) {
+        const input = document.getElementById('tokenInput');
+        if (input) input.value = savedToken;
+      }
+      loadDashboard();
+      loadAlertThreshold();
+      
+      // Auto-refresh every 30 seconds (with debounce to avoid multiple simultaneous requests)
+      let refreshTimeout = null;
+      function debouncedRefresh() {
+        if (refreshTimeout) clearTimeout(refreshTimeout);
+        refreshTimeout = setTimeout(() => {
+          loadDashboard(false); // Force refresh, bypass cache
+        }, 30000);
+      }
+      debouncedRefresh();
+    } else {
+      showError('API Client non chargé. Vérifiez que /api-client.js est accessible.');
+    }
+  </script>
+  <script src="/js/layout.js"></script>
+</body>
+</html>

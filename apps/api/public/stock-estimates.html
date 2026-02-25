@@ -4,72 +4,31 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Estimations temps stock - bmad-stock-agent</title>
-  <style>
-    * { box-sizing: border-box; }
-    body { font-family: system-ui, sans-serif; max-width: 1100px; margin: 2rem auto; padding: 0 1rem; color: #333; }
-    h1 { margin-bottom: 0.5rem; }
-    .section { margin: 1.5rem 0; padding: 1rem; border: 1px solid #ddd; border-radius: 8px; }
-    label { display: block; margin-top: 0.5rem; font-weight: 500; }
-    input[type="text"], input[type="number"], select { margin-top: 0.25rem; padding: 0.35rem; max-width: 300px; }
-    button { margin-top: 0.5rem; margin-right: 0.5rem; padding: 0.5rem 1rem; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 4px; }
-    button:hover { background: #0056b3; }
-    button:disabled { background: #ccc; cursor: not-allowed; }
-    .error { color: #c00; }
-    .success { color: #0a0; }
-    table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
-    th, td { border: 1px solid #ddd; padding: 0.5rem; text-align: left; }
-    th { background: #f5f5f5; cursor: pointer; user-select: none; white-space: nowrap; }
-    th:hover { background: #e9e9e9; }
-    .hidden { display: none; }
-    /* Urgency colors */
-    .urgency-critical { background: #fce4e4; color: #c0392b; font-weight: bold; }
-    .urgency-warning  { background: #fef5e7; color: #e67e22; font-weight: bold; }
-    .urgency-watch    { background: #fef9e7; color: #f1c40f; font-weight: bold; }
-    .urgency-ok       { background: #eafaf1; color: #27ae60; }
-    .urgency-unknown  { background: #f2f3f4; color: #95a5a6; }
-    /* Confidence badges */
-    .badge { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 10px; font-size: 0.8rem; font-weight: 500; }
-    .badge-high   { background: #d5f5e3; color: #1e8449; }
-    .badge-medium { background: #fef9e7; color: #b7950b; }
-    .badge-low    { background: #fdebd0; color: #ca6f1e; }
-    .badge-insufficient { background: #fadbd8; color: #c0392b; }
-    /* Banner */
-    .banner { padding: 0.75rem 1rem; background: #eaf2f8; border-left: 4px solid #3498db; border-radius: 4px; margin-bottom: 1rem; font-size: 0.9rem; }
-    .banner strong { color: #2980b9; }
-    /* Search */
-    .controls { display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap; margin-bottom: 0.75rem; }
-    .controls label { margin-top: 0; }
-    .controls input[type="text"] { max-width: 250px; }
-    .sort-arrow { font-size: 0.7rem; margin-left: 0.25rem; }
-    .tooltip { position: relative; cursor: help; }
-    .tooltip:hover::after {
-      content: attr(data-tip);
-      position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%);
-      background: #333; color: #fff; padding: 0.25rem 0.5rem; border-radius: 4px;
-      font-size: 0.75rem; white-space: nowrap; z-index: 10;
-    }
-    .empty-state { text-align: center; padding: 2rem; color: #888; }
-  </style>
+  <link rel="stylesheet" href="/css/design-system.css">
+  <script src="/api-client.js"></script>
 </head>
 <body>
-  <h1>Estimations temps stock</h1>
-  <p>Vue d'ensemble du temps de stock disponible pour chaque produit, basée sur la consommation moyenne.</p>
+  <div id="layout-nav"></div>
+  <div id="layout-header"></div>
+  <main class="page-container" data-page-title="Estimations temps stock">
+  <h1 class="text-2xl font-semibold text-gray-800 mb-2">Estimations temps stock</h1>
+  <p class="text-gray-600 mb-4">Vue d'ensemble du temps de stock disponible pour chaque produit, basée sur la consommation moyenne.</p>
 
-  <div class="section">
-    <label>Token JWT (après connexion via /auth/login) :</label>
-    <input type="text" id="token" placeholder="Collez votre access_token ici" style="width: 100%;" />
-    <button id="loadBtn" style="margin-top: 0.5rem;">Charger les estimations</button>
+  <div class="rounded-lg border border-gray-200 bg-white shadow p-5 my-6">
+    <p class="text-sm text-gray-600 mb-2">Les estimations utilisent votre session. Si vous n'êtes pas connecté, vous serez redirigé vers la page de connexion.</p>
+    <button type="button" id="loadBtn" class="px-4 py-2 bg-primary text-white border-0 rounded cursor-pointer hover:opacity-90 disabled:bg-gray-400 disabled:cursor-not-allowed">Charger les estimations</button>
+    <a href="/login.html" class="ml-3 text-primary text-sm font-medium hover:underline">Se connecter</a>
   </div>
 
-  <div class="banner">
-    <strong>&#x1F4CA; Estimations basiques</strong> — Ces calculs sont basés sur la consommation moyenne sur la période sélectionnée. Les estimations s'amélioreront avec le moteur IA (disponible avec l'abonnement Premium).
+  <div class="p-4 mb-4 bg-blue-50 border-l-4 border-l-primary rounded text-sm">
+    <strong class="text-primary">&#x1F4CA; Estimations basiques</strong> — Ces calculs sont basés sur la consommation moyenne sur la période sélectionnée. Les estimations s'amélioreront avec le moteur IA (disponible avec l'abonnement Premium).
   </div>
 
-  <div class="section">
-    <div class="controls">
+  <div class="rounded-lg border border-gray-200 bg-white shadow p-5 my-6">
+    <div class="flex flex-wrap gap-4 items-end mb-3">
       <div>
-        <label>Période d'analyse</label>
-        <select id="periodDays">
+        <label class="block font-medium">Période d'analyse</label>
+        <select id="periodDays" class="mt-1 p-2 border border-gray-300 rounded max-w-[200px]">
           <option value="7">7 jours</option>
           <option value="14">14 jours</option>
           <option value="30" selected>30 jours</option>
@@ -78,17 +37,19 @@
         </select>
       </div>
       <div>
-        <label>Rechercher</label>
-        <input type="text" id="searchInput" placeholder="Nom du produit..." />
+        <label class="block font-medium">Rechercher</label>
+        <input type="text" id="searchInput" class="mt-1 p-2 border border-gray-300 rounded max-w-[250px]" placeholder="Nom du produit..." />
       </div>
     </div>
 
-    <div id="errorMsg" class="error hidden"></div>
+    <div id="errorMsg" class="hidden text-error font-medium"></div>
     <div id="tableContainer">
-      <div class="empty-state" id="emptyState">Cliquez sur « Charger les estimations » pour afficher les données.</div>
+      <div class="text-center py-8 text-gray-500" id="emptyState">Cliquez sur « Charger les estimations » pour afficher les données.</div>
     </div>
   </div>
+  </main>
 
+  <script src="/js/layout.js"></script>
 <script>
 (function () {
   'use strict';
@@ -99,17 +60,18 @@
   let sortDir = 'asc'; // asc or desc
 
   // --- DOM refs ---
-  const tokenInput = document.getElementById('token');
   const loadBtn = document.getElementById('loadBtn');
   const periodSelect = document.getElementById('periodDays');
   const searchInput = document.getElementById('searchInput');
   const errorMsg = document.getElementById('errorMsg');
   const tableContainer = document.getElementById('tableContainer');
-  const emptyState = document.getElementById('emptyState');
 
   // --- Helpers ---
   function getToken() {
-    return (tokenInput.value || '').trim();
+    if (typeof BmadApiClient !== 'undefined') {
+      return (BmadApiClient.loadTokenFromStorage() || '').trim();
+    }
+    return '';
   }
 
   function showError(msg) {
@@ -123,11 +85,11 @@
   }
 
   function urgencyClass(days) {
-    if (days === null || days === undefined) return 'urgency-unknown';
-    if (days < 7) return 'urgency-critical';
-    if (days <= 14) return 'urgency-warning';
-    if (days <= 30) return 'urgency-watch';
-    return 'urgency-ok';
+    if (days === null || days === undefined) return 'bg-gray-100 text-gray-500';
+    if (days < 7) return 'bg-red-100 text-error font-semibold';
+    if (days <= 14) return 'bg-amber-100 text-amber-800 font-semibold';
+    if (days <= 30) return 'bg-yellow-100 text-yellow-800 font-semibold';
+    return 'bg-green-100 text-success font-medium';
   }
 
   function urgencyLabel(days) {
@@ -137,13 +99,13 @@
 
   function confidenceBadge(level) {
     const map = {
-      high: { cls: 'badge-high', label: 'Fiable' },
-      medium: { cls: 'badge-medium', label: 'Modéré' },
-      low: { cls: 'badge-low', label: 'Peu fiable' },
-      insufficient: { cls: 'badge-insufficient', label: 'Données insuffisantes' },
+      high: { cls: 'rounded-full px-2 py-0.5 text-xs font-medium bg-success text-white', label: 'Fiable' },
+      medium: { cls: 'rounded-full px-2 py-0.5 text-xs font-medium bg-warning text-gray-900', label: 'Modéré' },
+      low: { cls: 'rounded-full px-2 py-0.5 text-xs font-medium bg-amber-200 text-amber-900', label: 'Peu fiable' },
+      insufficient: { cls: 'rounded-full px-2 py-0.5 text-xs font-medium bg-error text-white', label: 'Données insuffisantes' },
     };
     const info = map[level] || map.insufficient;
-    return '<span class="badge ' + info.cls + '">' + info.label + '</span>';
+    return '<span class="' + info.cls + '">' + info.label + '</span>';
   }
 
   function formatDate(dateStr) {
@@ -153,12 +115,12 @@
   }
 
   function formatConsumption(val) {
-    if (val === null || val === undefined) return '<span class="tooltip" data-tip="Aucune vente enregistrée sur cette période">—</span>';
+    if (val === null || val === undefined) return '<span title="Aucune vente enregistrée sur cette période">—</span>';
     return val.toFixed(3);
   }
 
   function formatDaysRemaining(val) {
-    if (val === null || val === undefined) return '<span class="tooltip" data-tip="Aucune vente enregistrée sur cette période">—</span>';
+    if (val === null || val === undefined) return '<span title="Aucune vente enregistrée sur cette période">—</span>';
     return val.toFixed(1);
   }
 
@@ -202,11 +164,11 @@
     const sorted = sortEstimates(filtered);
 
     if (sorted.length === 0 && allEstimates.length === 0) {
-      tableContainer.innerHTML = '<div class="empty-state">Aucun produit trouvé. Ajoutez des produits et des ventes pour voir les estimations.</div>';
+      tableContainer.innerHTML = '<div class="text-center py-8 text-gray-500">Aucun produit trouvé. Ajoutez des produits et des ventes pour voir les estimations.</div>';
       return;
     }
     if (sorted.length === 0) {
-      tableContainer.innerHTML = '<div class="empty-state">Aucun produit ne correspond à votre recherche.</div>';
+      tableContainer.innerHTML = '<div class="text-center py-8 text-gray-500">Aucun produit ne correspond à votre recherche.</div>';
       return;
     }
 
@@ -220,42 +182,55 @@
       { key: 'confidence_level', label: 'Fiabilité' },
     ];
 
-    let html = '<table><thead><tr>';
-    for (var i = 0; i < cols.length; i++) {
-      var arrow = '';
-      if (cols[i].key === sortCol) {
-        arrow = ' <span class="sort-arrow">' + (sortDir === 'asc' ? '▲' : '▼') + '</span>';
+    const tableClass = 'table-auto w-full text-sm border-collapse';
+    const thClass = 'border-b border-gray-200 bg-gray-50 px-4 py-2 text-left cursor-pointer select-none whitespace-nowrap hover:bg-gray-100';
+    const tdClass = 'border-b border-gray-100 px-4 py-2 text-left';
+    const trClass = 'hover:bg-gray-50';
+
+    let html = '<table class="' + tableClass + '" role="table"><thead><tr>';
+    for (let i = 0; i < cols.length; i++) {
+      const key = cols[i].key;
+      let arrow = '';
+      const ariaSort = key === sortCol ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none';
+      if (key === sortCol) {
+        arrow = ' <span class="text-xs ml-1" aria-hidden="true">' + (sortDir === 'asc' ? '▲' : '▼') + '</span>';
       }
-      html += '<th data-col="' + cols[i].key + '">' + cols[i].label + arrow + '</th>';
+      html += '<th class="' + thClass + '" data-col="' + key + '" role="columnheader" aria-sort="' + ariaSort + '" tabindex="0">' + cols[i].label + arrow + '</th>';
     }
     html += '</tr></thead><tbody>';
 
-    for (var j = 0; j < sorted.length; j++) {
-      var e = sorted[j];
-      var uc = urgencyClass(e.days_remaining);
-      html += '<tr>';
-      html += '<td>' + escapeHtml(e.product_name) + '</td>';
-      html += '<td>' + escapeHtml(e.sku) + '</td>';
-      html += '<td>' + e.current_stock + ' ' + escapeHtml(e.unit) + '</td>';
-      html += '<td>' + formatConsumption(e.avg_daily_consumption) + '</td>';
-      html += '<td class="' + uc + '">' + formatDaysRemaining(e.days_remaining) + '</td>';
-      html += '<td>' + formatDate(e.estimated_stockout_date) + '</td>';
-      html += '<td>' + confidenceBadge(e.confidence_level) + '</td>';
+    for (let j = 0; j < sorted.length; j++) {
+      const e = sorted[j];
+      const uc = urgencyClass(e.days_remaining);
+      html += '<tr class="' + trClass + '">';
+      html += '<td class="' + tdClass + '">' + escapeHtml(e.product_name) + '</td>';
+      html += '<td class="' + tdClass + '">' + escapeHtml(e.sku) + '</td>';
+      html += '<td class="' + tdClass + '">' + e.current_stock + ' ' + escapeHtml(e.unit) + '</td>';
+      html += '<td class="' + tdClass + '">' + formatConsumption(e.avg_daily_consumption) + '</td>';
+      html += '<td class="' + tdClass + ' ' + uc + '">' + formatDaysRemaining(e.days_remaining) + '</td>';
+      html += '<td class="' + tdClass + '">' + formatDate(e.estimated_stockout_date) + '</td>';
+      html += '<td class="' + tdClass + '">' + confidenceBadge(e.confidence_level) + '</td>';
       html += '</tr>';
     }
 
     html += '</tbody></table>';
     tableContainer.innerHTML = html;
 
-    // Attach sort handlers to headers
-    var ths = tableContainer.querySelectorAll('th[data-col]');
-    for (var k = 0; k < ths.length; k++) {
+    // Attach sort handlers to headers (click + keyboard)
+    const ths = tableContainer.querySelectorAll('th[data-col]');
+    for (let k = 0; k < ths.length; k++) {
       ths[k].addEventListener('click', handleSort);
+      ths[k].addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          handleSort({ currentTarget: e.currentTarget });
+        }
+      });
     }
   }
 
   function handleSort(evt) {
-    var col = evt.currentTarget.getAttribute('data-col');
+    const col = evt.currentTarget.getAttribute('data-col');
     if (sortCol === col) {
       sortDir = sortDir === 'asc' ? 'desc' : 'asc';
     } else {
@@ -273,21 +248,19 @@
   // --- Load data ---
   async function loadEstimates() {
     clearError();
-    var token = getToken();
+    const token = getToken();
     if (!token) {
-      showError('Veuillez saisir un token JWT.');
+      showError('Veuillez vous connecter pour charger les estimations.');
       return;
     }
 
-    var period = periodSelect.value || '30';
+    const period = periodSelect.value || '30';
     loadBtn.disabled = true;
     loadBtn.textContent = 'Chargement...';
 
     try {
-      var res = await fetch('/stock-estimates?period_days=' + encodeURIComponent(period), {
-        headers: { 'Authorization': 'Bearer ' + token },
-      });
-      var body = await res.json();
+      const res = await BmadApiClient.fetch('/stock-estimates?period_days=' + encodeURIComponent(period));
+      const body = await res.json();
       if (!res.ok || !body.success) {
         showError(body.error || 'Erreur lors du chargement');
         return;
@@ -311,20 +284,21 @@
     }
   });
 
+  // Debounce recherche (spec front-end) — 250 ms
+  let searchDebounceTimer;
   searchInput.addEventListener('input', function () {
-    if (allEstimates.length > 0) {
-      renderTable();
-    }
+    clearTimeout(searchDebounceTimer);
+    searchDebounceTimer = setTimeout(function () {
+      if (allEstimates.length > 0) {
+        renderTable();
+      }
+    }, 250);
   });
 
-  // Restore token from localStorage
-  var saved = localStorage.getItem('jwt_token');
-  if (saved) {
-    tokenInput.value = saved;
+  // Initialiser le token getter pour api-client (401/403 → redirect login)
+  if (typeof BmadApiClient !== 'undefined') {
+    BmadApiClient.setTokenGetter(function () { return BmadApiClient.loadTokenFromStorage(); });
   }
-  tokenInput.addEventListener('change', function () {
-    localStorage.setItem('jwt_token', tokenInput.value);
-  });
 })();
 </script>
 </body>

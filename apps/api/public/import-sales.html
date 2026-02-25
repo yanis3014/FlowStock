@@ -4,28 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Import ventes - bmad-stock-agent</title>
-  <style>
-    * { box-sizing: border-box; }
-    body { font-family: system-ui, sans-serif; max-width: 900px; margin: 2rem auto; padding: 0 1rem; }
-    h1 { margin-bottom: 0.5rem; }
-    .section { margin: 1.5rem 0; padding: 1rem; border: 1px solid #ddd; border-radius: 8px; }
-    label { display: block; margin-top: 0.5rem; font-weight: 500; }
-    input[type="text"], input[type="file"] { margin-top: 0.25rem; }
-    button { margin-top: 0.5rem; padding: 0.5rem 1rem; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 4px; }
-    button:hover { background: #0056b3; }
-    button:disabled { background: #ccc; cursor: not-allowed; }
-    .error { color: #c00; }
-    .success { color: #0a0; }
-    table { width: 100%; border-collapse: collapse; font-size: 0.9rem; overflow-x: auto; }
-    th, td { border: 1px solid #ddd; padding: 0.5rem; text-align: left; }
-    th { background: #f5f5f5; }
-    .mapping-grid { display: grid; grid-template-columns: 1fr auto 1fr; gap: 0.5rem; align-items: center; }
-    .mapping-grid label { margin: 0; }
-    select { padding: 0.25rem; }
-    a { color: #007bff; }
-  </style>
+  <link rel="stylesheet" href="/css/design-system.css">
 </head>
 <body>
+  <div id="layout-nav"></div>
+  <div id="layout-header"></div>
+  <main class="page-container" data-page-title="Import ventes">
   <h1>Import ventes</h1>
   <p>Importez vos ventes depuis un fichier CSV.</p>
 
@@ -61,7 +45,9 @@
     <h2>Résultat de l'import</h2>
     <div id="resultContent"></div>
   </div>
+  </main>
 
+  <script src="/js/layout.js"></script>
   <script>
     const API_BASE = '';
     const tokenEl = document.getElementById('token');

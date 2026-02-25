@@ -5,6 +5,7 @@ import { body, validationResult } from 'express-validator';
 import {
   getCurrentSubscription,
   upgradeSubscription,
+  getSubscriptionChanges,
   getFeaturesForTier,
   type SubscriptionTier,
 } from '../services/subscription.service';
@@ -104,6 +105,28 @@ router.post(
     }
   }
 );
+
+/**
+ * GET /subscriptions/changes
+ * History of subscription tier changes for the authenticated tenant (audit).
+ */
+router.get('/changes', authenticateToken, async (req: Request, res: Response) => {
+  if (!req.user?.tenantId) {
+    res.status(401).json({ success: false, error: 'Authentication required' });
+    return;
+  }
+
+  try {
+    const changes = await getSubscriptionChanges(req.user.tenantId);
+    res.status(200).json({
+      success: true,
+      data: changes,
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to get subscription changes';
+    res.status(500).json({ success: false, error: message });
+  }
+});
 
 /**
  * GET /subscriptions/premium-only

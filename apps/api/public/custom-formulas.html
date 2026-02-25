@@ -4,54 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Formules personnalisées - bmad-stock-agent</title>
-  <style>
-    * { box-sizing: border-box; }
-    body { font-family: system-ui, sans-serif; max-width: 1060px; margin: 2rem auto; padding: 0 1rem; color: #333; }
-    h1 { margin-bottom: 0.5rem; }
-    h2 { margin-top: 0; }
-    .section { margin: 1.5rem 0; padding: 1rem; border: 1px solid #ddd; border-radius: 8px; }
-    label { display: block; margin-top: 0.5rem; font-weight: 500; }
-    input[type="text"], input[type="number"], select, textarea { margin-top: 0.25rem; padding: 0.4rem; width: 100%; max-width: 500px; border: 1px solid #ccc; border-radius: 4px; font-family: inherit; font-size: 0.95rem; }
-    textarea { min-height: 60px; resize: vertical; font-family: 'Consolas', 'Monaco', monospace; }
-    button { margin-top: 0.5rem; margin-right: 0.5rem; padding: 0.5rem 1rem; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 4px; font-size: 0.95rem; }
-    button:hover { background: #0056b3; }
-    button:disabled { background: #ccc; cursor: not-allowed; }
-    button.secondary { background: #6c757d; }
-    button.secondary:hover { background: #5a6268; }
-    button.danger { background: #dc3545; }
-    button.danger:hover { background: #c82333; }
-    button.success { background: #28a745; }
-    button.success:hover { background: #218838; }
-    .error { color: #c00; margin-top: 0.25rem; }
-    .success-msg { color: #0a0; margin-top: 0.25rem; }
-    .hidden { display: none !important; }
-    .formula-card { padding: 0.75rem; border: 1px solid #eee; border-radius: 6px; margin-bottom: 0.5rem; background: #fafafa; }
-    .formula-card h3 { margin: 0 0 0.25rem 0; font-size: 1rem; }
-    .formula-card p { margin: 0 0 0.25rem 0; font-size: 0.9rem; color: #555; }
-    .formula-card code { background: #e9ecef; padding: 2px 6px; border-radius: 3px; font-size: 0.85rem; }
-    .formula-card .actions { margin-top: 0.5rem; }
-    .formula-card .actions button { font-size: 0.85rem; padding: 0.3rem 0.7rem; margin-top: 0; }
-    .result-box { padding: 1rem; background: #f0f7ff; border-radius: 6px; margin-top: 0.5rem; font-size: 1.1rem; border: 1px solid #b8daff; }
-    .result-box .value { font-weight: bold; color: #007bff; }
-    .validation-ok { color: #28a745; font-size: 0.9rem; margin-top: 0.25rem; }
-    .validation-err { color: #dc3545; font-size: 0.9rem; margin-top: 0.25rem; }
-    .autocomplete-container { position: relative; }
-    .autocomplete-dropdown { position: absolute; top: 100%; left: 0; right: 0; max-width: 500px; max-height: 200px; overflow-y: auto; background: white; border: 1px solid #ccc; border-radius: 0 0 4px 4px; z-index: 10; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-    .autocomplete-dropdown .item { padding: 6px 10px; cursor: pointer; font-size: 0.9rem; border-bottom: 1px solid #f0f0f0; }
-    .autocomplete-dropdown .item:hover { background: #e9ecef; }
-    .autocomplete-dropdown .item .label { font-weight: 600; font-family: monospace; }
-    .autocomplete-dropdown .item .desc { color: #666; font-size: 0.8rem; margin-left: 0.5rem; }
-    .vars-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 0.5rem; margin-top: 0.5rem; }
-    .var-item { background: #f8f9fa; padding: 0.4rem 0.6rem; border-radius: 4px; font-size: 0.85rem; border: 1px solid #e9ecef; }
-    .var-item code { background: #e2e6ea; padding: 1px 4px; border-radius: 2px; font-weight: 600; }
-    .tabs { display: flex; gap: 0; margin-bottom: -1px; position: relative; z-index: 1; }
-    .tab { padding: 0.5rem 1.2rem; cursor: pointer; border: 1px solid #ddd; border-bottom: none; border-radius: 6px 6px 0 0; background: #f5f5f5; font-size: 0.95rem; }
-    .tab.active { background: white; font-weight: 600; border-bottom: 1px solid white; }
-    .tab-content { display: none; }
-    .tab-content.active { display: block; }
-  </style>
+  <link rel="stylesheet" href="/css/design-system.css">
 </head>
 <body>
+  <div id="layout-nav"></div>
+  <div id="layout-header"></div>
+  <main class="page-container" data-page-title="Formules personnalisées">
   <h1>Formules personnalisées</h1>
   <p>Créez vos propres formules de calcul comme dans Excel, en utilisant les variables de vos données stocks et ventes.</p>
 
@@ -166,7 +124,9 @@
     <div id="execError" class="error hidden"></div>
     <input type="hidden" id="execFormulaId" value="" />
   </div>
+  </main>
 
+  <script src="/js/layout.js"></script>
   <script>
     const API_BASE = '';
     const tokenEl = document.getElementById('token');
