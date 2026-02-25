@@ -5,7 +5,8 @@
     "rootDir": "./src",
     "noEmit": false,
     "esModuleInterop": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "paths": {}
   },
   "include": ["src/**/*"],
   "exclude": ["src/**/__tests__/**", "node_modules", "dist"]
