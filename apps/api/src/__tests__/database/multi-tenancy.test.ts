@@ -288,6 +288,103 @@ describe('Multi-Tenancy Isolation Tests', () => {
     });
   });
 
+  describe('Refresh tokens RLS isolation (Story 1.2)', () => {
+    let user1Id: string;
+    let user2Id: string;
+    let token1: string;
+    let token2: string;
+    let rlsApplicableRefresh: boolean;
+
+    beforeAll(async () => {
+      const rlsCheck = await pool.query(
+        "SELECT rolbypassrls FROM pg_roles WHERE rolname = current_user"
+      );
+      rlsApplicableRefresh = rlsCheck.rows.length > 0 && !rlsCheck.rows[0]?.rolbypassrls;
+
+      const client = await pool.connect();
+      try {
+        const dummyHash = '$2b$10$abcdefghijklmnopqrstuvO1F2N3A4B5C6D7E8F9A0B1C2D3E4F5A6B7C8D9E';
+        await client.query('SELECT set_tenant_context($1::uuid)', [tenant1Id]);
+        const u1 = await client.query(
+          `INSERT INTO users (tenant_id, email, password_hash, role)
+           VALUES ($1, $2, $3, 'user') RETURNING id`,
+          [tenant1Id, 'rls-test-u1@tenant1.test', dummyHash]
+        );
+        user1Id = u1.rows[0].id;
+        token1 = 'test-refresh-token-tenant1-' + Date.now();
+        await client.query(
+          `INSERT INTO refresh_tokens (user_id, token, expires_at, revoked)
+           VALUES ($1, $2, NOW() + INTERVAL '1 day', false)`,
+          [user1Id, token1]
+        );
+
+        await client.query('SELECT set_tenant_context($1::uuid)', [tenant2Id]);
+        const u2 = await client.query(
+          `INSERT INTO users (tenant_id, email, password_hash, role)
+           VALUES ($1, $2, $3, 'user') RETURNING id`,
+          [tenant2Id, 'rls-test-u2@tenant2.test', dummyHash]
+        );
+        user2Id = u2.rows[0].id;
+        token2 = 'test-refresh-token-tenant2-' + Date.now();
+        await client.query(
+          `INSERT INTO refresh_tokens (user_id, token, expires_at, revoked)
+           VALUES ($1, $2, NOW() + INTERVAL '1 day', false)`,
+          [user2Id, token2]
+        );
+      } finally {
+        client.release();
+      }
+    });
+
+    afterAll(async () => {
+      const client = await pool.connect();
+      try {
+        await client.query('SELECT set_tenant_context($1::uuid)', [tenant1Id]);
+        await client.query('DELETE FROM refresh_tokens WHERE user_id = $1', [user1Id]);
+        await client.query('DELETE FROM users WHERE id = $1', [user1Id]);
+        await client.query('SELECT set_tenant_context($1::uuid)', [tenant2Id]);
+        await client.query('DELETE FROM refresh_tokens WHERE user_id = $1', [user2Id]);
+        await client.query('DELETE FROM users WHERE id = $1', [user2Id]);
+      } finally {
+        client.release();
+      }
+    });
+
+    it('should return only current tenant refresh_tokens with tenant context', async () => {
+      if (!rlsApplicableRefresh) return;
+      const client = await pool.connect();
+      try {
+        await client.query('SELECT set_tenant_context($1::uuid)', [tenant1Id]);
+        const r1 = await client.query('SELECT * FROM refresh_tokens WHERE token = $1', [token1]);
+        expect(r1.rows.length).toBe(1);
+        expect(r1.rows[0].user_id).toBe(user1Id);
+
+        await client.query('SELECT set_tenant_context($1::uuid)', [tenant2Id]);
+        const r2 = await client.query('SELECT * FROM refresh_tokens WHERE token = $1', [token2]);
+        expect(r2.rows.length).toBe(1);
+        expect(r2.rows[0].user_id).toBe(user2Id);
+      } finally {
+        client.release();
+      }
+    });
+
+    it('should not see other tenant refresh_tokens when context is set', async () => {
+      if (!rlsApplicableRefresh) return;
+      const client = await pool.connect();
+      try {
+        await client.query('SELECT set_tenant_context($1::uuid)', [tenant1Id]);
+        const otherToken = await client.query('SELECT * FROM refresh_tokens WHERE token = $1', [token2]);
+        expect(otherToken.rows.length).toBe(0);
+
+        await client.query('SELECT set_tenant_context($1::uuid)', [tenant2Id]);
+        const otherToken2 = await client.query('SELECT * FROM refresh_tokens WHERE token = $1', [token1]);
+        expect(otherToken2.rows.length).toBe(0);
+      } finally {
+        client.release();
+      }
+    });
+  });
+
   describe('Tenant data integrity', () => {
     it('should enforce unique slug constraint', async () => {
       await expect(

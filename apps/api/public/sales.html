@@ -4,30 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Ventes - bmad-stock-agent</title>
-  <style>
-    * { box-sizing: border-box; }
-    body { font-family: system-ui, sans-serif; max-width: 960px; margin: 2rem auto; padding: 0 1rem; }
-    h1 { margin-bottom: 0.5rem; }
-    .section { margin: 1.5rem 0; padding: 1rem; border: 1px solid #ddd; border-radius: 8px; }
-    label { display: block; margin-top: 0.5rem; font-weight: 500; }
-    input[type="text"], input[type="email"], input[type="number"], input[type="date"], select, textarea { margin-top: 0.25rem; width: 100%; max-width: 400px; padding: 0.35rem; }
-    button { margin-top: 0.5rem; margin-right: 0.5rem; padding: 0.5rem 1rem; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 4px; }
-    button:hover { background: #0056b3; }
-    button:disabled { background: #ccc; cursor: not-allowed; }
-    button.danger { background: #dc3545; }
-    button.danger:hover { background: #c82333; }
-    .error { color: #c00; }
-    .success { color: #0a0; }
-    table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
-    th, td { border: 1px solid #ddd; padding: 0.5rem; text-align: left; }
-    th { background: #f5f5f5; }
-    .hidden { display: none; }
-    .stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 1rem; margin: 0.5rem 0; }
-    .stat-box { padding: 0.5rem; border: 1px solid #eee; border-radius: 4px; }
-    .stat-box strong { display: block; font-size: 0.85rem; color: #666; }
-  </style>
+  <link rel="stylesheet" href="/css/design-system.css">
 </head>
 <body>
+  <div id="layout-nav"></div>
+  <div id="layout-header"></div>
+  <main class="page-container" data-page-title="Ventes">
   <h1>Saisie des ventes</h1>
   <p>Saisissez vos ventes quotidiennes (date, produit, quantité, prix optionnel). Consultez la liste et les statistiques.</p>
 
@@ -101,7 +83,9 @@
     <button id="saveBtn">Enregistrer</button>
     <button id="cancelBtn">Annuler</button>
   </div>
+  </main>
 
+  <script src="/js/layout.js"></script>
   <script>
     const API_BASE = '';
     const tokenEl = document.getElementById('token');

@@ -1,116 +1,150 @@
-import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
-import { apiFetch, refreshCsrf } from '@/lib/api';
+'use client';
 
-interface User {
-  id: string;
-  email: string;
-  first_name: string;
-  last_name: string;
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+
+const STORAGE_KEY = 'bmad_jwt_token';
+
+export interface User {
+  userId: string;
+  tenantId: string;
   role: string;
-}
-
-interface Tenant {
-  id: string;
-  company_name: string;
-  slug: string;
+  email: string;
 }
 
 interface AuthState {
   user: User | null;
-  tenant: Tenant | null;
-  isAuthenticated: boolean;
+  token: string | null;
   isLoading: boolean;
 }
 
 interface AuthContextType extends AuthState {
-  login: (email: string, password: string) => Promise<void>;
-  register: (data: RegisterData) => Promise<void>;
+  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
-}
-
-interface RegisterData {
-  email: string;
-  password: string;
-  first_name: string;
-  last_name: string;
-  company_name: string;
+  setToken: (token: string | null) => void;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-export function AuthProvider({ children }: { children: ReactNode }) {
+export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<AuthState>({
     user: null,
-    tenant: null,
-    isAuthenticated: false,
+    token: null,
     isLoading: true,
   });
 
-  useEffect(() => {
-    const token = localStorage.getItem('access_token');
-    const user = localStorage.getItem('user');
-    const tenant = localStorage.getItem('tenant');
-    if (token && user && tenant) {
-      setState({
-        user: JSON.parse(user),
-        tenant: JSON.parse(tenant),
-        isAuthenticated: true,
-        isLoading: false,
-      });
-    } else {
-      setState((s) => ({ ...s, isLoading: false }));
+  const loadStoredToken = useCallback(() => {
+    if (typeof window === 'undefined') return null;
+    try {
+      return sessionStorage.getItem(STORAGE_KEY) || null;
+    } catch {
+      return null;
     }
   }, []);
 
-  const login = useCallback(async (email: string, password: string) => {
-    await refreshCsrf();
-    const res = await apiFetch<{
-      success: boolean;
-      data: { user: User; tenant: Tenant; access_token: string; refresh_token: string };
-    }>('/auth/login', {
-      method: 'POST',
-      body: { email, password },
-    });
-
-    const { user, tenant, access_token, refresh_token } = res.data;
-    localStorage.setItem('access_token', access_token);
-    localStorage.setItem('refresh_token', refresh_token);
-    localStorage.setItem('user', JSON.stringify(user));
-    localStorage.setItem('tenant', JSON.stringify(tenant));
-    setState({ user, tenant, isAuthenticated: true, isLoading: false });
-  }, []);
-
-  const register = useCallback(async (data: RegisterData) => {
-    await refreshCsrf();
-    const res = await apiFetch<{
-      success: boolean;
-      data: { user: User; tenant: Tenant; access_token: string; refresh_token: string };
-    }>('/auth/register', {
-      method: 'POST',
-      body: data,
-    });
-
-    const { user, tenant, access_token, refresh_token } = res.data;
-    localStorage.setItem('access_token', access_token);
-    localStorage.setItem('refresh_token', refresh_token);
-    localStorage.setItem('user', JSON.stringify(user));
-    localStorage.setItem('tenant', JSON.stringify(tenant));
-    setState({ user, tenant, isAuthenticated: true, isLoading: false });
+  const setToken = useCallback((token: string | null) => {
+    if (typeof window === 'undefined') return;
+    try {
+      if (token) {
+        sessionStorage.setItem(STORAGE_KEY, token);
+      } else {
+        sessionStorage.removeItem(STORAGE_KEY);
+      }
+    } catch {}
+    setState((prev) => ({ ...prev, token, user: token ? prev.user : null }));
   }, []);
 
   const logout = useCallback(() => {
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
-    localStorage.removeItem('user');
-    localStorage.removeItem('tenant');
-    setState({ user: null, tenant: null, isAuthenticated: false, isLoading: false });
-  }, []);
+    setToken(null);
+    setState((prev) => ({ ...prev, user: null }));
+  }, [setToken]);
 
-  return (
-    <AuthContext.Provider value={{ ...state, login, register, logout }}>
-      {children}
-    </AuthContext.Provider>
+  const login = useCallback(
+    async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || '';
+      try {
+        const csrfRes = await fetch(`${apiUrl}/csrf-token`, { credentials: 'include' });
+        if (!csrfRes.ok) throw new Error('Impossible d\'obtenir le token CSRF');
+        const csrfJson = await csrfRes.json();
+        const csrfToken = (csrfJson?.csrfToken && String(csrfJson.csrfToken)) || '';
+
+        const res = await fetch(`${apiUrl}/auth/login`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': csrfToken,
+          },
+          credentials: 'include',
+          body: JSON.stringify({ email, password }),
+        });
+
+        const data = await res.json().catch(() => ({}));
+
+        if (!res.ok) {
+          return { success: false, error: data?.error || 'Connexion impossible.' };
+        }
+
+        const accessToken = data?.data?.access_token;
+        if (!accessToken) {
+          return { success: false, error: 'Réponse inattendue.' };
+        }
+
+        setToken(accessToken);
+
+        return { success: true };
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'Erreur réseau.';
+        return { success: false, error: msg };
+      }
+    },
+    [setToken]
   );
+
+  useEffect(() => {
+    const token = loadStoredToken();
+    if (!token) {
+      setState((prev) => ({ ...prev, token: null, user: null, isLoading: false }));
+      return;
+    }
+
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || '';
+    fetch(`${apiUrl}/auth/me`, {
+      headers: { Authorization: `Bearer ${token}` },
+      credentials: 'include',
+    })
+      .then((res) => {
+        if (!res.ok) {
+          setToken(null);
+          setState((prev) => ({ ...prev, isLoading: false }));
+          return;
+        }
+        return res.json();
+      })
+      .then((json) => {
+        if (json?.success && json?.data) {
+          setState((prev) => ({
+            ...prev,
+            token,
+            user: json.data,
+            isLoading: false,
+          }));
+        } else {
+          setState((prev) => ({ ...prev, token, user: null, isLoading: false }));
+        }
+      })
+      .catch(() => {
+        setToken(null);
+        setState((prev) => ({ ...prev, isLoading: false }));
+      });
+  }, [loadStoredToken, setToken]);
+
+  const value: AuthContextType = {
+    ...state,
+    login,
+    logout,
+    setToken,
+  };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {

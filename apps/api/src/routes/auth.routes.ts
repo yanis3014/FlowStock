@@ -12,6 +12,7 @@ import {
   loginRateLimiter,
   forgotPasswordRateLimiter,
   verifyEmailRateLimiter,
+  resetPasswordRateLimiter,
 } from '../middleware/rateLimit';
 import {
   registerUser,
@@ -199,6 +200,7 @@ router.post(
  */
 router.post(
   '/reset-password',
+  resetPasswordRateLimiter,
   validateResetPassword,
   handleValidationErrors,
   async (req: Request, res: Response) => {

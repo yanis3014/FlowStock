@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Courbes de Prévision - bmad-stock-agent</title>
+  <link rel="stylesheet" href="/css/design-system.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="/api-client.js"></script>
+</head>
+<body>
+  <div id="layout-nav"></div>
+  <div id="layout-header"></div>
+  <main class="page-container" data-page-title="Courbes de Prévision">
+  <div class="section">
+    <div class="info-box">
+      <strong>📊 Visualisation des prévisions</strong> — Les courbes montrent l'évolution prévue des stocks basée sur la consommation moyenne. 
+      La ligne orange indique la date recommandée pour passer commande (en tenant compte du délai de livraison).
+    </div>
+
+    <div class="controls">
+      <div>
+        <label>Période d'analyse</label>
+        <select id="periodDays">
+          <option value="7">7 jours</option>
+          <option value="14">14 jours</option>
+          <option value="30" selected>30 jours</option>
+          <option value="60">60 jours</option>
+          <option value="90">90 jours</option>
+        </select>
+      </div>
+      <div>
+        <label>Produit à afficher</label>
+        <select id="productSelect">
+          <option value="">-- Sélectionner un produit --</option>
+        </select>
+      </div>
+      <div>
+        <button id="loadBtn">Charger les données</button>
+      </div>
+      <div>
+        <label>Produit à comparer</label>
+        <select id="compareProductSelect">
+          <option value="">-- Ajouter un produit --</option>
+        </select>
+      </div>
+      <div>
+        <button id="addCompareBtn" class="secondary" disabled>Ajouter à la comparaison</button>
+      </div>
+    </div>
+
+    <div id="errorMsg" class="error hidden"></div>
+
+    <div id="chartSection" style="display: none;">
+      <div class="chart-container chart-container-lg">
+        <canvas id="forecastChart"></canvas>
+      </div>
+      
+      <div id="legendContainer"></div>
+      
+      <div id="comparisonSection" style="display: none;">
+        <div class="section-title">Produits comparés</div>
+        <ul class="comparison-list" id="comparisonList"></ul>
+      </div>
+    </div>
+
+    <div id="emptyState" class="empty-state">
+      <p>👆 Sélectionnez un produit et cliquez sur "Charger les données" pour afficher la courbe de prévision.</p>
+      <p style="font-size: 0.875rem; color: #94a3b8;">Les courbes montrent quand les stocks vont tomber et quand recommander une commande.</p>
+    </div>
+  </div>
+  </main>
+
+  <script src="/js/layout.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  // --- State ---
+  const MAX_COMPARISON = 5; // Story 4.3: limite raisonnable pour comparaison multi-produits
+  let chart = null;
+  let allEstimates = [];
+  let allProducts = [];
+  let productsMap = new Map(); // product_id -> Product
+  let comparedProducts = new Set(); // Set of product_ids being compared
+  let currentProductId = null;
+  let recommendationMarker = null; // Store for overlay drawing
+
+  // --- DOM refs ---
+  const periodSelect = document.getElementById('periodDays');
+  const productSelect = document.getElementById('productSelect');
+  const loadBtn = document.getElementById('loadBtn');
+  const addCompareBtn = document.getElementById('addCompareBtn');
+  const errorMsg = document.getElementById('errorMsg');
+  const chartSection = document.getElementById('chartSection');
+  const emptyState = document.getElementById('emptyState');
+  const forecastChart = document.getElementById('forecastChart');
+  const legendContainer = document.getElementById('legendContainer');
+  const comparisonSection = document.getElementById('comparisonSection');
+  const comparisonList = document.getElementById('comparisonList');
+  const compareProductSelect = document.getElementById('compareProductSelect');
+
+  // --- Helpers ---
+  function getToken() {
+    if (typeof BmadApiClient !== 'undefined') {
+      return (BmadApiClient.loadTokenFromStorage() || '').trim();
+    }
+    const saved = localStorage.getItem('bmad_jwt_token');
+    return (saved || '').trim();
+  }
+
+  function showError(msg) {
+    errorMsg.textContent = msg;
+    errorMsg.classList.remove('hidden');
+  }
+
+  function clearError() {
+    errorMsg.textContent = '';
+    errorMsg.classList.add('hidden');
+  }
+
+  function confidenceBadge(level) {
+    const map = {
+      high: { cls: 'confidence-high', label: 'Fiable' },
+      medium: { cls: 'confidence-medium', label: 'Modéré' },
+      low: { cls: 'confidence-low', label: 'Peu fiable' },
+      insufficient: { cls: 'confidence-insufficient', label: 'Données insuffisantes' },
+    };
+    const info = map[level] || map.insufficient;
+    return '<span class="confidence-badge ' + info.cls + '">' + info.label + '</span>';
+  }
+
+  function formatDate(dateStr) {
+    if (!dateStr) return '—';
+    const d = new Date(dateStr);
+    return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  }
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  // --- Build timeline data ---
+  function buildTimeline(estimate, product) {
+    if (!estimate || estimate.days_remaining === null || estimate.avg_daily_consumption === null || estimate.avg_daily_consumption <= 0) {
+      return null; // Pas de données suffisantes
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const stockoutDate = estimate.estimated_stockout_date ? new Date(estimate.estimated_stockout_date) : null;
+    if (!stockoutDate) return null;
+
+    const days = Math.ceil(estimate.days_remaining);
+    const timeline = [];
+    const currentStock = estimate.current_stock;
+    const dailyConsumption = estimate.avg_daily_consumption;
+
+    // Point initial (aujourd'hui)
+    timeline.push({
+      date: new Date(today),
+      stock: currentStock,
+      label: formatDate(today.toISOString())
+    });
+
+    // Points quotidiens jusqu'à la rupture
+    for (let i = 1; i <= days; i++) {
+      const date = new Date(today);
+      date.setDate(date.getDate() + i);
+      const stock = Math.max(0, currentStock - (dailyConsumption * i));
+      timeline.push({
+        date: date,
+        stock: stock,
+        label: formatDate(date.toISOString())
+      });
+    }
+
+    // Date recommandation commande
+    const leadTimeDays = (product && product.lead_time_days) ? product.lead_time_days : 7;
+    const recommendationDate = new Date(stockoutDate);
+    recommendationDate.setDate(recommendationDate.getDate() - leadTimeDays);
+
+    return {
+      timeline: timeline,
+      stockoutDate: stockoutDate,
+      recommendationDate: recommendationDate,
+      leadTimeDays: leadTimeDays
+    };
+  }
+
+  // --- Chart colors ---
+  const chartColors = [
+    '#3b82f6', // blue
+    '#10b981', // green
+    '#f59e0b', // orange
+    '#ef4444', // red
+    '#8b5cf6', // purple
+    '#06b6d4', // cyan
+  ];
+
+  function getColorForProduct(productId, index) {
+    return chartColors[index % chartColors.length];
+  }
+
+  // --- Render chart ---
+  function renderChart() {
+    if (chart) {
+      chart.destroy();
+    }
+
+    const datasets = [];
+    const labels = [];
+    const recommendationMarkers = [];
+
+    // Collect all products to display (current + compared)
+    const productsToShow = [];
+    if (currentProductId) {
+      productsToShow.push({ id: currentProductId, isCurrent: true });
+    }
+    comparedProducts.forEach(id => {
+      if (id !== currentProductId) {
+        productsToShow.push({ id: id, isCurrent: false });
+      }
+    });
+
+    if (productsToShow.length === 0) {
+      chartSection.style.display = 'none';
+      emptyState.style.display = 'block';
+      return;
+    }
+
+    chartSection.style.display = 'block';
+    emptyState.style.display = 'none';
+
+    // Build datasets for each product
+    productsToShow.forEach((item, index) => {
+      const productId = item.id;
+      const estimate = allEstimates.find(e => e.product_id === productId);
+      const product = productsMap.get(productId);
+
+      if (!estimate) return;
+
+      const timelineData = buildTimeline(estimate, product);
+      if (!timelineData) return;
+
+      const color = getColorForProduct(productId, index);
+      const productName = estimate.product_name || 'Produit inconnu';
+
+      // Build labels from first dataset
+      if (labels.length === 0) {
+        timelineData.timeline.forEach(point => {
+          labels.push(point.label);
+        });
+      }
+
+      // Build dataset
+      const stockValues = timelineData.timeline.map(p => p.stock);
+      datasets.push({
+        label: productName,
+        data: stockValues,
+        borderColor: color,
+        backgroundColor: color + '20',
+        borderWidth: item.isCurrent ? 3 : 2,
+        fill: false,
+        tension: 0.1,
+        pointRadius: item.isCurrent ? 4 : 3,
+        pointHoverRadius: 6,
+      });
+
+      // Store recommendation marker for first product (current)
+      if (item.isCurrent && recommendationMarkers.length === 0) {
+        const recDate = timelineData.recommendationDate;
+        const recIndex = timelineData.timeline.findIndex(p => {
+          const pDate = new Date(p.date);
+          pDate.setHours(0, 0, 0, 0);
+          return pDate.getTime() >= recDate.getTime();
+        });
+        if (recIndex >= 0) {
+          recommendationMarkers.push({
+            index: recIndex,
+            date: recDate,
+            label: formatDate(recDate.toISOString()),
+            stock: timelineData.timeline[recIndex]?.stock || 0
+          });
+        }
+      }
+    });
+
+    if (datasets.length === 0) {
+      chartSection.style.display = 'none';
+      emptyState.style.display = 'block';
+      emptyState.innerHTML = '<p>⚠️ Données insuffisantes pour afficher la courbe.</p><p style="font-size: 0.875rem;">Ce produit n\'a pas assez de données de ventes pour générer une prévision.</p>';
+      return;
+    }
+
+    // Store recommendation marker for later overlay rendering
+    recommendationMarker = null;
+    if (recommendationMarkers.length > 0 && currentProductId) {
+      recommendationMarker = recommendationMarkers[0];
+      
+      // Register custom plugin for recommendation line
+      const recommendationPlugin = {
+        id: 'recommendationLinePlugin_' + Date.now(), // Unique ID to avoid conflicts
+        afterDraw: function(chart) {
+          drawRecommendationLine(chart, recommendationMarker);
+        }
+      };
+      Chart.register(recommendationPlugin);
+    }
+
+    // Create chart
+    const ctx = forecastChart.getContext('2d');
+    chart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: datasets
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: {
+          intersect: false,
+          mode: 'index'
+        },
+        plugins: {
+          legend: {
+            display: true,
+            position: 'top'
+          },
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                const datasetLabel = context.dataset.label || '';
+                const value = context.parsed.y;
+                const index = context.dataIndex;
+                const date = labels[index];
+                return datasetLabel + ': ' + value.toFixed(2) + ' ' + (allEstimates.find(e => e.product_id === productsToShow[context.datasetIndex]?.id)?.unit || '') + ' (' + date + ')';
+              }
+            }
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            title: {
+              display: true,
+              text: 'Stock (quantité)'
+            }
+          },
+          x: {
+            title: {
+              display: true,
+              text: 'Date'
+            }
+          }
+        }
+      }
+    });
+
+    // Render legend with confidence
+    renderLegend(productsToShow);
+
+    // Render comparison list
+    if (comparedProducts.size > 0) {
+      renderComparisonList();
+    } else {
+      comparisonSection.style.display = 'none';
+    }
+  }
+
+  function drawRecommendationLine(chart, marker) {
+    if (!chart || !marker) return;
+    
+    const canvas = chart.canvas;
+    const ctx = canvas.getContext('2d');
+    const chartArea = chart.chartArea;
+    const xScale = chart.scales.x;
+    const yScale = chart.scales.y;
+    
+    if (!xScale || !yScale || !chartArea) return;
+    
+    // Calculate x position for recommendation date
+    const xPos = xScale.getPixelForValue(marker.index);
+    
+    // Draw vertical line
+    ctx.save();
+    ctx.strokeStyle = '#f59e0b';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([5, 5]);
+    ctx.beginPath();
+    ctx.moveTo(xPos, chartArea.top);
+    ctx.lineTo(xPos, chartArea.bottom);
+    ctx.stroke();
+    ctx.restore();
+    
+    // Draw label above chart
+    ctx.save();
+    ctx.fillStyle = '#f59e0b';
+    ctx.font = 'bold 12px system-ui';
+    ctx.textAlign = 'center';
+    const label = '📅 Recommander avant ' + marker.label;
+    const labelWidth = ctx.measureText(label).width;
+    const labelPadding = 8;
+    const labelHeight = 20;
+    
+    // Draw label background
+    ctx.fillStyle = '#f59e0b';
+    ctx.fillRect(xPos - labelWidth/2 - labelPadding, chartArea.top - labelHeight - 5, labelWidth + labelPadding*2, labelHeight);
+    
+    // Draw label text
+    ctx.fillStyle = 'white';
+    ctx.fillText(label, xPos, chartArea.top - 10);
+    ctx.restore();
+  }
+
+  function renderLegend(productsToShow) {
+    let html = '<div class="legend">';
+    productsToShow.forEach((item, index) => {
+      const productId = item.id;
+      const estimate = allEstimates.find(e => e.product_id === productId);
+      if (!estimate) return;
+
+      const color = getColorForProduct(productId, index);
+      const productName = estimate.product_name || 'Produit inconnu';
+      const confidence = confidenceBadge(estimate.confidence_level);
+      const daysRemaining = estimate.days_remaining !== null ? estimate.days_remaining.toFixed(1) + ' jours' : '—';
+      const stockoutDate = formatDate(estimate.estimated_stockout_date);
+
+      html += '<div class="legend-item">';
+      html += '<div class="legend-color" style="background: ' + color + ';"></div>';
+      html += '<span><strong>' + escapeHtml(productName) + '</strong> ' + confidence + '</span>';
+      html += '<span style="margin-left: 0.5rem; color: #64748b; font-size: 0.875rem;">(' + daysRemaining;
+      if (stockoutDate !== '—') {
+        html += ', rupture: ' + stockoutDate;
+      }
+      html += ')</span>';
+      html += '</div>';
+    });
+    html += '</div>';
+    legendContainer.innerHTML = html;
+  }
+
+  function renderComparisonList() {
+    let html = '';
+    comparedProducts.forEach(productId => {
+      const estimate = allEstimates.find(e => e.product_id === productId);
+      if (!estimate) return;
+
+      const color = getColorForProduct(productId, Array.from(comparedProducts).indexOf(productId));
+      html += '<li class="comparison-item" style="border-left-color: ' + color + ';">';
+      html += '<span><strong>' + escapeHtml(estimate.product_name) + '</strong> ' + confidenceBadge(estimate.confidence_level) + '</span>';
+      html += '<button class="danger" onclick="removeFromComparison(\'' + productId + '\')">Retirer</button>';
+      html += '</li>';
+    });
+    comparisonList.innerHTML = html;
+    comparisonSection.style.display = 'block';
+  }
+
+  // --- Load data ---
+  async function loadProducts() {
+    const token = getToken();
+    if (!token) {
+      showError('Veuillez vous connecter pour charger les produits.');
+      return;
+    }
+
+    try {
+      const res = await fetch('/products?limit=1000', {
+        headers: { 'Authorization': 'Bearer ' + token },
+      });
+      const body = await res.json();
+      if (!res.ok || !body.success) {
+        throw new Error(body.error || 'Erreur lors du chargement des produits');
+      }
+      allProducts = body.data || [];
+      productsMap.clear();
+      allProducts.forEach(p => productsMap.set(p.id, p));
+
+      // Populate product select
+      productSelect.innerHTML = '<option value="">-- Sélectionner un produit --</option>';
+      compareProductSelect.innerHTML = '<option value="">-- Ajouter un produit --</option>';
+      allProducts.forEach(p => {
+        const option = document.createElement('option');
+        option.value = p.id;
+        option.textContent = p.name + ' (' + p.sku + ')';
+        productSelect.appendChild(option);
+        
+        const compareOption = document.createElement('option');
+        compareOption.value = p.id;
+        compareOption.textContent = p.name + ' (' + p.sku + ')';
+        compareProductSelect.appendChild(compareOption);
+      });
+    } catch (err) {
+      showError('Erreur lors du chargement des produits: ' + err.message);
+    }
+  }
+
+  async function loadEstimates() {
+    clearError();
+    const token = getToken();
+    if (!token) {
+      showError('Veuillez vous connecter.');
+      return;
+    }
+
+    const period = periodSelect.value || '30';
+    loadBtn.disabled = true;
+    loadBtn.textContent = 'Chargement...';
+
+    try {
+      const res = await fetch('/stock-estimates?period_days=' + encodeURIComponent(period), {
+        headers: { 'Authorization': 'Bearer ' + token },
+      });
+      const body = await res.json();
+      if (!res.ok || !body.success) {
+        throw new Error(body.error || 'Erreur lors du chargement');
+      }
+      allEstimates = body.data || [];
+      
+      // Filter estimates to only show products with sufficient data
+      allEstimates = allEstimates.filter(e => e.days_remaining !== null && e.avg_daily_consumption !== null && e.avg_daily_consumption > 0);
+      
+      // Update add compare button state (limite 5 produits, story 4.3)
+      if (currentProductId) {
+        addCompareBtn.disabled = comparedProducts.has(currentProductId) || comparedProducts.size >= MAX_COMPARISON;
+      }
+      
+      renderChart();
+    } catch (err) {
+      showError('Erreur réseau : ' + err.message);
+    } finally {
+      loadBtn.disabled = false;
+      loadBtn.textContent = 'Charger les données';
+    }
+  }
+
+  // --- Comparison functions ---
+  window.addToComparison = function(productId) {
+    if (!productId || comparedProducts.has(productId)) return;
+    if (comparedProducts.size >= MAX_COMPARISON) return; // Limite raisonnable (story 4.3)
+    comparedProducts.add(productId);
+    addCompareBtn.disabled = comparedProducts.size >= MAX_COMPARISON || (currentProductId === productId && comparedProducts.has(productId));
+    renderChart();
+  };
+
+  window.removeFromComparison = function(productId) {
+    comparedProducts.delete(productId);
+    addCompareBtn.disabled = !currentProductId || (currentProductId === productId);
+    renderChart();
+  };
+
+  // --- Events ---
+  loadBtn.addEventListener('click', async () => {
+    await loadEstimates();
+  });
+
+
+  periodSelect.addEventListener('change', function() {
+    if (currentProductId) {
+      loadEstimates();
+    }
+  });
+
+  addCompareBtn.addEventListener('click', function() {
+    const compareProductId = compareProductSelect.value;
+    if (!compareProductId) return;
+    if (comparedProducts.size >= MAX_COMPARISON) return;
+    const estimate = allEstimates.find(e => e.product_id === compareProductId);
+    if (estimate && !comparedProducts.has(compareProductId)) {
+      addToComparison(compareProductId);
+      compareProductSelect.value = '';
+      addCompareBtn.disabled = comparedProducts.size >= MAX_COMPARISON;
+    }
+  });
+
+  compareProductSelect.addEventListener('change', function() {
+    const compareProductId = this.value;
+    addCompareBtn.disabled = !compareProductId || comparedProducts.has(compareProductId) || comparedProducts.size >= MAX_COMPARISON;
+  });
+
+  productSelect.addEventListener('change', function() {
+    currentProductId = this.value || null;
+    addCompareBtn.disabled = !currentProductId || comparedProducts.has(currentProductId);
+    if (currentProductId) {
+      loadEstimates();
+    } else {
+      chartSection.style.display = 'none';
+      emptyState.style.display = 'block';
+    }
+  });
+
+  // Initialize: load products on page load
+  loadProducts();
+
+  // Token géré par api-client (bmad_jwt_token) et BmadApiClient.loadTokenFromStorage()
+})();
+</script>
+</body>
+</html>

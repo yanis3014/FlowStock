@@ -1,0 +1,72 @@
+import { Router, Request, Response } from 'express';
+import { authenticateToken } from '../middleware/auth';
+import { 
+  getDashboardSummary, 
+  updateTenantAlertThreshold,
+  getTenantAlertThresholdSetting 
+} from '../services/dashboard.service';
+
+const router = Router();
+
+/**
+ * GET /dashboard/summary
+ * Get dashboard summary data (sales yesterday, current stock, alerts, etc.)
+ */
+router.get('/summary', authenticateToken, async (req: Request, res: Response) => {
+  if (!req.user?.tenantId) {
+    res.status(401).json({ success: false, error: 'Authentication required' });
+    return;
+  }
+  try {
+    const summary = await getDashboardSummary(req.user.tenantId);
+    res.status(200).json({ success: true, data: summary });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to get dashboard summary';
+    res.status(500).json({ success: false, error: message });
+  }
+});
+
+/**
+ * GET /dashboard/alert-threshold
+ * Get current alert threshold setting for tenant
+ */
+router.get('/alert-threshold', authenticateToken, async (req: Request, res: Response) => {
+  if (!req.user?.tenantId) {
+    res.status(401).json({ success: false, error: 'Authentication required' });
+    return;
+  }
+  try {
+    const threshold = await getTenantAlertThresholdSetting(req.user.tenantId);
+    res.status(200).json({ success: true, data: { thresholdPercent: threshold } });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to get alert threshold';
+    res.status(500).json({ success: false, error: message });
+  }
+});
+
+/**
+ * PUT /dashboard/alert-threshold
+ * Update alert threshold setting for tenant
+ */
+router.put('/alert-threshold', authenticateToken, async (req: Request, res: Response) => {
+  if (!req.user?.tenantId) {
+    res.status(401).json({ success: false, error: 'Authentication required' });
+    return;
+  }
+  
+  const { thresholdPercent } = req.body;
+  if (typeof thresholdPercent !== 'number' || !Number.isFinite(thresholdPercent)) {
+    res.status(400).json({ success: false, error: 'thresholdPercent must be a finite number' });
+    return;
+  }
+  
+  try {
+    await updateTenantAlertThreshold(req.user.tenantId, thresholdPercent);
+    res.status(200).json({ success: true, data: { thresholdPercent } });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to update alert threshold';
+    res.status(500).json({ success: false, error: message });
+  }
+});
+
+export default router;

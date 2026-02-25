@@ -1,26 +1,25 @@
-# SaaS Gestion de Stocks IA pour PME Fullstack Architecture Document
+# Flowstock – Fullstack Architecture Document
+
+**Focus : Restauration, Nightlife & Real-time Stock Management**
 
 ---
 
 ## Introduction
 
-Ce document décrit l'architecture full-stack complète pour le SaaS de gestion de stocks IA pour PME, incluant les systèmes backend, l'implémentation frontend, et leur intégration. Il sert de source unique de vérité pour le développement piloté par IA, assurant la cohérence à travers toute la stack technologique.
+Ce document décrit l'architecture full-stack de **Flowstock**, SaaS de gestion de stocks en temps réel pour la restauration et le monde de la nuit (Horeca). Il couvre le **Connecteur Universel POS** (synchro ventes en temps réel), le **Dashboard de Rush "Traffic Light"**, le **Scan-to-Recipe**, le moteur de stock hybride (unités + volumes), et l’intégration IA/ML. Il sert de source unique de vérité pour le développement piloté par IA.
 
-Cette approche unifiée combine ce qui serait traditionnellement des documents d'architecture backend et frontend séparés, rationalisant le processus de développement pour les applications full-stack modernes où ces préoccupations sont de plus en plus entremêlées.
+Contexte produit (aligné brief/PRD) : vision claire des stocks pendant le rush, zéro saisie grâce à la synchro avec les caisses (Lightspeed, L'Addition, Square), onboarding <15 min, prédictions et commandes de clôture. L’architecture privilégie le **temps réel** (WebSockets, webhooks POS), le **mobile-first** et la **haute disponibilité** du Connecteur (99.9%).
 
 ### Starter Template or Existing Project
 
-**N/A - Greenfield project**
-
-Aucun starter template ou projet existant n'est mentionné dans le PRD. Il s'agit d'un projet greenfield qui sera développé from scratch. Cependant, étant donné les besoins techniques (microservices modulaires, infrastructure ML, multi-tenancy), je recommanderai des frameworks/stacks adaptés lors de la sélection de la tech stack.
-
-**Recommandation à venir:** Basé sur les requirements du PRD (architecture microservices, IA/ML, Python pour ML, frontend moderne), je recommanderai une stack appropriée dans la section Tech Stack.
+**N/A - Greenfield project** (ou évolution d’un monorepo existant). Stack recommandée : monorepo (Turborepo/Nx), API RESTful + Connecteur Universel (Adapter Pattern), frontend Next.js/React + Tailwind, backend Node.js (TypeScript) ou Python (FastAPI) pour ML, PostgreSQL + Redis, Clerk/Auth0.
 
 ### Change Log
 
 | Date | Version | Description | Author |
 |------|---------|-------------|--------|
 | 2024-12-19 | 1.0 | Initial architecture document creation | Architect |
+| 2026-02-22 | 1.1 | Alignement brief/PRD Flowstock : titre, intro, Technical Summary (Connecteur Universel, POS Sync, temps réel), Tech Stack (WebSockets, POS, Auth), External APIs Connecteur POS, Core Workflows webhook POS + dashboard temps réel | Architect |
 
 ---
 
@@ -28,7 +27,7 @@ Aucun starter template ou projet existant n'est mentionné dans le PRD. Il s'agi
 
 ### Technical Summary
 
-Cette application suit une **architecture microservices modulaire** déployée sur cloud (AWS/GCP/Azure) avec un frontend web responsive moderne et un backend composé de services indépendants pour la scalabilité et l'évolutivité. Le frontend utilisera un framework moderne (React/Vue.js) avec state management pour offrir une expérience utilisateur simple et intuitive, tandis que le backend sera organisé en microservices (Service Stocks, Service IA/ML avec Chat IA intégré, Service Commandes, Service Factures, Service Analytics) communiquant via APIs RESTful. L'infrastructure ML Python sera intégrée pour les prédictions IA et le réentraînement quotidien, avec support cold start via modèles pré-entraînés. La plateforme cloud choisie fournira l'authentification, le stockage, et l'infrastructure scalable nécessaire. Cette architecture répond aux objectifs du PRD en permettant la scalabilité horizontale, l'isolation multi-tenant, et l'intégration IA/ML complexe tout en maintenant la simplicité pour les utilisateurs PME.
+**Flowstock** suit une **architecture modulaire** (monorepo) avec **Connecteur Universel POS** en cœur : réception des ventes en temps réel via **webhooks** des logiciels de caisse (Lightspeed, L'Addition, Square), traduction en décrémentation de stock (Adapter Pattern), et mise à jour du **Dashboard de Rush "Traffic Light"** en <10 s (cible <5 s) via **WebSockets**. Le frontend est **mobile-first** (Next.js/React, Tailwind, design High-Contrast) pour usage en cuisine et au bar ; le backend expose une API RESTful et un service de synchro POS (schéma de données agnostique Orders). Services : Stocks (moteur hybride unités/volumes), IA/ML (prédictions, Scan-to-Recipe, facture), Commandes (prédictives de clôture), Factures (OCR/réconciliation). **Redis** stocke l’état de stock "en direct" pendant le rush (latence <100 ms). Authentification **Clerk ou Auth0** (multi-tenant). L’architecture vise la scalabilité horizontale, l’isolation multi-tenant, l’uptime 99.9% du Connecteur, et l’onboarding <15 min (connexion POS + Scan-to-Recipe).
 
 ### Platform and Infrastructure Choice
 
@@ -53,6 +52,8 @@ Cette application suit une **architecture microservices modulaire** déployée s
 GCP est recommandé car (1) le projet est centré sur l'IA/ML avec besoin de réentraînement quotidien - Vertex AI offre les meilleures capacités ML intégrées, (2) support natif Python/PyTorch/TensorFlow, (3) Cloud Run permet déploiement simple de microservices, (4) BigQuery excellent pour analytics time-series nécessaires pour l'IA, (5) scalabilité automatique importante pour croissance.
 
 **Confirmation requise:** Confirmez-vous le choix de GCP ou préférez-vous AWS/Azure ?
+
+**Note (alignement brief/PRD)** : Le brief et le PRD mentionnent aussi **Vercel/Supabase** pour la vélocité (frontend + API + PostgreSQL managé) et une infrastructure **Serverless** pour l’évolutivité. Pour le MVP "Rush Edition", un déploiement Vercel (frontend) + Supabase (PostgreSQL, Auth, Realtime) ou GCP reste cohérent ; le **Connecteur Universel** (webhooks POS) et **Redis** (état rush) doivent être hébergés de façon fiable (uptime 99.9%).
 
 ---
 
@@ -377,9 +378,11 @@ graph TB
 | API Style | REST | OpenAPI 3.0 | Communication entre services et frontend | Standard, simple, bien supporté, documentation OpenAPI |
 | Database (Relational) | PostgreSQL | 15+ | Données relationnelles (stocks, commandes, utilisateurs, fournisseurs) | Robustesse, support JSON, multi-tenancy, performances |
 | Database (Time-Series) | BigQuery | Latest | Données de ventes historiques et métriques IA time-series | Intégration GCP native, scalabilité automatique, analytics puissant |
-| Cache | Redis | 7.2+ | Cache sessions, résultats API, données fréquemment accédées | Performances, TTL automatique, support structures de données |
+| Cache | Redis | 7.2+ | Cache sessions, résultats API ; **état stock "en direct" pendant le rush** (latence <100 ms) | Performances, TTL ; alignement PRD : stock théorique en direct pour Dashboard Rush |
 | File Storage | Google Cloud Storage | Latest | Photos factures, exports CSV, fichiers utilisateurs | Intégration GCP, scalabilité, CDN intégré, gestion versions |
-| Authentication | Cloud Identity (GCP) + JWT | Latest | Authentification et autorisation utilisateurs | Gestion OAuth2/OIDC native GCP, JWT pour tokens stateless |
+| Authentication | Clerk ou Auth0 (option PRD) / Cloud Identity (GCP) + JWT | Latest | Authentification et autorisation, multi-tenant (groupes restaurants) | Clerk/Auth0 : onboarding rapide, multi-tenant. GCP : JWT stateless, OAuth2/OIDC |
+| Real-time | WebSockets (Socket.io ou natif) | Latest | Mise à jour temps réel du Dashboard de Rush sans rafraîchissement | Alignement PRD : mise à jour 5-10 s après vente POS ; push depuis backend vers frontend |
+| POS Connecteur | Webhooks + Adapter Pattern (custom) | N/A | Réception ventes en temps réel depuis caisses (Lightspeed, L'Addition, Square) | Connecteur Universel Must-Have #1 ; traduction JSON vente → décrémentation stock ; schéma agnostique Orders |
 | Frontend Testing | Vitest + React Testing Library | Latest | Tests unitaires et intégration composants React | Rapide, compatible Vite, excellente DX, aligné avec React |
 | Backend Testing | Jest + Supertest | Latest | Tests unitaires et intégration APIs Node.js | Standard Node.js, mocks faciles, intégration CI/CD |
 | ML Testing | pytest | Latest | Tests unitaires et intégration modèles ML Python | Standard Python ML, fixtures, parametrize pour tests multiples |
@@ -401,12 +404,12 @@ graph TB
 | CSS Framework | Tailwind CSS | 3.4+ | Framework CSS utilitaire pour styling rapide | Productivité, consistency, dark mode intégré, purge CSS automatique |
 
 **Notes importantes:**
-- **TypeScript partout** (frontend + backend Node.js) pour type safety et partage types
-- **Python uniquement pour ML service** pour compatibilité bibliothèques ML
-- **BigQuery au lieu d'InfluxDB** pour intégration GCP native et analytics avancés
-- **Cloud Run** pour orchestration (Kubernetes managé) avec possibilité migration GKE
-- **Turborepo** pour monorepo (simplicité vs Nx)
-- **React Query** recommandé pour state management (cache API automatique important pour dashboard)
+- **TypeScript partout** (frontend + backend Node.js) pour type safety et partage types (crucial fiches techniques / schéma POS).
+- **Python** pour ML service (Scan-to-Recipe, prédictions, facture) ; modèles SOTA (GPT-4o, Gemini 1.5 Pro) pour vision/NLP ; Prophet/XGBoost pour séries temporelles (brief/PRD).
+- **Next.js** option frontend (PRD) en plus de React ; **Tailwind** + design High-Contrast (cuisine / bars).
+- **Redis** : en plus du cache, stocker l’état de stock "live" pendant le rush pour garantir latence <100 ms et alimentation du Dashboard Traffic Light.
+- **Connecteur Universel** : priorité Webhooks pour ventes POS ; Adapter Pattern pour transformer tout JSON de vente en décrémentations standardisées.
+- **Turborepo** (ou Nx) pour monorepo ; partage des types frontend/backend pour cohérence des recettes et des Orders.
 
 ---
 
@@ -1562,6 +1565,32 @@ graph TB
 
 Cette section documente toutes les intégrations avec des services externes nécessaires au fonctionnement du système. Chaque intégration est documentée avec ses endpoints, méthodes d'authentification, limites de taux, et considérations de sécurité.
 
+### 0. Connecteur Universel POS (Lightspeed, L'Addition, Square) – Must-Have #1
+
+**Purpose:**  
+Réception des ventes en **temps réel** depuis les logiciels de caisse pour décrémenter automatiquement le stock et alimenter le Dashboard de Rush. Architecture **agnostique** : chaque POS expose des webhooks ou une API de type "orders/sales" ; le Connecteur traduit (Adapter Pattern) le payload spécifique en modèle interne `Order` / lignes de vente, puis déclenche la décrémentation (mapping vente → recettes → ingrédients).
+
+**POS cibles MVP (exemples):**
+- **Lightspeed** – API REST + webhooks (orders created/updated)
+- **L'Addition** – API / webhooks selon documentation fournisseur
+- **Square** – Orders API, webhooks (order.created, order.updated)
+
+**Modèle d’intégration:**  
+- **Webhooks (prioritaire)** : le POS envoie un POST vers notre endpoint (ex. `POST /api/v1/pos/webhooks/lightspeed`) à chaque vente validée ; vérification signature, normalisation en événement `SaleEvent`, puis traitement synchrone ou via queue pour mise à jour stock + broadcast WebSocket (dashboard).  
+- **Fallback** : polling API POS si webhooks indisponibles ; ou saisie manuelle d’urgence (mode dégradé PRD).
+
+**Sécurité:**  
+- Clés API / secrets POS stockés par tenant (chiffrement AES-256, PRD).  
+- Validation des webhooks (HMAC/signature selon POS) pour éviter les injections.  
+- Audit log de chaque événement reçu (traçabilité, détection coulage).
+
+**Objectifs non-fonctionnels:**  
+- Latence bout-en-bout : mise à jour dashboard <10 s (cible <5 s).  
+- Uptime Connecteur : 99.9%.  
+- Mode dégradé : si POS injoignable ou webhook en erreur, alerte + possibilité saisie manuelle sans perte de données.
+
+---
+
 ### 1. Google Cloud Vertex AI
 
 **Purpose:**  
@@ -1928,6 +1957,42 @@ Service Account avec permissions IAM. Application Default Credentials (ADC).
 
 Cette section décrit les workflows critiques du système via des diagrammes de séquence Mermaid. Ils servent de référence pour l’implémentation par les agents IA et pour la validation de bout en bout.
 
+### 0. Workflow Réception Vente POS (Webhook) → Décrémentation Stock → Dashboard Temps Réel *(Flowstock Rush Edition)*
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant POS as Caisse (Lightspeed/Square/L'Addition)
+    participant WH as API Webhook POS (Connecteur Universel)
+    participant ADAPT as Adapter (normalisation Order)
+    participant STK as Stocks Service
+    participant Redis as Redis (état live)
+    participant PG as PostgreSQL
+    participant WS as WebSocket Server
+    participant FE as Frontend (Dashboard Rush)
+
+    POS->>WH: POST /pos/webhooks/{provider}\n(payload vente / order)
+    WH->>WH: Vérification signature (HMAC)
+    WH->>ADAPT: Traduction payload → SaleEvent standard
+    ADAPT-->>WH: Order normalisé (lignes: product_id ou sku, qty)
+    WH->>STK: Décrémentation stock (vente → recettes → ingrédients)
+    STK->>PG: INSERT stock_movements, UPDATE quantities
+    STK->>Redis: Mise à jour état stock "live" (tenant_id, product_id, qty)
+    STK-->>WH: OK
+    WH->>WS: Broadcast (tenant_id, updated_products)
+    WS-->>FE: Push mise à jour (Traffic Light 5-10 s)
+    FE-->>FE: Rafraîchit jauges Vert/Orange/Rouge sans reload
+```
+
+**Objectifs:**  
+- Zéro saisie : chaque vente en caisse décrémente le stock automatiquement.  
+- Dashboard de Rush mis à jour en <10 s (cible <5 s) via WebSocket.  
+- Traçabilité : chaque événement webhook et chaque mouvement de stock sont loggés (audit, anti-coulage).
+
+**En cas d’échec webhook ou POS injoignable :** alerte côté backend, mode dégradé avec saisie manuelle d’urgence (PRD NFR21).
+
+---
+
 ### 1. Workflow Prédiction IA Quotidienne
 
 ```mermaid
@@ -2093,7 +2158,9 @@ sequenceDiagram
 
 ---
 
-### 5. Workflow Sync Ventes depuis Terminal de Paiement
+### 5. Workflow Sync Ventes depuis Terminal de Paiement *(fallback / complément)*
+
+*En contexte Flowstock Rush Edition, le flux principal est le Workflow 0 (webhooks POS). Ce workflow sert de fallback (sync manuelle) ou pour terminaux sans webhook.*
 
 ```mermaid
 sequenceDiagram

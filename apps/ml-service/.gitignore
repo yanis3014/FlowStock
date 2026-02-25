@@ -1,1 +1,17 @@
-apps/ml-service/bmad_ml_service.egg-info/
+# MLflow and model artifacts (Epic 5.1)
+mlruns/
+*.joblib
+
+# Python
+__pycache__/
+*.py[cod]
+.eggs/
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Env
+.env
+.venv/
+venv/

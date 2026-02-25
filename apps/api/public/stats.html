@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Statistiques - bmad-stock-agent</title>
+  <link rel="stylesheet" href="/css/design-system.css">
+  <script src="/api-client.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <div id="layout-nav"></div>
+  <div id="layout-header"></div>
+  <main class="page-container" data-page-title="Statistiques">
+  <input type="text" id="tokenInput" class="token-input" placeholder="Token JWT (ou vide si déjà connecté)" aria-label="Token JWT" style="margin-bottom: 1rem;" />
+  <div id="errorContainer"></div>
+  <div id="loadingContainer" class="loading">Chargement des statistiques...</div>
+  <div id="statsContent" style="display: none;">
+    <div class="stats-grid">
+      <div class="stat-card sales">
+        <div class="stat-label">Ventes hier</div>
+        <div class="stat-value" id="salesAmount">-</div>
+        <div class="stat-label">Transactions: <span id="salesCount">-</span></div>
+        <div id="salesChange" class="stat-change"></div>
+      </div>
+      <div class="stat-card stock">
+        <div class="stat-label">Stock actuel (valeur)</div>
+        <div class="stat-value" id="stockValue">-</div>
+        <div class="stat-label">Produits: <span id="productCount">-</span> · Faible: <span id="lowStockCount">-</span> · Critique: <span id="criticalStockCount">-</span></div>
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-title">Ventes sur période</div>
+      <div class="period-tabs">
+        <button type="button" id="tab7d" class="active" aria-pressed="true">7 jours</button>
+        <button type="button" id="tab30d" aria-pressed="false">30 jours</button>
+      </div>
+      <div class="chart-container">
+        <canvas id="salesChart" aria-label="Graphique des ventes par jour"></canvas>
+      </div>
+      <div id="chartEmpty" class="empty-state" style="display: none;">Aucune vente sur la période sélectionnée.</div>
+    </div>
+    <div class="section">
+      <div class="section-title">Top produits vendus</div>
+      <div class="period-tabs">
+        <button type="button" id="topTab7d" class="active">7 derniers jours</button>
+        <button type="button" id="topTab30d">30 derniers jours</button>
+      </div>
+      <div id="topProductsWrap">
+        <table class="top-products-table" id="topProductsTable">
+          <thead><tr><th>Produit</th><th>Quantité vendue</th><th>Montant</th></tr></thead>
+          <tbody id="topProductsBody"></tbody>
+        </table>
+      </div>
+      <div id="topProductsEmpty" class="empty-state" style="display: none;">Aucune vente sur la période.</div>
+    </div>
+    <div class="section">
+      <div class="section-title">Export</div>
+      <p style="font-size: 0.875rem; color: #64748b; margin-bottom: 0.75rem;">Télécharger les données affichées (ventes par jour et top produits) en CSV.</p>
+      <button type="button" id="exportCsvBtn" class="btn">Exporter en CSV</button>
+    </div>
+  </div>
+  </main>
+
+  <script src="/js/layout.js"></script>
+  <script>
+    'use strict';
+    let dashboardData = null;
+    let salesByDay7 = [];
+    let salesByDay30 = [];
+    let topProducts7 = [];
+    let topProducts30 = [];
+    let productNames = {};
+    let currentChartPeriod = 7;
+    let currentTopPeriod = 7;
+    let salesChart = null;
+
+    function getToken() {
+      var input = document.getElementById('tokenInput');
+      if (input && input.value.trim()) return input.value.trim();
+      return localStorage.getItem('bmad_jwt_token') || '';
+    }
+    function setToken(token) {
+      if (token) {
+        localStorage.setItem('bmad_jwt_token', token);
+        var input = document.getElementById('tokenInput');
+        if (input) input.value = token;
+      }
+    }
+    function showError(msg) {
+      var container = document.getElementById('errorContainer');
+      if (container) container.innerHTML = '<div class="error-box">' + escapeHtml(msg) + '</div>';
+    }
+    function clearError() {
+      var container = document.getElementById('errorContainer');
+      if (container) container.innerHTML = '';
+    }
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+    function formatCurrency(amount) {
+      return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(amount || 0);
+    }
+    function formatNumber(num) {
+      return new Intl.NumberFormat('fr-FR').format(num);
+    }
+    function dateToISO(date) {
+      var d = new Date(date);
+      d.setHours(0, 0, 0, 0);
+      return d.toISOString();
+    }
+    function daysAgo(days) {
+      var d = new Date();
+      d.setDate(d.getDate() - days);
+      d.setHours(0, 0, 0, 0);
+      return d.toISOString();
+    }
+    function endOfTodayISO() {
+      var d = new Date();
+      d.setHours(23, 59, 59, 999);
+      return d.toISOString();
+    }
+    function parseDayKey(key) {
+      if (!key) return '';
+      var m = key.match(/^(\d{4})-(\d{2})-(\d{2})/);
+      if (m) return m[1] + '-' + m[2] + '-' + m[3];
+      return key;
+    }
+
+    function renderSummary() {
+      if (!dashboardData) return;
+      var sy = dashboardData.sales_yesterday || {};
+      document.getElementById('salesAmount').textContent = formatCurrency(sy.total_amount);
+      document.getElementById('salesCount').textContent = formatNumber(sy.transaction_count || 0);
+      var changeEl = document.getElementById('salesChange');
+      if (sy.change_percent != null) {
+        var change = sy.change_percent;
+        changeEl.textContent = (change >= 0 ? '+' : '') + change.toFixed(1) + '% vs moyenne';
+        changeEl.className = 'stat-change ' + (change >= 0 ? 'positive' : 'negative');
+      } else {
+        changeEl.textContent = '';
+      }
+      var st = dashboardData.current_stock || {};
+      document.getElementById('stockValue').textContent = formatCurrency(st.total_value);
+      document.getElementById('productCount').textContent = formatNumber(st.product_count || 0);
+      document.getElementById('lowStockCount').textContent = formatNumber(st.low_stock_count || 0);
+      document.getElementById('criticalStockCount').textContent = formatNumber(st.critical_stock_count || 0);
+    }
+
+    function buildChartData(groups) {
+      var labels = [];
+      var data = [];
+      groups.forEach(function (g) {
+        labels.push(parseDayKey(g.key));
+        data.push(g.total_amount != null ? g.total_amount : g.quantity_sold);
+      });
+      return { labels: labels, data: data };
+    }
+    function renderSalesChart() {
+      var groups = currentChartPeriod === 7 ? salesByDay7 : salesByDay30;
+      var container = document.getElementById('chartEmpty');
+      var canvas = document.getElementById('salesChart');
+      if (!groups || groups.length === 0) {
+        if (salesChart) { salesChart.destroy(); salesChart = null; }
+        container.style.display = 'block';
+        canvas.style.display = 'none';
+        return;
+      }
+      container.style.display = 'none';
+      canvas.style.display = 'block';
+      var cd = buildChartData(groups);
+      if (salesChart) salesChart.destroy();
+      var ctx = canvas.getContext('2d');
+      salesChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: cd.labels,
+          datasets: [{ label: 'Montant (€)', data: cd.data, backgroundColor: 'rgba(59, 130, 246, 0.6)', borderColor: '#3b82f6', borderWidth: 1 }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            y: { beginAtZero: true, ticks: { callback: function(v) { return v + ' €'; } } }
+          }
+        }
+      });
+    }
+
+    function getProductName(productId) {
+      return productNames[productId] || ('Produit ' + (productId ? productId.substring(0, 8) : '-'));
+    }
+    function renderTopProducts() {
+      var groups = currentTopPeriod === 7 ? topProducts7 : topProducts30;
+      var tbody = document.getElementById('topProductsBody');
+      var empty = document.getElementById('topProductsEmpty');
+      var wrap = document.getElementById('topProductsWrap');
+      if (!tbody || !empty) return;
+      tbody.innerHTML = '';
+      if (!groups || groups.length === 0) {
+        wrap.style.display = 'none';
+        empty.style.display = 'block';
+        return;
+      }
+      wrap.style.display = 'block';
+      empty.style.display = 'none';
+      var top10 = groups.slice(0, 10);
+      top10.forEach(function (g) {
+        var tr = document.createElement('tr');
+        tr.innerHTML = '<td>' + escapeHtml(getProductName(g.key)) + '</td><td>' + formatNumber(g.quantity_sold) + '</td><td>' + formatCurrency(g.total_amount) + '</td>';
+        tbody.appendChild(tr);
+      });
+    }
+
+    function exportCSV() {
+      var rows = [];
+      rows.push('Type,Période,Libellé,Montant (€),Quantité');
+      var sy = dashboardData && dashboardData.sales_yesterday ? dashboardData.sales_yesterday : {};
+      rows.push('Ventes hier,-,Total,' + (sy.total_amount != null ? sy.total_amount : 0) + ',' + (sy.transaction_count != null ? sy.transaction_count : 0));
+      var dayGroups = currentChartPeriod === 7 ? salesByDay7 : salesByDay30;
+      if (dayGroups && dayGroups.length) {
+        dayGroups.forEach(function (g) {
+          rows.push('Ventes par jour,' + parseDayKey(g.key) + ',' + parseDayKey(g.key) + ',' + (g.total_amount != null ? g.total_amount : '') + ',' + g.quantity_sold);
+        });
+      }
+      rows.push('Top produits,' + (currentTopPeriod === 7 ? '7j' : '30j') + ',Produit,Montant,Quantité');
+      var topGroups = currentTopPeriod === 7 ? topProducts7 : topProducts30;
+      if (topGroups && topGroups.length) {
+        topGroups.slice(0, 10).forEach(function (g) {
+          rows.push('Top,' + (currentTopPeriod === 7 ? '7j' : '30j') + ',' + getProductName(g.key).replace(/,/g, ' ') + ',' + (g.total_amount != null ? g.total_amount : '') + ',' + g.quantity_sold);
+        });
+      }
+      var csv = rows.map(function (r) { return r; }).join('\n');
+      var blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'statistiques-' + new Date().toISOString().slice(0, 10) + '.csv';
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }
+
+    function loadProductsMap() {
+      var token = getToken();
+      if (!token) return Promise.resolve();
+      return BmadApiClient.fetch('/products?limit=500', { headers: { 'Authorization': 'Bearer ' + token } })
+        .then(function (r) { return r.json(); })
+        .then(function (body) {
+          if (body.success && body.data && Array.isArray(body.data)) {
+            body.data.forEach(function (p) {
+              productNames[p.id] = p.name || p.sku || p.id;
+            });
+          }
+        })
+        .catch(function () {});
+    }
+
+    function loadAll() {
+      clearError();
+      var token = getToken();
+      if (!token) {
+        showError('Veuillez saisir un token JWT.');
+        return;
+      }
+      var loading = document.getElementById('loadingContainer');
+      var content = document.getElementById('statsContent');
+      if (loading) loading.style.display = 'block';
+      if (content) content.style.display = 'none';
+
+      var dateTo = endOfTodayISO();
+      var dateFrom7 = daysAgo(7);
+      var dateFrom30 = daysAgo(30);
+
+      Promise.all([
+        BmadApiClient.fetch('/dashboard/summary', { headers: { 'Authorization': 'Bearer ' + token } }).then(function (r) { return r.json(); }),
+        BmadApiClient.fetch('/sales/summary?group_by=day&date_from=' + encodeURIComponent(dateFrom7) + '&date_to=' + encodeURIComponent(dateTo), { headers: { 'Authorization': 'Bearer ' + token } }).then(function (r) { return r.json(); }),
+        BmadApiClient.fetch('/sales/summary?group_by=day&date_from=' + encodeURIComponent(dateFrom30) + '&date_to=' + encodeURIComponent(dateTo), { headers: { 'Authorization': 'Bearer ' + token } }).then(function (r) { return r.json(); }),
+        BmadApiClient.fetch('/sales/summary?group_by=product&date_from=' + encodeURIComponent(dateFrom7) + '&date_to=' + encodeURIComponent(dateTo), { headers: { 'Authorization': 'Bearer ' + token } }).then(function (r) { return r.json(); }),
+        BmadApiClient.fetch('/sales/summary?group_by=product&date_from=' + encodeURIComponent(dateFrom30) + '&date_to=' + encodeURIComponent(dateTo), { headers: { 'Authorization': 'Bearer ' + token } }).then(function (r) { return r.json(); }),
+        loadProductsMap()
+      ]).then(function (results) {
+        var summaryBody = results[0];
+        if (!summaryBody.success || !summaryBody.data) {
+          showError(summaryBody.error || 'Erreur chargement dashboard');
+          return;
+        }
+        dashboardData = summaryBody.data;
+        salesByDay7 = (results[1].success && results[1].data && results[1].data.groups) ? results[1].data.groups : [];
+        salesByDay30 = (results[2].success && results[2].data && results[2].data.groups) ? results[2].data.groups : [];
+        topProducts7 = (results[3].success && results[3].data && results[3].data.groups) ? results[3].data.groups : [];
+        topProducts30 = (results[4].success && results[4].data && results[4].data.groups) ? results[4].data.groups : [];
+
+        if (loading) loading.style.display = 'none';
+        if (content) content.style.display = 'block';
+        renderSummary();
+        renderSalesChart();
+        renderTopProducts();
+      }).catch(function (err) {
+        showError('Erreur réseau : ' + (err && err.message ? err.message : String(err)));
+        if (loading) loading.style.display = 'none';
+        if (content) content.style.display = 'block';
+      });
+    }
+
+    function init() {
+      var tab7 = document.getElementById('tab7d');
+      var tab30 = document.getElementById('tab30d');
+      if (tab7) tab7.addEventListener('click', function () { currentChartPeriod = 7; tab7.classList.add('active'); tab7.setAttribute('aria-pressed', 'true'); if (tab30) { tab30.classList.remove('active'); tab30.setAttribute('aria-pressed', 'false'); } renderSalesChart(); });
+      if (tab30) tab30.addEventListener('click', function () { currentChartPeriod = 30; tab30.classList.add('active'); tab30.setAttribute('aria-pressed', 'true'); if (tab7) { tab7.classList.remove('active'); tab7.setAttribute('aria-pressed', 'false'); } renderSalesChart(); });
+
+      var top7 = document.getElementById('topTab7d');
+      var top30 = document.getElementById('topTab30d');
+      if (top7) top7.addEventListener('click', function () { currentTopPeriod = 7; top7.classList.add('active'); if (top30) top30.classList.remove('active'); renderTopProducts(); });
+      if (top30) top30.addEventListener('click', function () { currentTopPeriod = 30; top30.classList.add('active'); if (top7) top7.classList.remove('active'); renderTopProducts(); });
+
+      var exportBtn = document.getElementById('exportCsvBtn');
+      if (exportBtn) exportBtn.addEventListener('click', exportCSV);
+
+      if (typeof BmadApiClient !== 'undefined') {
+        BmadApiClient.setTokenGetter(function () { return getToken(); });
+        var saved = localStorage.getItem('bmad_jwt_token');
+        if (saved) {
+          var input = document.getElementById('tokenInput');
+          if (input) input.value = saved;
+        }
+        loadAll();
+      } else {
+        showError('API Client non chargé.');
+      }
+    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+    else init();
+  </script>
+</body>
+</html>

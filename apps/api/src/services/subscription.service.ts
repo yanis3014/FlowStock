@@ -237,3 +237,37 @@ export function tierSatisfies(tenantTier: SubscriptionTier, requiredTiers: Subsc
   const minRequired = Math.min(...requiredTiers.map((t) => TIER_ORDER.indexOf(t)));
   return tenantLevel >= minRequired;
 }
+
+export interface SubscriptionChangeRow {
+  id: string;
+  tenant_id: string;
+  subscription_id: string;
+  old_tier: SubscriptionTier | null;
+  new_tier: SubscriptionTier;
+  changed_at: Date;
+  changed_by_user_id: string | null;
+}
+
+/**
+ * Get subscription change history for a tenant (for admin/audit). RLS applies.
+ */
+export async function getSubscriptionChanges(tenantId: string): Promise<
+  { id: string; old_tier: string | null; new_tier: string; changed_at: string; changed_by_user_id: string | null }[]
+> {
+  const db = getDatabase();
+  const result = await db.queryWithTenant<SubscriptionChangeRow>(
+    tenantId,
+    `SELECT id, tenant_id, subscription_id, old_tier, new_tier, changed_at, changed_by_user_id
+     FROM subscription_changes
+     WHERE tenant_id = $1
+     ORDER BY changed_at DESC`,
+    [tenantId]
+  );
+  return result.rows.map((row) => ({
+    id: row.id,
+    old_tier: row.old_tier,
+    new_tier: row.new_tier,
+    changed_at: row.changed_at.toISOString(),
+    changed_by_user_id: row.changed_by_user_id,
+  }));
+}

@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Créer un compte - bmad-stock-agent</title>
+  <link rel="stylesheet" href="/css/design-system.css">
+  <script src="/api-client.js"></script>
+</head>
+<body class="auth-page">
+  <div class="card">
+    <h1>Créer un compte</h1>
+    <div id="errorContainer"></div>
+    <div id="successContainer"></div>
+    <form id="registerForm">
+      <div class="form-group">
+        <label for="email">Email</label>
+        <input type="email" id="email" name="email" required autocomplete="email" placeholder="vous@exemple.com" />
+      </div>
+      <div class="form-group">
+        <label for="password">Mot de passe</label>
+        <input type="password" id="password" name="password" required autocomplete="new-password" placeholder="••••••••" minlength="8" />
+      </div>
+      <div class="form-group">
+        <label for="first_name">Prénom</label>
+        <input type="text" id="first_name" name="first_name" required autocomplete="given-name" placeholder="Jean" />
+      </div>
+      <div class="form-group">
+        <label for="last_name">Nom</label>
+        <input type="text" id="last_name" name="last_name" required autocomplete="family-name" placeholder="Dupont" />
+      </div>
+      <div class="form-group">
+        <label for="company_name">Nom de l'entreprise</label>
+        <input type="text" id="company_name" name="company_name" required placeholder="Ma Société" />
+      </div>
+      <button type="submit" class="btn" id="submitBtn">Créer le compte</button>
+    </form>
+    <div class="link-row">
+      <a href="/login-page">Déjà un compte ? Se connecter</a>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      const form = document.getElementById('registerForm');
+      const errorEl = document.getElementById('errorContainer');
+      const successEl = document.getElementById('successContainer');
+      const submitBtn = document.getElementById('submitBtn');
+
+      function showError(msg) {
+        errorEl.textContent = msg || '';
+        successEl.textContent = '';
+      }
+      function showSuccess(msg) {
+        successEl.textContent = msg || '';
+        errorEl.textContent = '';
+      }
+
+      form.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        showError('');
+        showSuccess('');
+        submitBtn.disabled = true;
+
+        const payload = {
+          email: document.getElementById('email').value.trim(),
+          password: document.getElementById('password').value,
+          first_name: document.getElementById('first_name').value.trim(),
+          last_name: document.getElementById('last_name').value.trim(),
+          company_name: document.getElementById('company_name').value.trim()
+        };
+
+        try {
+          if (typeof BmadApiClient === 'undefined') {
+            showError('API Client non chargé.');
+            submitBtn.disabled = false;
+            return;
+          }
+          await BmadApiClient.ensureCsrf();
+          const res = await fetch('/auth/register', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-CSRF-Token': BmadApiClient.getCsrfToken()
+            },
+            credentials: 'include',
+            body: JSON.stringify(payload)
+          });
+          const data = await res.json().catch(function () { return {}; });
+
+          if (!res.ok) {
+            showError(data.error || 'Inscription impossible.');
+            submitBtn.disabled = false;
+            return;
+          }
+          if (!data.success || !data.data) {
+            showError('Réponse inattendue.');
+            submitBtn.disabled = false;
+            return;
+          }
+          var verifyToken = data.data.email_verification_token;
+          if (verifyToken) {
+            try {
+              var verifyRes = await fetch('/auth/verify-email?token=' + encodeURIComponent(verifyToken), { credentials: 'include' });
+              if (verifyRes.ok) {
+                showSuccess('Compte créé et email vérifié. Redirection…');
+                setTimeout(function () { window.location.href = '/login-page'; }, 1000);
+                return;
+              }
+            } catch (err) {}
+          }
+          showSuccess('Compte créé. Vous pouvez vous connecter.');
+          setTimeout(function () { window.location.href = '/login-page'; }, 1500);
+        } catch (err) {
+          showError(err.message || 'Erreur réseau.');
+        }
+        submitBtn.disabled = false;
+      });
+    })();
+  </script>
+</body>
+</html>

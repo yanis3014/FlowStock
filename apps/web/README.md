@@ -1,73 +1,46 @@
-# React + TypeScript + Vite
+# FlowStock — Front-end Next.js
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Application Next.js (App Router) pour FlowStock. Authentification via AuthProvider et appels API centralisés via le hook `useApi`.
 
-Currently, two official plugins are available:
+## Prérequis
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- Node.js 18+
+- L’API backend (`apps/api`) doit être démarrée pour les appels API (login, register, dashboard, etc.).
 
-## React Compiler
+## Ports en développement
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+| Service | Port par défaut | Commande |
+|--------|------------------|----------|
+| **Next.js (ce front-end)** | **3001** | `npm run dev` (défini dans `package.json` : `next dev -p 3001`) |
+| **API Express (backend)** | **3000** (ou autre selon config API) | `npm run dev` dans `apps/api` |
 
-## Expanding the ESLint configuration
+En dev, le front tourne donc sur `http://localhost:3001` et doit connaître l’URL de l’API (souvent `http://localhost:3000`).
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## Variables d’environnement
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+Créer un fichier `.env.local` à la racine de `apps/web` (voir `.env.local.example`).
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+| Variable | Description | Exemple (dev) |
+|----------|-------------|----------------|
+| `NEXT_PUBLIC_API_URL` | URL de base de l’API Express (backend). Tous les appels (`/auth/login`, `/csrf-token`, `/dashboard/summary`, etc.) sont préfixés par cette URL. | `http://localhost:3000` |
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+- **En développement** : l’API tourne souvent sur le port **3000** et Next sur **3001**. Définir `NEXT_PUBLIC_API_URL=http://localhost:3000`.
+- **En production** : mettre l’URL publique de l’API (même origine ou domaine configuré CORS côté API).
+
+Le préfixe `NEXT_PUBLIC_` est requis pour que la variable soit disponible côté client (navigateur).
+
+## Commandes
+
+```bash
+npm install
+npm run dev    # Démarre le serveur de dev sur le port 3001
+npm run build  # Build de production
+npm run start  # Démarre le serveur en mode production (port 3001)
+npm run lint   # ESLint
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Structure (auth & API)
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+- **Contexte auth** : `src/contexts/AuthContext.tsx` — AuthProvider, `useAuth()`, token en sessionStorage, login/logout.
+- **Client API** : `src/hooks/useApi.ts` — `useApi()` expose `fetchApi` (avec token) et `fetchApiGuest` (sans token, pour login/register). CSRF, credentials, 401/403 → redirection login.
+- **Pages** : login, register, dashboard ; aucune saisie de JWT visible.

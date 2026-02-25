@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chat IA - bmad-stock-agent</title>
+  <link rel="stylesheet" href="/css/design-system.css">
+</head>
+<body class="flex flex-col min-h-screen m-0 p-0 bg-gray-100 font-sans">
+  <div id="layout-nav"></div>
+  <div id="layout-header"></div>
+  <main class="page-container flex flex-col flex-1 min-h-0" data-page-title="Chat IA">
+  <div class="flex justify-between items-center px-4 py-4 bg-primary text-white rounded-t-lg">
+    <h1 class="m-0 text-xl font-semibold">Chat IA</h1>
+    <button type="button" class="px-4 py-2 rounded-md bg-white/20 hover:bg-white/30 text-white border-0 cursor-pointer font-medium min-h-[44px] sm:min-h-0" onclick="window.close()">Fermer</button>
+  </div>
+
+  <div class="px-4 py-3 bg-white border-b border-gray-200">
+    <label class="block text-sm font-medium text-gray-700">Token JWT (après connexion via /auth/login) :</label>
+    <input type="text" id="token" class="mt-1 w-full max-w-md px-3 py-2 border border-gray-300 rounded-md text-sm" placeholder="Collez votre access_token ici" />
+  </div>
+
+  <div id="errorMsg" class="hidden mx-4 mt-2 p-3 bg-red-50 text-error rounded-lg text-sm"></div>
+
+  <div class="flex flex-col flex-1 min-h-0 overflow-y-auto p-4 gap-4" id="messagesContainer">
+    <div class="flex flex-1 items-center justify-center text-center text-gray-500 p-8" id="emptyState">
+      Posez votre question sur vos stocks...
+    </div>
+  </div>
+
+  <div class="flex flex-wrap gap-2 sm:gap-3 p-4 bg-white border-t border-gray-200 items-end">
+    <input 
+      type="text" 
+      id="messageInput" 
+      class="flex-1 min-w-0 px-4 py-3 border border-gray-300 rounded-lg text-base"
+      placeholder="Posez votre question..." 
+      onkeypress="handleKeyPress(event)"
+      aria-label="Message input"
+    />
+    <button type="button" id="sendBtn" class="px-4 py-3 min-h-[44px] bg-primary text-white border-0 rounded-lg cursor-pointer font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed" onclick="sendMessage()">Envoyer</button>
+  </div>
+  </main>
+
+  <script src="/js/layout.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  // --- State ---
+  let conversationId = null;
+  let token = '';
+  const ML_SERVICE_URL = 'http://localhost:8000'; // ML Service URL
+
+  // --- DOM Elements ---
+  const tokenInput = document.getElementById('token');
+  const messageInput = document.getElementById('messageInput');
+  const sendBtn = document.getElementById('sendBtn');
+  const messagesContainer = document.getElementById('messagesContainer');
+  const emptyState = document.getElementById('emptyState');
+  const errorMsg = document.getElementById('errorMsg');
+
+  // --- Token Management ---
+  tokenInput.addEventListener('change', (e) => {
+    token = e.target.value.trim();
+    // Try to load from localStorage
+    if (!token) {
+      token = localStorage.getItem('chat_token') || '';
+      tokenInput.value = token;
+    } else {
+      localStorage.setItem('chat_token', token);
+    }
+  });
+
+  // Load token from localStorage on page load
+  window.addEventListener('DOMContentLoaded', () => {
+    token = localStorage.getItem('chat_token') || '';
+    tokenInput.value = token;
+  });
+
+  // --- Message Display ---
+  function addMessage(role, content, timestamp = null) {
+    emptyState.style.display = 'none';
+    
+    const messageDiv = document.createElement('div');
+    var baseClasses = 'max-w-[90%] sm:max-w-[80%] px-4 py-3 rounded-xl break-words';
+    messageDiv.className = role === 'user'
+      ? baseClasses + ' self-end bg-primary text-white'
+      : baseClasses + ' self-start bg-white border border-gray-200 text-gray-800';
+    messageDiv.setAttribute('role', role === 'user' ? 'user' : 'assistant');
+    messageDiv.setAttribute('aria-live', role === 'assistant' ? 'polite' : 'off');
+    
+    messageDiv.innerHTML = '<div>' + escapeHtml(content) + '</div>' +
+      '<div class="text-xs opacity-70 mt-1">' + (timestamp || new Date().toLocaleTimeString('fr-FR')) + '</div>';
+    
+    messagesContainer.appendChild(messageDiv);
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+  }
+
+  function showTypingIndicator() {
+    const typingDiv = document.createElement('div');
+    typingDiv.className = 'self-start px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-500 italic';
+    typingDiv.id = 'typingIndicator';
+    typingDiv.textContent = 'IA écrit...';
+    messagesContainer.appendChild(typingDiv);
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+  }
+
+  function hideTypingIndicator() {
+    const typing = document.getElementById('typingIndicator');
+    if (typing) typing.remove();
+  }
+
+  function showError(message) {
+    errorMsg.textContent = message;
+    errorMsg.classList.remove('hidden');
+    setTimeout(() => {
+      errorMsg.classList.add('hidden');
+    }, 5000);
+  }
+
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  // --- API Calls ---
+  async function sendMessage() {
+    const message = messageInput.value.trim();
+    if (!message) return;
+    
+    if (!token) {
+      showError('Veuillez d\'abord entrer un token JWT');
+      return;
+    }
+
+    // Add user message to UI
+    addMessage('user', message);
+    messageInput.value = '';
+    sendBtn.disabled = true;
+    showTypingIndicator();
+
+    try {
+      const response = await fetch(`${ML_SERVICE_URL}/api/v1/chat/message`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          conversation_id: conversationId,
+          message: message
+        })
+      });
+
+      hideTypingIndicator();
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail || `Erreur ${response.status}`);
+      }
+
+      const data = await response.json();
+      conversationId = data.conversation_id;
+      
+      // Add AI response to UI
+      addMessage('assistant', data.response);
+      
+    } catch (error) {
+      hideTypingIndicator();
+      showError(`Erreur: ${error.message}`);
+      addMessage('assistant', `Désolé, une erreur s'est produite: ${error.message}`);
+    } finally {
+      sendBtn.disabled = false;
+      messageInput.focus();
+    }
+  }
+
+  // --- Expose to global for onclick handlers ---
+  window.sendMessage = sendMessage;
+
+  // --- Keyboard Handling ---
+  window.handleKeyPress = function(event) {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault();
+      sendMessage();
+    }
+  };
+
+  // --- Button click (fallback if onclick not working) ---
+  sendBtn.addEventListener('click', sendMessage);
+
+  // --- Focus management ---
+  messageInput.focus();
+})();
+</script>
+</body>
+</html>

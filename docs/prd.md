@@ -1,4 +1,6 @@
-# SaaS Gestion de Stocks IA pour PME Product Requirements Document (PRD)
+# Flowstock – Product Requirements Document (PRD)
+
+**Focus : Restauration, Nightlife & Real-time Stock Management**
 
 ---
 
@@ -6,19 +8,19 @@
 
 ### Goals
 
-- **Gain de temps et clarté pour PME** - Réduire de 70% le temps passé sur gestion de stocks vs Excel, interface visuelle claire remplaçant les lignes de fichier
-- **Prédictions IA précises** - Atteindre >85% de précision dans les prédictions de rupture de stocks après 3 mois d'apprentissage
-- **Optimisation cash flow** - Réduire de 30% le cash dormant dans les entrepôts grâce à meilleures prévisions
-- **Réduction ruptures** - Diminuer de 60% les ruptures de stocks grâce aux prévisions IA
-- **Adoption PME** - Atteindre 50 PME utilisatrices actives dans les 6 mois post-lancement avec 80% de rétention après 3 mois
-- **Boucle valeur complète** - Automatiser le cycle Prédiction → Commande → Réception → Intégration sans saisie manuelle
-- **Satisfaction utilisateurs** - Score NPS minimum de 50, 90% utilisateurs trouvent interface plus claire que Excel
+- **Vision claire en rush** - Donner aux restaurateurs et gérants de bars une vision des stocks en temps réel pendant le service (dashboard "Traffic Light"), sans recomptage manuel.
+- **Zéro saisie chronophage** - Synchronisation automatique des ventes via Connecteur Universel POS (Lightspeed, L'Addition, Square) ; stock qui décrémente à chaque commande validée en caisse.
+- **Onboarding éclair** - Configuration d'un établissement en <15 minutes grâce au Scan-to-Recipe (photo de menu/carte → fiches techniques IA), sans saisie manuelle des recettes.
+- **Prédictions IA opérationnelles** - Précision de rupture >90% après 2 semaines d'historique ; précision Scan-to-Recipe ≥90% sur l'extraction des ingrédients dès le premier scan.
+- **Réduction stress in-rush** - Diminution de 80% des ruptures "surprise" ; gain de temps administratif (de ~1h/jour à ~15 min/jour sur Flowstock).
+- **Maîtrise des marges** - Réduction des pertes alimentaires (food cost) et du coulage (bars/clubs) : détection des écarts théorique/réel, déclaration de perte express.
+- **Adoption établissements** - 50 établissements (restaurants et bars) actifs dans les 6 mois post-lancement, rétention 85% après 3 mois ; 10K€ MRR à 12 mois (100-200€/mois). **Boucle valeur complète** - Commandes prédictives de clôture (panier généré en fin de service), réception facture IA et réconciliation, intégration stock sans saisie.
 
 ### Background Context
 
-Les PME et e-commerces gèrent actuellement leurs stocks via Excel ou des outils manuels peu performants, générant ruptures de stocks, surstockage (cash dormant), manque de prévisions précises, et synchronisation difficile multi-plateformes. Les solutions existantes sont trop chères (réservées aux grandes entreprises), complexes, et manquent de précision dans leurs prédictions.
+Les restaurateurs et gérants de bars gèrent aujourd'hui leurs stocks "à l'aveugle" en rush : l'information ne circule pas entre la caisse et le stock réel, les managers recompent manuellement toutes les 2 heures, et la saisie de fiches techniques est si pénible qu'elle est souvent abandonnée. Les solutions existantes sont administratives (comptabilité le lendemain) ou trop chères ; Excel et le papier ne tiennent pas la cadence et génèrent ruptures, coulage (pertes 10-20% en bars) et stress.
 
-Ce PRD définit le MVP d'un SaaS avec intelligence artificielle prédictive, conçu spécifiquement pour les PME (cafés, petits stores, petites entreprises) et e-commerces, offrant des prévisions précises de rupture de stocks, une interface visuelle simple, et des fonctionnalités d'automatisation pour remplacer les solutions manuelles. L'IA est le cœur différenciant du produit - sans elle, le produit n'a plus d'innovation vs Excel. Le MVP se concentre sur les 3 priorités critiques : (1) Moteur IA de prédictions, (2) Interface visuelle simple, (3) Système de commandes + photo facture IA.
+Ce PRD définit le MVP **"Rush Edition"** de **Flowstock** : un outil opérationnel conçu pour être utilisé pendant le service par les équipes (cuisine, salle, bar). Cœur du produit : (1) **Connecteur Universel API** pour la synchro temps réel avec les POS, (2) **Dashboard de Rush "Traffic Light"** (Vert/Orange/Rouge, mise à jour 5-10 s), (3) **Scan-to-Recipe** (IA vision/NLP pour générer les fiches techniques depuis une photo de carte), (4) **Moteur de stock hybride** (unités solides + volumes liquides, fractions de bouteilles), (5) **Commandes prédictives de clôture**, (6) **Photo facture IA & réconciliation**. Scope MVP limité au Physical Retail / Horeca (pas Shopify/Amazon en MVP).
 
 ### Change Log
 
@@ -28,6 +30,7 @@ Ce PRD définit le MVP d'un SaaS avec intelligence artificielle prédictive, con
 | 2024-12-19 | 1.1 | Analysis and corrections applied: Added missing requirements (FR21-FR32), simplified MVP scope (FR16, FR17, FR8, NFR15), added subscription tiers structure, added customizable calculations feature | PM Agent |
 | 2024-12-19 | 1.2 | Epic details completed: Added full epic breakdown with 7 epics, 35 stories total, detailed acceptance criteria for each story, logical sequencing ensured | PM Agent |
 | 2026-01-28 | 1.3 | Implementation readiness corrections: Added FR33 (Chat IA conversationnel) and FR34 (Génération commandes depuis chat) to cover UX requirements | PM Agent |
+| 2026-02-22 | 1.4 | Alignement PRD sur brief Flowstock/Horeca : Goals & Background (restaurateurs, rush, vision claire, coulage), Requirements (Connecteur POS, Dashboard Traffic Light, Scan-to-Recipe, moteur hybride, commandes clôture, déclaration perte), UI (high-contrast, mobile-first), abonnements & technique, Epic list, Next Steps | PM Agent |
 
 ---
 
@@ -35,9 +38,9 @@ Ce PRD définit le MVP d'un SaaS avec intelligence artificielle prédictive, con
 
 ### Functional
 
-FR1: Le système doit permettre aux utilisateurs de créer, lire, mettre à jour et supprimer des stocks avec quantités, emplacements, et informations produits de base.
+FR1: Le système doit permettre aux utilisateurs de créer, lire, mettre à jour et supprimer des stocks avec quantités, emplacements, et informations produits de base. Le moteur doit gérer à la fois les **unités discrètes** (pièces, steaks, pains) et les **volumes** (cl, L pour liquides ; fractions de bouteilles pour bars/clubs).
 
-FR2: Le système doit afficher une vision globale des stocks en temps réel dans un tableau de bord centralisé avec distinction visuelle par couleurs pour faciliter la lecture rapide.
+FR2: Le système doit afficher un **Dashboard de Rush "Traffic Light"** : interface ultra-lisible avec produits critiques sous forme de jauges Vert (OK) / Orange (à surveiller) / Rouge (rupture imminente), mise à jour toutes les 5 à 10 secondes, utilisable en cuisine et au bar (mobile/tablette, high-contrast).
 
 FR3: Le système doit calculer et afficher des estimations de temps de stock disponible pour chaque produit. Pour MVP, ces estimations peuvent être basiques (calcul simple consommation moyenne) et s'améliorer avec l'IA une fois disponible.
 
@@ -45,7 +48,7 @@ FR4: Le moteur IA doit analyser les données historiques de ventes (si disponibl
 
 FR5: Le moteur IA doit apprendre progressivement à partir des ventes quotidiennes même en l'absence de données historiques initiales, avec amélioration continue de la précision au fil du temps.
 
-FR6: Le moteur IA doit prédire les ruptures de stocks avec une précision cible de 85% après 3 mois d'apprentissage par entreprise. Le système doit afficher le niveau de confiance actuel des prédictions.
+FR6: Le moteur IA doit prédire les ruptures de stocks avec une précision cible de >90% après 2 semaines d'historique de ventes (cold start avec modèles de base). Le système doit afficher le niveau de confiance actuel des prédictions.
 
 FR7: Le système doit générer des recommandations de commande avec rapport explicatif détaillant pourquoi chaque commande est recommandée (tendance, stock actuel, prévision rupture).
 
@@ -79,7 +82,7 @@ FR21: Le système doit permettre la saisie manuelle des données de ventes (date
 
 FR22: Le système doit permettre l'import de données de ventes via fichier CSV avec validation et mapping des colonnes.
 
-FR23: Le système doit permettre l'intégration basique avec terminaux de paiement pour capture automatique des ventes (scope MVP limité aux intégrations principales).
+FR23: Le système doit fournir un **Connecteur Universel API (POS Sync)** : couche d'abstraction (Adapter Pattern) pour recevoir les flux de ventes en temps réel des logiciels de caisse (Lightspeed, L'Addition, Square) via webhooks/API, et traduire chaque commande validée en décrémentation de stock (sans saisie manuelle). Mode dégradé : saisie manuelle d'urgence si perte de synchro.
 
 FR24: Le système doit permettre l'import initial des stocks existants via fichier CSV ou Excel pour faciliter l'onboarding des nouveaux clients.
 
@@ -103,15 +106,23 @@ FR33: Le système doit fournir une interface de chat conversationnel avec agent 
 
 FR34: Le système doit permettre au chat IA de générer des recommandations de commande directement depuis la conversation lorsque l'IA détecte une rupture de stock imminente, avec possibilité de validation en un clic depuis le chat.
 
+FR35: Le système doit offrir un **Scan-to-Recipe** : à partir d'une photo de menu ou de carte, l'IA (vision + NLP) doit générer automatiquement des fiches techniques théoriques (plats/cocktails décomposés en ingrédients avec quantités suggérées). Validation humaine simple après le scan ; apprentissage par correction (feedback loop). Cible : ≥90% de reconnaissance des ingrédients dès le premier essai.
+
+FR36: Le système doit gérer un **moteur de stock hybride** : unités solides (pièces) et volumes liquides (cl, L), avec gestion des fractions de bouteilles (bars/nightlife) et des modificateurs de plats (cuisine). Décrémentation automatique à partir des ventes POS mappées aux recettes.
+
+FR37: Le système doit générer des **commandes prédictives de clôture** : en fin de service, panier de commande fournisseur proposé automatiquement à partir du stock théorique restant et des prédictions de vente du lendemain, avec validation en un clic par le gérant.
+
+FR38: Le système doit proposer un **module de déclaration de perte "Express"** (ex. 2 clics) pour enregistrer bouteilles cassées, verres offerts, pertes cuisine, et doit permettre l'analyse des écarts théorique/réel (détection d'anomalies / coulage) avec alertes sur écarts suspects.
+
 ### Non Functional
 
-NFR1: Le système doit répondre aux requêtes de visualisation de stocks en moins de 2 secondes pour garantir une expérience utilisateur fluide.
+NFR1: Le système doit répondre aux requêtes de visualisation de stocks en moins de 2 secondes pour garantir une expérience utilisateur fluide. En mode rush, le dashboard doit se mettre à jour en moins de 10 secondes après une vente en caisse (cible : <5 secondes).
 
 NFR2: Le système doit générer les prédictions IA en moins de 5 secondes pour maintenir l'engagement utilisateur.
 
 NFR3: Le système doit supporter un minimum de 100 utilisateurs simultanés sans dégradation de performance.
 
-NFR4: Le système doit garantir une disponibilité de 99% (uptime) pour MVP, avec plan d'amélioration vers 99.5% en V2 pour assurer l'accès continu aux données critiques de stocks.
+NFR4: Le système doit garantir une disponibilité de 99% (uptime) pour MVP, avec 99.9% pour le Connecteur Universel (dashboard de rush opérationnel pendant le service). Plan d'amélioration vers 99.5% global en V2.
 
 NFR5: Toutes les données de stocks doivent être chiffrées en transit (HTTPS) et au repos (encryption at rest) pour conformité sécurité.
 
@@ -129,7 +140,7 @@ NFR11: Le système doit être scalable horizontalement pour supporter la croissa
 
 NFR12: Le moteur IA doit être capable de fonctionner avec un minimum de données (cold start) en utilisant des modèles de base et apprentissage progressif.
 
-NFR13: Le système doit garantir la précision minimale de 85% des prédictions IA après 3 mois d'apprentissage par entreprise.
+NFR13: Le système doit garantir une précision minimale de 90% des prédictions de rupture après 2 semaines d'historique de ventes (cold start). Précision Scan-to-Recipe : ≥90% de reconnaissance des ingrédients dès le premier essai (avec objectif de baisse du taux d'ajustement manuel des recettes vers <10%).
 
 NFR14: Le système doit gérer les erreurs gracieusement avec messages d'erreur clairs et possibilité de récupération sans perte de données.
 
@@ -143,34 +154,39 @@ NFR18: Le système doit maintenir un système de validation des prédictions IA 
 
 NFR19: Le système doit gérer les erreurs spécifiques à l'IA (fausses prédictions, modèles défaillants) avec mécanismes de correction manuelle et communication transparente aux utilisateurs.
 
+NFR20: Le système doit permettre un **onboarding complet** (connexion POS + scan carte/menu) en moins de 15 minutes pour un établissement standard (cible : 80% des utilisateurs).
+
+NFR21: Le système doit fournir un **mode dégradé** (saisie manuelle, offline-first) si la connectivité ou l'API POS est indisponible, sans perte de données.
+
 ---
 
 ## User Interface Design Goals
 
 ### Overall UX Vision
 
-L'interface doit être **extrêmement simple et intuitive** pour des utilisateurs PME non-techniques. L'objectif est de remplacer Excel par une expérience visuelle moderne où les informations critiques sont immédiatement visibles sans navigation complexe. L'interface doit prioriser la **clarté visuelle** avec distinction par couleurs, graphiques faciles à comprendre, et accès rapide aux actions principales. Le design doit communiquer la **confiance et la simplicité** - les utilisateurs doivent se sentir en contrôle et comprendre immédiatement l'état de leurs stocks et les recommandations de l'IA.
+L'interface doit être **opérationnelle en rush** : utilisable en cuisine, au bar ou en salle par des équipes sous pression, sans formation longue. Design **High-Contrast** (lisible en cuisine et dans l'obscurité des bars), **Mobile-First** (tablettes, smartphones), avec mise à jour **temps réel** du dashboard (WebSockets) sans rafraîchissement. L'objectif est de supprimer le "pilotage à l'aveugle" : vision claire des stocks critiques (Traffic Light Vert/Orange/Rouge), zéro saisie chronophage grâce à la synchro POS, et aide à la décision immédiate pendant le service. Confiance et simplicité : le manager doit voir en un coup d'œil l'état du frigo et du bar.
 
 ### Key Interaction Paradigms
 
-- **Dashboard-first approach** - Toutes les informations critiques visibles dès la connexion, pas de navigation profonde nécessaire
-- **Action rapide** - Les actions les plus fréquentes (voir stocks, voir prévisions, voir statistiques) accessibles en <2 clics
-- **Visual feedback** - Couleurs distinctes pour états (vert=OK, orange=attention, rouge=rupture), alertes visuelles claires
-- **Progressive disclosure** - Détails disponibles sur demande, mais vue d'ensemble toujours visible
-- **Confiance IA** - Transparence sur les prédictions (rapports explicatifs, niveaux de confiance visibles)
-- **Mobile-friendly** - Interface responsive permettant consultation rapide sur mobile même si usage principal desktop
+- **Rush-first / Dashboard Traffic Light** - Vue d'ensemble des produits critiques (jauges Vert/Orange/Rouge) visible dès la connexion, mise à jour en temps réel (5-10 s), pas de navigation profonde en plein service
+- **Zero-saisie** - Synchro automatique avec la caisse ; saisie manuelle réservée au mode dégradé et à la déclaration de perte express (2 clics)
+- **High-Contrast & lisible** - Design lisible en cuisine (lumière vive) et dans l'obscurité des bars ; contraste élevé, tailles de police adaptées
+- **Mobile-First (tablette/smartphone)** - Usage principal sur tablette (caisse, cuisine) et smartphone (consultation rapide au bar) ; desktop en complément
+- **Action rapide** - Validation commandes de clôture en 1 clic, déclaration de perte en 2 clics, scan carte → fiches techniques sans formulaire long
+- **Confiance IA** - Transparence sur les prédictions et le Scan-to-Recipe ; validation humaine simple après le scan, feedback loop pour corrections
 
 ### Core Screens and Views
 
-1. **Dashboard Principal** - Vue d'ensemble stocks, alertes, statistiques vente veille, actions recommandées
-2. **Vue Stocks Détaillée** - Liste/grid des stocks avec quantités, emplacements, courbes de prévision, statuts
-3. **Prédictions IA** - Écran dédié aux prévisions de rupture avec rapports explicatifs, courbes temporelles (Premium/Premium Plus)
-4. **Commandes Intelligentes** - Liste des recommandations de commande avec rapports, validation en un clic (Premium/Premium Plus)
-5. **Réception Factures** - Interface upload photo facture, extraction IA, vérification, confirmation intégration (Premium Plus uniquement)
-6. **Statistiques et Analyses** - Graphiques ventes, tendances basiques (tous niveaux), analyses avancées (Premium/Premium Plus)
-7. **Calculs Personnalisables** - Interface pour créer formules prédéfinies et personnalisées, champ de saisie manuelle fonctions mathématiques
-8. **Gestion Abonnements** - Interface pour voir niveau actuel, fonctionnalités disponibles, upgrade/downgrade
-9. **Authentification/Onboarding** - Login, création compte, configuration initiale (import stocks, saisie fournisseurs)
+1. **Dashboard de Rush "Traffic Light"** - Jauges Vert/Orange/Rouge par produit critique, mise à jour temps réel, vue mobile/tablette ultra-lisible ; premier écran en service
+2. **Vue Stocks Détaillée** - Liste/grid des stocks (unités + volumes liquides), emplacements, courbes de prévision, statuts, historique mouvements
+3. **Onboarding / Connexion POS** - Connexion API caisse (Lightspeed, L'Addition, Square), scan de carte (Scan-to-Recipe), configuration en <15 min
+4. **Scan-to-Recipe** - Upload photo menu/carte → fiches techniques IA, validation et correction manuelle, feedback loop
+5. **Commandes de Clôture** - Panier prédictif en fin de service, validation en 1 clic, envoi fournisseur
+6. **Réception Factures** - Upload photo facture, extraction IA, réconciliation vs commande, mise à jour stock, alertes erreurs/prix
+7. **Déclaration de perte / Anti-Coulage** - Saisie express (2 clics) pertes, écarts théorique/réel, alertes anomalies (bars/clubs)
+8. **Prédictions IA & Statistiques** - Prévisions de rupture, rapports explicatifs, tendances ventes (tous niveaux / Premium)
+9. **Gestion Abonnements** - Niveau actuel, fonctionnalités par niveau, upgrade/downgrade
+10. **Authentification** - Login, création compte, multi-tenant (groupes restaurants)
 
 ### Accessibility: WCAG AA
 
@@ -182,15 +198,17 @@ Le système doit respecter les standards WCAG AA pour accessibilité :
 
 ### Branding
 
-**Style visuel:** Moderne, professionnel, mais accessible. Palette de couleurs avec distinction claire pour les états (vert/orange/rouge pour stocks). Design épuré sans surcharge visuelle. Typographie lisible et hiérarchie claire. Pas de branding spécifique imposé pour MVP - focus sur fonctionnalité et clarté.
+**Style visuel:** Design System **High-Contrast** pour environnement cuisine (lumière vive) et bars (obscurité). Palette Vert/Orange/Rouge (Traffic Light) pour états de stock. Épuré, sans surcharge ; typographie lisible, hiérarchie claire. Focus "Ops/Field" : utilisable en mouvement, pas uniquement au bureau. Pas de branding imposé pour MVP - clarté et réactivité en rush.
 
-### Target Device and Platforms: Web Responsive
+### Target Device and Platforms: Mobile-First, Web Responsive
 
-Application web responsive fonctionnant sur desktop (usage principal) et mobile (consultation rapide). Optimisée pour desktop mais utilisable sur mobile pour actions simples (vérification stocks, alertes, validation commandes).
+Application **Mobile-First** : usage principal sur **tablette** (caisse, cuisine) et **smartphone** (consultation au bar, en salle). Desktop en complément pour configuration et rapports. Responsive, temps réel (WebSockets) pour mise à jour du dashboard sans rafraîchissement. Support navigateurs modernes et iOS 14+, Android 10+.
 
 ---
 
 ## Structure d'Abonnement et Fonctionnalités par Niveau
+
+*Pricing Horeca-friendly : 100-200€/mois selon niveau (aligné brief Flowstock).*
 
 ### Niveau Normal (Abonnement de base)
 
@@ -301,21 +319,15 @@ Les utilisateurs peuvent créer leurs propres formules via un champ de saisie si
 
 ## Technical Assumptions
 
-### Repository Structure: Monorepo
+### Repository Structure: Monorepo (Turborepo ou Nx)
 
-Structure monorepo recommandée pour faciliter le partage de code entre frontend, backend, et services IA, tout en maintenant une séparation claire des responsabilités. Permet également une meilleure gestion des dépendances partagées et un déploiement coordonné.
+Monorepo pour partager les types entre Frontend et Backend (crucial pour la cohérence des fiches techniques et du schéma POS). Déploiement coordonné, dépendances partagées.
 
-### Service Architecture: Microservices modulaire
+### Service Architecture: API RESTful + Connecteur Universel
 
-Architecture microservices modulaire avec services séparés pour :
-- **API Gateway** - Point d'entrée unique, authentification, routage
-- **Service Stocks** - Gestion CRUD stocks, historique, métadonnées
-- **Service IA/ML** - Moteur de prédictions, entraînement, réentraînement quotidien
-- **Service Commandes** - Gestion commandes, recommandations, validation
-- **Service Factures** - Extraction IA factures, OCR, vérification
-- **Service Analytics** - Statistiques, rapports, métriques
-
-Cette architecture permet scalabilité indépendante (service IA peut scaler séparément), isolation des données, et évolutivité future. Communication via APIs RESTful avec possibilité d'ajout de message queue pour tâches asynchrones (entraînement IA).
+- **API RESTful** avec couche d'abstraction (Adapter Pattern) pour le **Connecteur Universel POS** : traduction des flux de ventes (webhooks Lightspeed, L'Addition, Square) en décrémentation de stock standardisée.
+- **Intégrations** : priorité Webhooks pour recevoir les ventes POS en temps réel ; système de "traductions" modulaire (JSON vente → décrémentation).
+- **Services** : Stocks (CRUD, hybride unités/volumes), IA/ML (prédictions, Scan-to-Recipe, facture), Commandes (prédictives de clôture), temps réel (WebSockets/Socket.io pour dashboard).
 
 ### Testing Requirements: Unit + Integration + E2E
 
@@ -328,40 +340,45 @@ Cette architecture permet scalabilité indépendante (service IA peut scaler sé
 
 Tests automatisés dans CI/CD avec exécution sur chaque commit. Tests manuels pour UX/UI et validation utilisateur.
 
-### Additional Technical Assumptions and Requests
+### Additional Technical Assumptions and Requests (alignés brief Flowstock)
 
-- **Base de données:** PostgreSQL pour données relationnelles (stocks, commandes, utilisateurs) + base de données time-series (InfluxDB ou TimescaleDB) pour données de ventes historiques et métriques IA
-- **Frontend:** Framework moderne (React ou Vue.js) avec state management (Redux/Vuex), design system avec composants réutilisables
-- **Backend:** Node.js/Python selon expertise équipe, APIs RESTful avec OpenAPI/Swagger documentation
-- **IA/ML:** Python avec frameworks (TensorFlow/PyTorch), infrastructure ML (MLflow pour tracking, Kubernetes pour déploiement modèles)
-- **Infrastructure:** Cloud (AWS/GCP/Azure) avec containers (Docker/Kubernetes), CI/CD (GitHub Actions/GitLab CI)
-- **Monitoring:** Logging centralisé (ELK stack ou équivalent), monitoring performance (Prometheus/Grafana), alerting
-- **Sécurité:** OAuth2/JWT pour authentification, chiffrement données sensibles, WAF, rate limiting
-- **Multi-tenancy:** Isolation données par client (schema par tenant ou row-level security selon scale)
-- **Cold start IA:** Modèles pré-entraînés sur données agrégées anonymisées + fine-tuning par client
-- **Réentraînement IA:** Pipeline automatisé quotidien avec validation avant déploiement nouveau modèle
+- **Frontend:** Next.js ou React avec Tailwind CSS ; Design System High-Contrast ; WebSockets (ou Socket.io) pour mise à jour temps réel du dashboard sans rafraîchissement.
+- **Backend:** Node.js (TypeScript) ou Python (FastAPI) ; API RESTful ; Connecteur Universel (Adapter Pattern) pour POS.
+- **Database:** PostgreSQL (Prisma ou Supabase) pour fiches techniques et relations Ingrédients/Plats ; Redis pour états de stock "en direct" pendant le rush (latence <100 ms).
+- **IA/ML:** Vision & NLP : modèles SOTA (GPT-4o, Gemini 1.5 Pro) pour Scan-to-Recipe et extraction factures. Prédictions : séries temporelles (Prophet, XGBoost) pour tendances et stocks critiques.
+- **Hosting:** Cloud (AWS ou Vercel/Supabase), infrastructure Serverless pour évolutivité.
+- **Authentification:** Clerk ou Auth0, support Multi-tenant (groupes de restaurants).
+- **Sécurité:** RGPD, chiffrement AES-256 pour clés API caisse, audit logs (historique complet des mouvements pour traçabilité coulage/erreurs).
+- **Multi-tenancy:** Isolation stricte des données et modèles IA par tenant.
+- **Cold start IA:** Modèles de base / benchmarks par type de cuisine ; précision >90% après 2 semaines d'historique.
 
 ---
 
-## Epic List
+## Epic List (MVP "Rush Edition" – ordre de priorité aligné brief)
 
 **Epic 1: Foundation & Infrastructure**  
-Établir l'infrastructure de base du projet, l'authentification, la gestion utilisateurs, et la configuration initiale permettant le déploiement d'une première version fonctionnelle.
+Infrastructure de base, authentification (Clerk/Auth0), multi-tenant, déploiement première version.
 
-**Epic 2: Gestion Stocks de Base**  
-Créer les fonctionnalités CRUD de base pour la gestion des stocks (création, lecture, mise à jour, suppression) avec suivi des quantités et historique des mouvements.
+**Epic 2: Connecteur Universel API (POS Sync)** *(Must-Have #1)*  
+Couche d'abstraction (Adapter Pattern) pour recevoir les ventes en temps réel des caisses (Lightspeed, L'Addition, Square) via webhooks/API et décrémenter le stock automatiquement. Schéma de données agnostique "Orders". Alertes perte de synchro, mode saisie manuelle d'urgence.
 
-**Epic 3: Moteur IA de Prédictions**  
-Développer le moteur d'intelligence artificielle pour l'analyse des tendances, l'apprentissage progressif, et la prédiction des ruptures de stocks avec précision minimale 85%.
+**Epic 3: Gestion Stocks de Base & Moteur Hybride**  
+CRUD stocks avec gestion des **unités** (pièces) et **volumes** (cl, L ; fractions de bouteilles pour bars). Historique des mouvements. Logique de décrémentation : vente (ex. "Burger") → -1 Pain, -1 Steak, -20g Fromage, etc.
 
-**Epic 4: Interface Visuelle & Tableau de Bord**  
-Créer l'interface utilisateur visuelle avec tableau de bord centralisé, courbes de prévision, alertes visuelles, et statistiques pour remplacer l'expérience Excel.
+**Epic 4: Dashboard de Rush "Traffic Light"**  
+Interface ultra-lisible (Vert/Orange/Rouge), mise à jour 5-10 s (WebSockets), mobile-first / high-contrast. Vue produits critiques en un coup d'œil pour cuisine et bar.
 
-**Epic 5: Système de Commandes Intelligentes**  
-Implémenter le système de recommandations de commande avec rapports explicatifs, validation en un clic, et gestion de l'autonomie graduelle de l'IA.
+**Epic 5: Scan-to-Recipe (IA Vision/NLP)**  
+Upload photo menu/carte → fiches techniques automatiques (ingrédients, quantités suggérées). Validation humaine et feedback loop. Cible : ≥90% reconnaissance ingrédients dès le premier essai.
 
-**Epic 6: Photo Facture IA & Intégration Automatique**  
-Développer la fonctionnalité d'extraction IA depuis photos de factures, vérification automatique, et intégration automatique en base de données sans saisie manuelle.
+**Epic 6: Moteur IA Prédictif & Commandes de Clôture**  
+Prédictions de rupture (>90% après 2 semaines), génération du panier de commande en fin de service, validation en 1 clic.
+
+**Epic 7: Photo Facture IA & Réconciliation**  
+Extraction IA des factures fournisseurs, mise à jour stock réel, détection erreurs de livraison et hausses de prix. Réconciliation vs commande initiale.
+
+**Epic 8: Anti-Coulage & Déclaration de perte**  
+Module déclaration de perte express (2 clics), analyse écarts théorique/réel, alertes anomalies (bars/clubs).
 
 ---
 
@@ -1064,50 +1081,24 @@ so that **je ne suis pas bloqué si la photo est illisible**.
 
 ## Next Steps
 
+### Immediate Technical Actions (alignées brief – pour Cursor)
+
+1. **Architecture du Connecteur Universel** – Schéma de données "Agnostique" capable de recevoir des Orders de différentes sources POS.
+2. **POC Scan-to-Recipe** – Tester l'extraction d'ingrédients à partir d'une photo de menu via API OpenAI/Gemini.
+3. **Dashboard "Rush Mode"** – Maquettage interface mobile/tablette ultra-lisible avec jauges de stock en temps réel (Traffic Light).
+4. **Logique de Décrémentation** – Coder la fonction qui transforme une vente (ex. "Burger") en décrémentations en base (-1 Pain, -1 Steak, -20g Fromage, etc.).
+
 ### UX Expert Prompt
 
 **Pour créer l'architecture UX/UI détaillée :**
 
-```
-@ux-expert Crée l'architecture UX/UI détaillée pour le SaaS de gestion de stocks IA pour PME. 
-Utilise le PRD disponible dans docs/prd.md comme référence complète.
-
-Points clés à traiter :
-- Interface extrêmement simple pour utilisateurs PME non-techniques
-- Dashboard-first approach avec toutes informations critiques visibles
-- Distinction visuelle par couleurs (vert/orange/rouge pour états stocks)
-- Support calculs personnalisables avec éditeur de formules type Excel
-- Gestion des 3 niveaux d'abonnement (Normal, Premium, Premium Plus)
-- Responsive design (desktop principal, mobile consultation)
-- Accessibilité WCAG AA
-
-Le PRD contient 7 épics avec 32 stories détaillées, requirements fonctionnels et non-fonctionnels complets, 
-et structure d'abonnement définie. Crée les wireframes, user flows, et design system nécessaires.
-```
+Utilise le PRD dans `docs/prd.md` (Flowstock – Restauration, Nightlife & Real-time). Points clés : **Dashboard de Rush "Traffic Light"** (Vert/Orange/Rouge, 5-10 s), **Mobile-First** (tablette/smartphone), **High-Contrast** (cuisine et bars), **Zero-saisie** (synchro POS), **Onboarding <15 min** (connexion POS + Scan-to-Recipe). Wireframes, user flows, design system pour interfaces "Ops/Field".
 
 ### Architect Prompt
 
 **Pour créer l'architecture technique détaillée :**
 
-```
-@architect Crée l'architecture technique complète pour le SaaS de gestion de stocks IA pour PME.
-Utilise le PRD disponible dans docs/prd.md comme référence complète.
-
-Points techniques clés du PRD :
-- Architecture microservices modulaire (API Gateway, Service Stocks, Service IA/ML, Service Commandes, Service Factures, Service Analytics)
-- Base de données : PostgreSQL (relationnel) + InfluxDB/TimescaleDB (time-series)
-- Infrastructure ML pour prédictions IA avec réentraînement quotidien
-- Multi-tenancy avec isolation stricte des données
-- Support cold start IA (fonctionnement sans données historiques)
-- Calculs personnalisables avec parser/évaluateur de formules
-- Structure d'abonnement avec restriction fonctionnalités par niveau
-- Sécurité : OAuth2/JWT, chiffrement, RGPD, logs audit
-- Performance : <2s visualisation stocks, <5s prédictions IA
-- Scalabilité horizontale
-
-Le PRD contient 7 épics avec 32 stories, requirements techniques détaillés, et assumptions techniques.
-Crée l'architecture complète avec choix technologiques, patterns, intégrations, et infrastructure.
-```
+Utilise le PRD dans `docs/prd.md` (Flowstock – Horeca). Points techniques : **Connecteur Universel POS** (Adapter Pattern, webhooks Lightspeed/L'Addition/Square), **API RESTful** + **WebSockets** (temps réel dashboard), **PostgreSQL** (fiches techniques, Prisma/Supabase) + **Redis** (stock en direct, <100 ms), **Monorepo** (Turborepo/Nx), **Clerk/Auth0** multi-tenant, **IA** Scan-to-Recipe (GPT-4o/Gemini) et prédictions (Prophet/XGBoost). Latence synchro <5-10 s, onboarding <15 min, uptime Connecteur 99.9%.
 
 ---
 
