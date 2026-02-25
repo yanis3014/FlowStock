@@ -21,17 +21,29 @@ import supplierRoutes from './routes/supplier.routes';
 import salesRoutes from './routes/sales.routes';
 import formulaRoutes from './routes/formula.routes';
 import stockEstimateRoutes from './routes/stock-estimate.routes';
+import dashboardRoutes from './routes/dashboard.routes';
 import { openApiDocument } from './openapi/spec';
 import type { HealthResponse } from '@bmad/shared';
 
 const app = express();
 
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      connectSrc: ["'self'", "http://localhost:8000", "http://localhost:3000"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.tailwindcss.com", "https://cdn.jsdelivr.net"],
+      scriptSrcAttr: ["'unsafe-inline'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+    },
+  },
+}));
 app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
 app.use(morgan('dev'));
 app.use(cookieParser());
 app.use(metricsMiddleware);
+app.use(express.static(path.join(__dirname, '..', 'public'), { index: false }));
 
 const PORT = config.PORT;
 const appVersion = config.APP_VERSION;
@@ -76,6 +88,7 @@ app.use('/suppliers', supplierRoutes);
 app.use('/sales', salesRoutes);
 app.use('/formulas', formulaRoutes);
 app.use('/stock-estimates', stockEstimateRoutes);
+app.use('/dashboard', dashboardRoutes);
 
 // Story 2.2: Import stocks page
 app.get('/import-stocks', (_req, res) => {
@@ -120,6 +133,34 @@ app.get('/custom-formulas-page', (_req, res) => {
 // Story 3.5: Stock estimates (estimations temps stock) page
 app.get('/stock-estimates-page', (_req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'stock-estimates.html'));
+});
+
+// Story 4.1: Chat IA page
+app.get('/chat-page', (_req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'chat.html'));
+});
+
+// Login & Register pages (recommendation code review: vraie page de login)
+app.get('/login-page', (_req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'login.html'));
+});
+app.get('/register-page', (_req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'register.html'));
+});
+
+// Story 4.2: Dashboard page
+app.get('/dashboard-page', (_req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'dashboard.html'));
+});
+
+// Story 4.3: Forecast curves page
+app.get('/forecast-page', (_req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'forecast.html'));
+});
+
+// Story 4.5: Statistics page
+app.get('/stats-page', (_req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'stats.html'));
 });
 
 app.use(csrfErrorHandler);

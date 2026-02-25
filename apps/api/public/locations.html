@@ -4,79 +4,64 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Emplacements - bmad-stock-agent</title>
-  <style>
-    * { box-sizing: border-box; }
-    body { font-family: system-ui, sans-serif; max-width: 900px; margin: 2rem auto; padding: 0 1rem; }
-    h1 { margin-bottom: 0.5rem; }
-    .section { margin: 1.5rem 0; padding: 1rem; border: 1px solid #ddd; border-radius: 8px; }
-    label { display: block; margin-top: 0.5rem; font-weight: 500; }
-    input[type="text"], select { margin-top: 0.25rem; width: 100%; max-width: 400px; padding: 0.35rem; }
-    button { margin-top: 0.5rem; margin-right: 0.5rem; padding: 0.5rem 1rem; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 4px; }
-    button:hover { background: #0056b3; }
-    button:disabled { background: #ccc; cursor: not-allowed; }
-    button.danger { background: #dc3545; }
-    button.danger:hover { background: #c82333; }
-    .error { color: #c00; }
-    .success { color: #0a0; }
-    table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
-    th, td { border: 1px solid #ddd; padding: 0.5rem; text-align: left; }
-    th { background: #f5f5f5; }
-    .hidden { display: none; }
-    a { color: #007bff; }
-  </style>
+  <link rel="stylesheet" href="/css/design-system.css">
 </head>
 <body>
-  <h1>Gestion des emplacements</h1>
-  <p>Créez et gérez vos emplacements (entrepôts, magasins). Associez les stocks aux emplacements depuis la liste des produits (filtre par emplacement).</p>
+  <div id="layout-nav"></div>
+  <div id="layout-header"></div>
+  <main class="page-container" data-page-title="Emplacements">
+  <h1 class="text-2xl font-semibold text-gray-800 mb-2">Gestion des emplacements</h1>
+  <p class="text-gray-600 mb-4">Créez et gérez vos emplacements (entrepôts, magasins). Associez les stocks aux emplacements depuis la liste des produits (filtre par emplacement).</p>
 
-  <div class="section">
-    <h2>Authentification</h2>
-    <label>Token JWT (après connexion via /auth/login) :</label>
-    <input type="text" id="token" placeholder="Collez votre access_token ici" style="width: 100%;" />
+  <div class="rounded-lg border border-gray-200 bg-white shadow p-5 my-6">
+    <h2 class="text-lg font-semibold text-gray-800 mb-2">Authentification</h2>
+    <label class="block mt-2 font-medium">Token JWT (après connexion via /auth/login) :</label>
+    <input type="text" id="token" class="mt-1 p-2 w-full max-w-md border border-gray-300 rounded" placeholder="Collez votre access_token ici" />
   </div>
 
-  <div class="section">
-    <h2>Liste des emplacements</h2>
-    <button id="refreshBtn">Rafraîchir</button>
-    <button id="newBtn">Nouvel emplacement</button>
-    <div id="listError" class="error hidden"></div>
-    <div id="listSuccess" class="success hidden"></div>
-    <table id="locationsTable" class="hidden">
+  <div class="rounded-lg border border-gray-200 bg-white shadow p-5 my-6">
+    <h2 class="text-lg font-semibold text-gray-800 mb-2">Liste des emplacements</h2>
+    <button type="button" id="refreshBtn" class="px-4 py-2 bg-primary text-white border-0 rounded cursor-pointer hover:opacity-90 mr-2">Rafraîchir</button>
+    <button type="button" id="newBtn" class="px-4 py-2 bg-primary text-white border-0 rounded cursor-pointer hover:opacity-90">Nouvel emplacement</button>
+    <div id="listError" class="hidden text-error font-medium mt-2"></div>
+    <div id="listSuccess" class="hidden text-success font-medium mt-2"></div>
+    <table id="locationsTable" class="hidden table-auto w-full text-sm border-collapse mt-4">
       <thead>
         <tr>
-          <th>Nom</th>
-          <th>Type</th>
-          <th>Adresse</th>
-          <th>Quantité totale</th>
-          <th>Actif</th>
-          <th>Actions</th>
+          <th class="border-b border-gray-200 bg-gray-50 px-4 py-2 text-left">Nom</th>
+          <th class="border-b border-gray-200 bg-gray-50 px-4 py-2 text-left">Type</th>
+          <th class="border-b border-gray-200 bg-gray-50 px-4 py-2 text-left">Adresse</th>
+          <th class="border-b border-gray-200 bg-gray-50 px-4 py-2 text-left">Quantité totale</th>
+          <th class="border-b border-gray-200 bg-gray-50 px-4 py-2 text-left">Actif</th>
+          <th class="border-b border-gray-200 bg-gray-50 px-4 py-2 text-left">Actions</th>
         </tr>
       </thead>
       <tbody id="locationsBody"></tbody>
     </table>
-    <p id="emptyList" class="hidden">Aucun emplacement. Cliquez sur "Nouvel emplacement".</p>
+    <p id="emptyList" class="hidden text-gray-600 mt-4">Aucun emplacement. Cliquez sur "Nouvel emplacement".</p>
   </div>
 
-  <div class="section hidden" id="formSection">
-    <h2 id="formTitle">Nouvel emplacement</h2>
-    <div id="formError" class="error hidden"></div>
+  <div class="rounded-lg border border-gray-200 bg-white shadow p-5 my-6 hidden" id="formSection">
+    <h2 id="formTitle" class="text-lg font-semibold text-gray-800 mb-2">Nouvel emplacement</h2>
+    <div id="formError" class="hidden text-error font-medium mb-2"></div>
     <input type="hidden" id="editId" />
-    <label>Nom *</label>
-    <input type="text" id="name" required placeholder="ex: Entrepôt principal" />
-    <label>Type</label>
-    <input type="text" id="location_type" placeholder="ex: entrepôt, magasin" />
-    <label>Adresse</label>
-    <input type="text" id="address" placeholder="Adresse complète" />
-    <div id="editActiveRow" class="hidden">
-      <label><input type="checkbox" id="is_active" checked /> Actif</label>
+    <label class="block mt-2 font-medium">Nom *</label>
+    <input type="text" id="name" required class="mt-1 p-2 w-full max-w-md border border-gray-300 rounded" placeholder="ex: Entrepôt principal" />
+    <label class="block mt-2 font-medium">Type</label>
+    <input type="text" id="location_type" class="mt-1 p-2 w-full max-w-md border border-gray-300 rounded" placeholder="ex: entrepôt, magasin" />
+    <label class="block mt-2 font-medium">Adresse</label>
+    <input type="text" id="address" class="mt-1 p-2 w-full max-w-md border border-gray-300 rounded" placeholder="Adresse complète" />
+    <div id="editActiveRow" class="hidden mt-2">
+      <label class="flex items-center gap-2"><input type="checkbox" id="is_active" checked /> Actif</label>
     </div>
-    <button id="saveBtn">Enregistrer</button>
-    <button id="cancelBtn">Annuler</button>
+    <button type="button" id="saveBtn" class="mt-4 px-4 py-2 bg-primary text-white border-0 rounded cursor-pointer hover:opacity-90 mr-2">Enregistrer</button>
+    <button type="button" id="cancelBtn" class="mt-4 px-4 py-2 bg-gray-200 text-gray-800 border-0 rounded cursor-pointer hover:bg-gray-300">Annuler</button>
   </div>
+  </main>
 
+  <script src="/api-client.js"></script>
+  <script src="/js/layout.js"></script>
   <script>
-    // Page servie par l'API (GET /locations-page) : API_BASE vide = même origine.
-    const API_BASE = '';
     const tokenEl = document.getElementById('token');
     const refreshBtn = document.getElementById('refreshBtn');
     const newBtn = document.getElementById('newBtn');
@@ -97,12 +82,7 @@
     const saveBtn = document.getElementById('saveBtn');
     const cancelBtn = document.getElementById('cancelBtn');
 
-    function headers() {
-      const t = tokenEl.value.trim();
-      const h = { 'Content-Type': 'application/json' };
-      if (t) h['Authorization'] = 'Bearer ' + t;
-      return h;
-    }
+    BmadApiClient.setTokenGetter(function () { return tokenEl ? tokenEl.value : ''; });
 
     function showListError(msg) {
       listError.textContent = msg || '';
@@ -119,7 +99,7 @@
 
     async function loadLocations() {
       showListError('');
-      const res = await fetch(API_BASE + '/locations', { headers: headers() });
+      const res = await BmadApiClient.fetch('/locations');
       if (!res.ok) {
         if (res.status === 401) showListError('Token manquant ou invalide.');
         else showListError(await res.text().catch(() => res.statusText));
@@ -137,15 +117,15 @@
         emptyList.classList.add('hidden');
         locationsTable.classList.remove('hidden');
         locationsBody.innerHTML = list.map(loc => `
-          <tr>
-            <td>${escapeHtml(loc.name)}</td>
-            <td>${escapeHtml(loc.location_type || '—')}</td>
-            <td>${escapeHtml(loc.address || '—')}</td>
-            <td>${Number(loc.total_quantity ?? 0)}</td>
-            <td>${loc.is_active ? 'Oui' : 'Non'}</td>
-            <td>
-              <button class="edit-btn" data-id="${loc.id}">Modifier</button>
-              <button class="delete-btn danger" data-id="${loc.id}" data-name="${escapeHtml(loc.name)}">Supprimer</button>
+          <tr class="hover:bg-gray-50 border-b border-gray-100">
+            <td class="px-4 py-2 text-left">${escapeHtml(loc.name)}</td>
+            <td class="px-4 py-2 text-left">${escapeHtml(loc.location_type || '—')}</td>
+            <td class="px-4 py-2 text-left">${escapeHtml(loc.address || '—')}</td>
+            <td class="px-4 py-2 text-left">${Number(loc.total_quantity ?? 0)}</td>
+            <td class="px-4 py-2 text-left">${loc.is_active ? 'Oui' : 'Non'}</td>
+            <td class="px-4 py-2 text-left">
+              <button type="button" class="edit-btn px-2 py-1 text-primary text-sm font-medium hover:underline" data-id="${loc.id}">Modifier</button>
+              <button type="button" class="delete-btn px-2 py-1 bg-error text-white text-sm rounded hover:opacity-90" data-id="${loc.id}" data-name="${escapeHtml(loc.name)}">Supprimer</button>
             </td>
           </tr>
         `).join('');
@@ -177,7 +157,7 @@
     }
 
     async function openEdit(id) {
-      const res = await fetch(API_BASE + '/locations/' + id, { headers: headers() });
+      const res = await BmadApiClient.fetch('/locations/' + id);
       if (!res.ok) {
         showFormError('Impossible de charger l\'emplacement.');
         return;
@@ -206,10 +186,9 @@
       saveBtn.disabled = true;
       const body = { name, address: addressEl.value.trim() || null, location_type: locationTypeEl.value.trim() || null };
       if (id) body.is_active = isActiveEl.checked;
-
-      const url = id ? API_BASE + '/locations/' + id : API_BASE + '/locations';
+      const url = id ? '/locations/' + id : '/locations';
       const method = id ? 'PUT' : 'POST';
-      const res = await fetch(url, { method, headers: headers(), body: JSON.stringify(body) });
+      const res = await BmadApiClient.fetch(url, { method, body: JSON.stringify(body) });
       const text = await res.text();
       let errMsg = '';
       try {
@@ -231,7 +210,7 @@
 
     async function confirmDelete(id, name) {
       if (!confirm('Supprimer l\'emplacement « ' + name + ' » ? (soft delete)')) return;
-      const res = await fetch(API_BASE + '/locations/' + id, { method: 'DELETE', headers: headers() });
+      const res = await BmadApiClient.fetch('/locations/' + id, { method: 'DELETE' });
       if (!res.ok) {
         const j = await res.json().catch(() => ({}));
         showListError(j.error || res.statusText);
@@ -246,7 +225,17 @@
     newBtn.addEventListener('click', openNew);
     saveBtn.addEventListener('click', saveLocation);
     cancelBtn.addEventListener('click', () => formSection.classList.add('hidden'));
+    tokenEl.addEventListener('change', () => {
+      BmadApiClient.saveTokenToStorage(tokenEl.value);
+      loadLocations();
+    });
+    tokenEl.addEventListener('input', () => {
+      BmadApiClient.saveTokenToStorage(tokenEl.value);
+      loadLocations();
+    });
 
+    var stored = BmadApiClient.loadTokenFromStorage();
+    if (stored) tokenEl.value = stored;
     loadLocations();
   </script>
 </body>

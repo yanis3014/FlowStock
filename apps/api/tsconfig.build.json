@@ -5,7 +5,11 @@
     "rootDir": "./src",
     "noEmit": false,
     "esModuleInterop": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "paths": {
+      "@bmad/shared": ["../../packages/shared/dist"],
+      "@bmad/shared/*": ["../../packages/shared/dist/*"]
+    }
   },
   "include": ["src/**/*"],
   "exclude": ["src/**/__tests__/**", "node_modules", "dist"]

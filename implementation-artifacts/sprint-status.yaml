@@ -1,8 +1,8 @@
-# generated: 2026-01-29
+# generated: 2026-02-22
 # project: bmad-stock-agent
-# project_key: 
+# project_key:
 # tracking_system: file-system
-# story_location: {project-root}/./implementation-artifacts
+# story_location: "{project-root}/./implementation-artifacts"
 
 # STATUS DEFINITIONS:
 # ==================
@@ -32,59 +32,69 @@
 # - Stories can be worked in parallel if team capacity allows
 # - SM typically creates next story after previous one is 'done' to incorporate learnings
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
+#
+# SOURCE: planning-artifacts/epics.md (Flowstock Rush Edition — 8 epics)
 
-generated: 2026-01-28 12:20
+generated: 2026-02-22
 project: bmad-stock-agent
-project_key: 
+project_key:
 tracking_system: file-system
 story_location: "{project-root}/./implementation-artifacts"
 
 development_status:
-  epic-1: done
+  epic-1: in-progress
   1-1-project-setup-infrastructure-foundation: done
   1-2-database-setup-multi-tenancy-foundation: done
   1-3-user-authentication-registration: done
   1-4-subscription-tiers-management: done
-  epic-1-retrospective: done
+  epic-1-retrospective: optional
 
-  epic-2: done
-  2-1-crud-stocks-de-base: done
-  2-2-import-initial-stocks-onboarding: done
-  2-3-gestion-emplacements: done
-  2-4-historique-mouvements-stocks: done
-  2-5-gestion-fournisseurs: done
-  epic-2-retrospective: done
+  epic-2: backlog
+  2-1-endpoint-webhook-pos-validation-des-payloads: backlog
+  2-2-decrementation-automatique-du-stock-evenement-vente: backlog
+  2-3-adapteur-pos-lightspeed: backlog
+  2-4-adapteurs-pos-l-addition-square: backlog
+  2-5-mode-degrade-alertes-perte-synchro: backlog
+  epic-2-retrospective: optional
 
-  epic-3: done
-  3-1-saisie-manuelle-ventes: done
-  3-2-import-csv-ventes: done
-  3-3-formules-predéfinies: done
-  3-4-saisie-manuelle-formules-personnalisees: done
-  3-5-calculs-basiques-temps-stock-sans-ia: done
-  epic-3-retrospective: done
+  epic-3: backlog
+  3-1-crud-stocks-de-base: backlog
+  3-2-import-initial-stocks-onboarding: backlog
+  3-3-gestion-emplacements: backlog
+  3-4-historique-mouvements-stocks: backlog
+  3-5-gestion-fournisseurs: backlog
+  3-6-saisie-manuelle-ventes: backlog
+  3-7-import-csv-ventes: backlog
+  3-8-formules-predéfinies: backlog
+  3-9-saisie-manuelle-formules-personnalisees: backlog
+  3-10-calculs-basiques-temps-stock-sans-ia: backlog
+  epic-3-retrospective: optional
 
   epic-4: backlog
-  4-1-chat-ia-conversationnel-avec-memoire-contextuelle: backlog
-  4-2-dashboard-principal-avec-vue-densemble: backlog
+  4-1-chat-ia-conversationnel-avec-memoire-contextuelle: ready-for-dev
+  4-2-dashboard-principal-avec-vue-d-ensemble: backlog
   4-3-visualisation-interactive-des-courbes-de-prevision: backlog
   4-4-alertes-visuelles: backlog
   4-5-statistiques-essentielles: backlog
   epic-4-retrospective: optional
 
   epic-5: backlog
-  5-1-infrastructure-ml-modeles-de-base: backlog
-  5-2-analyse-tendances-apprentissage-progressif: backlog
-  5-3-prediction-ruptures-stocks: backlog
-  5-4-reentrainement-automatique-quotidien: backlog
-  5-5-monitoring-performance-ia: backlog
+  5-1-upload-photo-menu-carte-et-extraction-ia-vision-nlp: backlog
+  5-2-validation-humaine-et-enregistrement-fiche-technique: backlog
+  5-3-feedback-loop-et-amelioration-du-modele: backlog
   epic-5-retrospective: optional
 
   epic-6: backlog
-  6-1-generation-recommandations-commande: backlog
-  6-2-validation-commande-en-un-clic: backlog
-  6-3-gestion-autonomie-ia-limites-par-defaut: backlog
-  6-4-progression-autonomie-graduelle-premium-plus: backlog
-  6-5-integration-chat-ia-avec-generation-commandes: backlog
+  6-1-infrastructure-ml-modeles-de-base: backlog
+  6-2-analyse-tendances-apprentissage-progressif: backlog
+  6-3-prediction-ruptures-stocks: backlog
+  6-4-reentrainement-automatique-quotidien: backlog
+  6-5-monitoring-performance-ia: backlog
+  6-6-generation-recommandations-commande: backlog
+  6-7-validation-commande-un-clic: backlog
+  6-8-gestion-autonomie-ia-limites-defaut: backlog
+  6-9-progression-autonomie-graduelle-premium-plus: backlog
+  6-10-integration-chat-ia-avec-generation-commandes: backlog
   epic-6-retrospective: optional
 
   epic-7: backlog
@@ -94,3 +104,8 @@ development_status:
   7-4-integration-automatique-bdd: backlog
   7-5-fallback-saisie-manuelle-facture: backlog
   epic-7-retrospective: optional
+
+  epic-8: backlog
+  8-1-declaration-perte-express-2-clics: backlog
+  8-2-analyse-ecarts-theorique-reel-alertes-anomalies: backlog
+  epic-8-retrospective: optional

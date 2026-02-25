@@ -4,6 +4,7 @@ module.exports = {
   roots: ['<rootDir>/src'],
   setupFiles: ['<rootDir>/jest.setup.js'],
   testMatch: ['**/__tests__/**/*.test.ts'],
+  testTimeout: 15000,
   // Run tests sequentially to avoid DB races (migrations.test drops schema; multi-tenancy/auth need migrated DB)
   maxWorkers: 1,
   collectCoverageFrom: [

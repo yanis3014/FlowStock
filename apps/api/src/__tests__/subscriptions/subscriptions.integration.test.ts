@@ -13,6 +13,7 @@ describe('Subscriptions Integration Tests', () => {
   let pool: Pool;
   let accessToken: string;
   let tenantId: string;
+  let userId: string;
   const testDbUrl =
     process.env.DATABASE_URL ||
     `postgresql://${process.env.POSTGRES_USER || 'bmad'}:${process.env.POSTGRES_PASSWORD || 'bmad'}@${process.env.POSTGRES_HOST || 'localhost'}:${process.env.POSTGRES_PORT || '5432'}/${process.env.POSTGRES_DB || 'bmad_stock_agent'}`;
@@ -34,6 +35,7 @@ describe('Subscriptions Integration Tests', () => {
     expect(registerRes.status).toBe(201);
     accessToken = registerRes.body.data.access_token;
     tenantId = registerRes.body.data.tenant.id;
+    userId = registerRes.body.data.user.id;
 
     // Verify email so login works
     const db = getDatabase();
@@ -112,6 +114,38 @@ describe('Subscriptions Integration Tests', () => {
         .send({ new_tier: 'premium' });
       expect(res.status).toBe(400);
       expect(res.body.error).toContain('unchanged');
+    });
+  });
+
+  describe('GET /subscriptions/changes', () => {
+    beforeAll(async () => {
+      // Ensure at least one upgrade exists so tests are order-independent
+      await request(app)
+        .post('/subscriptions/upgrade')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({ new_tier: 'premium' });
+      // Ignore 400 if already premium from previous tests
+    });
+
+    it('should return 401 without token', async () => {
+      const res = await request(app).get('/subscriptions/changes');
+      expect(res.status).toBe(401);
+    });
+
+    it('should return 200 with change history after upgrade', async () => {
+      const res = await request(app)
+        .get('/subscriptions/changes')
+        .set('Authorization', `Bearer ${accessToken}`);
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(Array.isArray(res.body.data)).toBe(true);
+      expect(res.body.data.length).toBeGreaterThanOrEqual(1);
+      expect(res.body.data[0]).toMatchObject({
+        old_tier: 'normal',
+        new_tier: 'premium',
+      });
+      expect(res.body.data[0].changed_at).toBeDefined();
+      expect(res.body.data[0].changed_by_user_id).toBe(userId);
     });
   });
 

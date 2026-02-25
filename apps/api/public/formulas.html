@@ -4,33 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Formules de calcul - bmad-stock-agent</title>
-  <style>
-    * { box-sizing: border-box; }
-    body { font-family: system-ui, sans-serif; max-width: 960px; margin: 2rem auto; padding: 0 1rem; }
-    h1 { margin-bottom: 0.5rem; }
-    .section { margin: 1.5rem 0; padding: 1rem; border: 1px solid #ddd; border-radius: 8px; }
-    label { display: block; margin-top: 0.5rem; font-weight: 500; }
-    input[type="text"], input[type="number"], select { margin-top: 0.25rem; padding: 0.35rem; max-width: 300px; }
-    button { margin-top: 0.5rem; margin-right: 0.5rem; padding: 0.5rem 1rem; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 4px; }
-    button:hover { background: #0056b3; }
-    button:disabled { background: #ccc; cursor: not-allowed; }
-    button.secondary { background: #6c757d; }
-    button.secondary:hover { background: #5a6268; }
-    .error { color: #c00; }
-    .success { color: #0a0; }
-    table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
-    th, td { border: 1px solid #ddd; padding: 0.5rem; text-align: left; }
-    th { background: #f5f5f5; }
-    .formula-card { padding: 0.75rem; border: 1px solid #eee; border-radius: 6px; margin-bottom: 0.5rem; }
-    .formula-card h3 { margin: 0 0 0.25rem 0; font-size: 1rem; }
-    .formula-card p { margin: 0; font-size: 0.9rem; color: #555; }
-    .result-box { padding: 1rem; background: #f8f9fa; border-radius: 6px; margin-top: 0.5rem; font-size: 1.2rem; }
-    .result-box .value { font-weight: bold; color: #007bff; }
-    .copy-btn { font-size: 0.85rem; padding: 0.25rem 0.5rem; }
-    .doc-section { font-size: 0.9rem; color: #666; margin-top: 0.5rem; }
-  </style>
+  <link rel="stylesheet" href="/css/design-system.css">
 </head>
 <body>
+  <div id="layout-nav"></div>
+  <div id="layout-header"></div>
+  <main class="page-container" data-page-title="Formules de calcul">
   <h1>Formules de calcul prédéfinies</h1>
   <p>Utilisez les 8 formules prédéfinies pour des calculs standards (consommation moyenne, stock de sécurité, point de commande, etc.).</p>
 
@@ -85,9 +64,11 @@
       <p><strong>8. Marge bénéficiaire</strong> — (prix_vente - prix_achat) / prix_vente × 100.</p>
     </div>
   </div>
+  </main>
 
+  <script src="/api-client.js"></script>
+  <script src="/js/layout.js"></script>
   <script>
-    const API_BASE = '';
     const tokenEl = document.getElementById('token');
     const formulasList = document.getElementById('formulasList');
     const formulasError = document.getElementById('formulasError');
@@ -104,28 +85,14 @@
 
     let formulas = [];
     let selectedFormula = null;
-    let csrfToken = '';
 
-    function headers(includeCsrf = false) {
-      const t = tokenEl.value.trim();
-      const h = { 'Content-Type': 'application/json' };
-      if (t) h['Authorization'] = `Bearer ${t}`;
-      if (includeCsrf && csrfToken) h['X-CSRF-Token'] = csrfToken;
-      return h;
-    }
-
-    async function ensureCsrf() {
-      if (csrfToken) return;
-      const r = await fetch(API_BASE + '/csrf-token', { credentials: 'include' });
-      const j = await r.json();
-      csrfToken = j.csrfToken || '';
-    }
+    BmadApiClient.setTokenGetter(function () { return tokenEl ? tokenEl.value : ''; });
 
     async function loadFormulas() {
       formulasError.classList.add('hidden');
       formulasError.textContent = '';
       try {
-        const r = await fetch(API_BASE + '/formulas/predefined', { headers: headers() });
+        const r = await BmadApiClient.fetch('/formulas/predefined');
         const json = await r.json();
         if (!json.success) throw new Error(json.error || 'Erreur chargement formules');
         formulas = json.data || [];
@@ -174,14 +141,15 @@
 
     async function loadProducts() {
       try {
-        const r = await fetch(API_BASE + '/products?limit=500', { headers: headers() });
+        const r = await BmadApiClient.fetch('/products?limit=50'); // TODO: pagination si plus de 50 produits
         const json = await r.json();
-        if (!json.success) throw new Error(json.error || 'Erreur produits');
-        const products = json.data || [];
+        console.log('Produits reçus :', json);
+        if (!r.ok || !json.success) throw new Error(json.error || 'Erreur produits');
+        const products = Array.isArray(json.data) ? json.data : [];
         productIdEl.innerHTML = '<option value="">— Choisir un produit (optionnel) —</option>' +
-          products.map(p => `<option value="${escapeHtml(p.id)}">${escapeHtml(p.name)} (${escapeHtml(p.sku)})</option>`).join('');
-      } catch {
-        productIdEl.innerHTML = '<option value="">— Erreur chargement produits —</option>';
+          products.map(p => `<option value="${escapeHtml(p.id)}">${escapeHtml(p.name || p.sku)} (${escapeHtml(p.sku || '')})</option>`).join('');
+      } catch (err) {
+        productIdEl.innerHTML = '<option value="">— Erreur: ' + escapeHtml(String(err.message || err)) + ' —</option>';
       }
     }
 
@@ -207,7 +175,6 @@
       resultContent.innerHTML = '';
       executeBtn.disabled = true;
       try {
-        await ensureCsrf();
         const productId = productIdEl.value || undefined;
         const periodDays = parseInt(periodDaysEl.value, 10) || 30;
         const scope = scopeEl.value || 'all';
@@ -216,11 +183,9 @@
           period_days: periodDays,
           scope,
         });
-        const r = await fetch(API_BASE + '/formulas/' + selectedFormula.id + '/execute', {
+        const r = await BmadApiClient.fetch('/formulas/' + selectedFormula.id + '/execute', {
           method: 'POST',
-          headers: headers(true),
           body,
-          credentials: 'include',
         });
         const json = await r.json();
         if (!json.success) throw new Error(json.error || 'Erreur exécution');
@@ -247,7 +212,17 @@
       }
     });
 
-    document.getElementById('token').addEventListener('change', loadFormulas);
+    tokenEl.addEventListener('change', () => {
+      BmadApiClient.saveTokenToStorage(tokenEl.value);
+      loadFormulas();
+    });
+    tokenEl.addEventListener('input', () => {
+      BmadApiClient.saveTokenToStorage(tokenEl.value);
+      loadFormulas();
+    });
+
+    var stored = BmadApiClient.loadTokenFromStorage();
+    if (stored) tokenEl.value = stored;
     loadFormulas();
   </script>
 </body>

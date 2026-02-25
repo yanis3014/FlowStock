@@ -274,11 +274,12 @@ export async function loginUser(input: LoginInput) {
     email: user.email,
   });
 
-  // Store refresh token in DB
+  // Store refresh token in DB (with tenant context for RLS)
   const expiresAt = new Date();
   expiresAt.setDate(expiresAt.getDate() + 7); // 7 days
 
-  await db.query(
+  await db.queryWithTenant(
+    user.tenant_id,
     `INSERT INTO refresh_tokens (user_id, token, expires_at, revoked)
      VALUES ($1, $2, $3, false)`,
     [user.id, refreshToken, expiresAt]
@@ -360,9 +361,9 @@ export async function refreshAccessToken(refreshToken: string) {
     throw new Error('Invalid token type');
   }
 
-  // Check token in DB (refresh_tokens has no RLS)
+  // Check token in DB via SECURITY DEFINER (refresh_tokens has RLS; lookup by token has no tenant context yet)
   const tokenResult = await db.query(
-    `SELECT user_id, revoked, expires_at FROM refresh_tokens WHERE token = $1 AND revoked = false`,
+    `SELECT * FROM get_refresh_token_info($1)`,
     [refreshToken]
   );
 
@@ -371,13 +372,14 @@ export async function refreshAccessToken(refreshToken: string) {
   }
 
   const tokenData = tokenResult.rows[0];
+  const tenantId = tokenData.tenant_id;
 
   // Check expiration
   if (new Date(tokenData.expires_at) < new Date()) {
     throw new Error('Refresh token expired');
   }
 
-  // Get tenant_id and is_active via SECURITY DEFINER (bypasses RLS)
+  // Get is_active via SECURITY DEFINER (tenant_id already from get_refresh_token_info)
   const userCheck = await db.query(
     'SELECT * FROM get_user_active_and_tenant($1)',
     [tokenData.user_id]
@@ -385,7 +387,6 @@ export async function refreshAccessToken(refreshToken: string) {
   if (userCheck.rows.length === 0 || !userCheck.rows[0].is_active) {
     throw new Error('User account is inactive');
   }
-  const tenantId = userCheck.rows[0].tenant_id;
 
   // Generate new access token
   const accessToken = generateAccessToken({
@@ -407,19 +408,22 @@ export async function refreshAccessToken(refreshToken: string) {
 export async function logoutUser(refreshToken: string) {
   const db = getDatabase();
 
-  // Revoke refresh token
-  const result = await db.query(
-    `UPDATE refresh_tokens 
-     SET revoked = true
-     WHERE token = $1 AND revoked = false
-     RETURNING id`,
+  // Get token info (SECURITY DEFINER) to obtain tenant_id for RLS-scoped UPDATE
+  const tokenResult = await db.query(
+    'SELECT * FROM get_refresh_token_info($1)',
     [refreshToken]
   );
-
-  if (result.rows.length === 0) {
-    // Token already revoked or doesn't exist - still return success
+  if (tokenResult.rows.length === 0) {
     return { success: true };
   }
+  const { tenant_id: tenantId } = tokenResult.rows[0];
+
+  // Revoke refresh token (with tenant context so RLS allows the UPDATE)
+  const result = await db.queryWithTenant(
+    tenantId,
+    `UPDATE refresh_tokens SET revoked = true WHERE token = $1 AND revoked = false RETURNING id`,
+    [refreshToken]
+  );
 
   return { success: true };
 }
@@ -491,11 +495,10 @@ export async function resetPassword(token: string, newPassword: string) {
     [passwordHash, userId]
   );
 
-  // Revoke all refresh tokens for this user (force re-login)
-  await db.query(
-    `UPDATE refresh_tokens 
-     SET revoked = true
-     WHERE user_id = $1 AND revoked = false`,
+  // Revoke all refresh tokens for this user (force re-login); use tenant context for RLS
+  await db.queryWithTenant(
+    tenantId,
+    `UPDATE refresh_tokens SET revoked = true WHERE user_id = $1 AND revoked = false`,
     [userId]
   );
 

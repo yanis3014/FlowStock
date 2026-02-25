@@ -18,8 +18,8 @@ describe('Auth Integration Tests', () => {
 
   beforeAll(async () => {
     pool = new Pool({ connectionString: testDbUrl });
-    
-    // Run migrations
+
+    // Run migrations (can be slow when DB under load)
     await runMigrations();
     
     // Create a test tenant for some tests

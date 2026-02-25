@@ -4,83 +4,68 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Fournisseurs - bmad-stock-agent</title>
-  <style>
-    * { box-sizing: border-box; }
-    body { font-family: system-ui, sans-serif; max-width: 960px; margin: 2rem auto; padding: 0 1rem; }
-    h1 { margin-bottom: 0.5rem; }
-    .section { margin: 1.5rem 0; padding: 1rem; border: 1px solid #ddd; border-radius: 8px; }
-    label { display: block; margin-top: 0.5rem; font-weight: 500; }
-    input[type="text"], input[type="email"], textarea { margin-top: 0.25rem; width: 100%; max-width: 400px; padding: 0.35rem; }
-    textarea { min-height: 60px; resize: vertical; }
-    button { margin-top: 0.5rem; margin-right: 0.5rem; padding: 0.5rem 1rem; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 4px; }
-    button:hover { background: #0056b3; }
-    button:disabled { background: #ccc; cursor: not-allowed; }
-    button.danger { background: #dc3545; }
-    button.danger:hover { background: #c82333; }
-    .error { color: #c00; }
-    .success { color: #0a0; }
-    table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
-    th, td { border: 1px solid #ddd; padding: 0.5rem; text-align: left; }
-    th { background: #f5f5f5; }
-    .hidden { display: none; }
-    a { color: #007bff; }
-  </style>
+  <link rel="stylesheet" href="/css/design-system.css">
 </head>
 <body>
-  <h1>Gestion des fournisseurs</h1>
-  <p>Créez et gérez vos fournisseurs. Associez les produits à un fournisseur depuis la liste des produits (filtre par fournisseur).</p>
+  <div id="layout-nav"></div>
+  <div id="layout-header"></div>
+  <main class="page-container" data-page-title="Fournisseurs">
+  <h1 class="text-2xl font-semibold text-gray-800 mb-2">Gestion des fournisseurs</h1>
+  <p class="text-gray-600 mb-4">Créez et gérez vos fournisseurs. Associez les produits à un fournisseur depuis la liste des produits (filtre par fournisseur).</p>
 
-  <div class="section">
-    <h2>Authentification</h2>
-    <label>Token JWT (après connexion via /auth/login) :</label>
-    <input type="text" id="token" placeholder="Collez votre access_token ici" style="width: 100%;" />
+  <div class="rounded-lg border border-gray-200 bg-white shadow p-5 my-6">
+    <h2 class="text-lg font-semibold text-gray-800 mb-2">Authentification</h2>
+    <label class="block mt-2 font-medium">Token JWT (après connexion via /auth/login) :</label>
+    <input type="text" id="token" class="mt-1 p-2 w-full max-w-md border border-gray-300 rounded" placeholder="Collez votre access_token ici" />
   </div>
 
-  <div class="section">
-    <h2>Liste des fournisseurs</h2>
-    <button id="refreshBtn">Rafraîchir</button>
-    <button id="newBtn">Nouveau fournisseur</button>
-    <div id="listError" class="error hidden"></div>
-    <div id="listSuccess" class="success hidden"></div>
-    <table id="suppliersTable" class="hidden">
+  <div class="rounded-lg border border-gray-200 bg-white shadow p-5 my-6">
+    <h2 class="text-lg font-semibold text-gray-800 mb-2">Liste des fournisseurs</h2>
+    <button type="button" id="refreshBtn" class="px-4 py-2 bg-primary text-white border-0 rounded cursor-pointer hover:opacity-90 mr-2">Rafraîchir</button>
+    <button type="button" id="newBtn" class="px-4 py-2 bg-primary text-white border-0 rounded cursor-pointer hover:opacity-90">Nouveau fournisseur</button>
+    <div id="listError" class="hidden text-error font-medium mt-2"></div>
+    <div id="listSuccess" class="hidden text-success font-medium mt-2"></div>
+    <table id="suppliersTable" class="hidden table-auto w-full text-sm border-collapse mt-4">
       <thead>
         <tr>
-          <th>Nom</th>
-          <th>Contact</th>
-          <th>Email</th>
-          <th>Produits</th>
-          <th>Actif</th>
-          <th>Actions</th>
+          <th class="border-b border-gray-200 bg-gray-50 px-4 py-2 text-left">Nom</th>
+          <th class="border-b border-gray-200 bg-gray-50 px-4 py-2 text-left">Contact</th>
+          <th class="border-b border-gray-200 bg-gray-50 px-4 py-2 text-left">Email</th>
+          <th class="border-b border-gray-200 bg-gray-50 px-4 py-2 text-left">Produits</th>
+          <th class="border-b border-gray-200 bg-gray-50 px-4 py-2 text-left">Actif</th>
+          <th class="border-b border-gray-200 bg-gray-50 px-4 py-2 text-left">Actions</th>
         </tr>
       </thead>
       <tbody id="suppliersBody"></tbody>
     </table>
-    <p id="emptyList" class="hidden">Aucun fournisseur. Cliquez sur "Nouveau fournisseur".</p>
+    <p id="emptyList" class="hidden text-gray-600 mt-4">Aucun fournisseur. Cliquez sur "Nouveau fournisseur".</p>
   </div>
 
-  <div class="section hidden" id="formSection">
-    <h2 id="formTitle">Nouveau fournisseur</h2>
-    <div id="formError" class="error hidden"></div>
+  <div class="rounded-lg border border-gray-200 bg-white shadow p-5 my-6 hidden" id="formSection">
+    <h2 id="formTitle" class="text-lg font-semibold text-gray-800 mb-2">Nouveau fournisseur</h2>
+    <div id="formError" class="hidden text-error font-medium mb-2"></div>
     <input type="hidden" id="editId" />
-    <label>Nom *</label>
-    <input type="text" id="name" required placeholder="ex: Grossiste Alimentaire" />
-    <label>Contact</label>
-    <input type="text" id="contact_name" placeholder="Nom du contact" />
-    <label>Email</label>
-    <input type="email" id="email" placeholder="contact@fournisseur.com" />
-    <label>Téléphone</label>
-    <input type="text" id="phone" placeholder="+33 1 23 45 67 89" />
-    <label>Adresse</label>
-    <input type="text" id="address" placeholder="Adresse complète" />
-    <label>Notes</label>
-    <textarea id="notes" placeholder="Notes internes"></textarea>
-    <div id="editActiveRow" class="hidden">
-      <label><input type="checkbox" id="is_active" checked /> Actif</label>
+    <label class="block mt-2 font-medium">Nom *</label>
+    <input type="text" id="name" required class="mt-1 p-2 w-full max-w-md border border-gray-300 rounded" placeholder="ex: Grossiste Alimentaire" />
+    <label class="block mt-2 font-medium">Contact</label>
+    <input type="text" id="contact_name" class="mt-1 p-2 w-full max-w-md border border-gray-300 rounded" placeholder="Nom du contact" />
+    <label class="block mt-2 font-medium">Email</label>
+    <input type="email" id="email" class="mt-1 p-2 w-full max-w-md border border-gray-300 rounded" placeholder="contact@fournisseur.com" />
+    <label class="block mt-2 font-medium">Téléphone</label>
+    <input type="text" id="phone" class="mt-1 p-2 w-full max-w-md border border-gray-300 rounded" placeholder="+33 1 23 45 67 89" />
+    <label class="block mt-2 font-medium">Adresse</label>
+    <input type="text" id="address" class="mt-1 p-2 w-full max-w-md border border-gray-300 rounded" placeholder="Adresse complète" />
+    <label class="block mt-2 font-medium">Notes</label>
+    <textarea id="notes" class="mt-1 p-2 w-full max-w-md border border-gray-300 rounded min-h-[60px] resize-y" placeholder="Notes internes"></textarea>
+    <div id="editActiveRow" class="hidden mt-2">
+      <label class="flex items-center gap-2"><input type="checkbox" id="is_active" checked /> Actif</label>
     </div>
-    <button id="saveBtn">Enregistrer</button>
-    <button id="cancelBtn">Annuler</button>
+    <button type="button" id="saveBtn" class="mt-4 px-4 py-2 bg-primary text-white border-0 rounded cursor-pointer hover:opacity-90 mr-2">Enregistrer</button>
+    <button type="button" id="cancelBtn" class="mt-4 px-4 py-2 bg-gray-200 text-gray-800 border-0 rounded cursor-pointer hover:bg-gray-300">Annuler</button>
   </div>
+  </main>
 
+  <script src="/js/layout.js"></script>
   <script>
     const API_BASE = '';
     const tokenEl = document.getElementById('token');
@@ -106,10 +91,19 @@
     const saveBtn = document.getElementById('saveBtn');
     const cancelBtn = document.getElementById('cancelBtn');
 
-    function headers() {
+    let csrfToken = '';
+    async function ensureCsrf() {
+      if (csrfToken) return;
+      const r = await fetch(API_BASE + '/csrf-token', { credentials: 'include' });
+      const j = await r.json();
+      csrfToken = j.csrfToken || '';
+    }
+
+    function headers(includeCsrf = false) {
       const t = tokenEl.value.trim();
       const h = { 'Content-Type': 'application/json' };
       if (t) h['Authorization'] = 'Bearer ' + t;
+      if (includeCsrf && csrfToken) h['X-CSRF-Token'] = csrfToken;
       return h;
     }
 
@@ -145,15 +139,15 @@
         emptyList.classList.add('hidden');
         suppliersTable.classList.remove('hidden');
         suppliersBody.innerHTML = list.map(sup => `
-          <tr>
-            <td>${escapeHtml(sup.name)}</td>
-            <td>${escapeHtml(sup.contact_name || '—')}</td>
-            <td>${escapeHtml(sup.email || '—')}</td>
-            <td>${Number(sup.products_count ?? 0)}</td>
-            <td>${sup.is_active ? 'Oui' : 'Non'}</td>
-            <td>
-              <button class="edit-btn" data-id="${sup.id}">Modifier</button>
-              <button class="delete-btn danger" data-id="${sup.id}" data-name="${escapeHtml(sup.name)}">Supprimer</button>
+          <tr class="hover:bg-gray-50 border-b border-gray-100">
+            <td class="px-4 py-2 text-left">${escapeHtml(sup.name)}</td>
+            <td class="px-4 py-2 text-left">${escapeHtml(sup.contact_name || '—')}</td>
+            <td class="px-4 py-2 text-left">${escapeHtml(sup.email || '—')}</td>
+            <td class="px-4 py-2 text-left">${Number(sup.products_count ?? 0)}</td>
+            <td class="px-4 py-2 text-left">${sup.is_active ? 'Oui' : 'Non'}</td>
+            <td class="px-4 py-2 text-left">
+              <button type="button" class="edit-btn px-2 py-1 text-primary text-sm font-medium hover:underline" data-id="${sup.id}">Modifier</button>
+              <button type="button" class="delete-btn px-2 py-1 bg-error text-white text-sm rounded hover:opacity-90" data-id="${sup.id}" data-name="${escapeHtml(sup.name)}">Supprimer</button>
             </td>
           </tr>
         `).join('');
@@ -218,6 +212,7 @@
       }
       showFormError('');
       saveBtn.disabled = true;
+      await ensureCsrf();
       const body = {
         name,
         contact_name: contactNameEl.value.trim() || null,
@@ -230,7 +225,7 @@
 
       const url = id ? API_BASE + '/suppliers/' + id : API_BASE + '/suppliers';
       const method = id ? 'PUT' : 'POST';
-      const res = await fetch(url, { method, headers: headers(), body: JSON.stringify(body) });
+      const res = await fetch(url, { method, headers: headers(true), body: JSON.stringify(body), credentials: 'include' });
       const text = await res.text();
       let errMsg = '';
       try {
@@ -252,7 +247,8 @@
 
     async function confirmDelete(id, name) {
       if (!confirm('Supprimer le fournisseur « ' + name + ' » ? (soft delete)')) return;
-      const res = await fetch(API_BASE + '/suppliers/' + id, { method: 'DELETE', headers: headers() });
+      await ensureCsrf();
+      const res = await fetch(API_BASE + '/suppliers/' + id, { method: 'DELETE', headers: headers(true), credentials: 'include' });
       if (!res.ok) {
         const j = await res.json().catch(() => ({}));
         showListError(j.error || res.statusText);

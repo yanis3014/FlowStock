@@ -1395,6 +1395,148 @@ Upgrade subscription tier.
 
 ---
 
+## 12. Chat IA Service (`/api/v1/chat`) - ML Service
+
+> **Base URL**: `http://localhost:8000` (ML/IA Service - Python FastAPI)
+>
+> All chat endpoints require JWT Bearer token authentication. The `tenant_id` and `user_id` are extracted from the JWT payload.
+
+### POST /api/v1/chat/message
+
+Send a message to the AI chat and get a response. Creates a new conversation if `conversation_id` is not provided.
+
+**Request**:
+```json
+{
+  "conversation_id": "uuid (optional - creates new conversation if omitted)",
+  "message": "Combien d'ordinateurs Dell en stock ?"
+}
+```
+
+| Field | Type | Required | Constraints | Description |
+|-------|------|----------|-------------|-------------|
+| `conversation_id` | UUID | No | Valid UUID | Existing conversation ID. If omitted, a new conversation is created. |
+| `message` | string | Yes | 1-2000 chars | User message to send to the AI chat |
+
+**Response** (200 OK):
+```json
+{
+  "conversation_id": "33333333-3333-3333-3333-333333333333",
+  "response": "Vous avez actuellement 45 ordinateurs Dell en stock. Voulez-vous plus de détails ?",
+  "context_used": true
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `conversation_id` | string (UUID) | The conversation ID (new or existing) |
+| `response` | string | AI-generated response |
+| `context_used` | boolean | Whether previous conversation context was used |
+
+**Error Responses**:
+- `401 Unauthorized` - Missing or invalid JWT token
+- `422 Unprocessable Entity` - Invalid request (empty message, invalid UUID)
+- `500 Internal Server Error` - LLM or database error
+
+---
+
+### GET /api/v1/chat/history
+
+Get conversation message history.
+
+**Query Parameters**:
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `conversation_id` | UUID | Yes | The conversation to retrieve history for |
+
+**Response** (200 OK):
+```json
+{
+  "messages": [
+    {
+      "id": "uuid",
+      "role": "user",
+      "content": "Combien d'ordinateurs Dell en stock ?",
+      "created_at": "2026-02-06T10:00:00Z",
+      "metadata": {}
+    },
+    {
+      "id": "uuid",
+      "role": "assistant",
+      "content": "Vous avez actuellement 45 ordinateurs Dell en stock.",
+      "created_at": "2026-02-06T10:00:02Z",
+      "metadata": {}
+    }
+  ]
+}
+```
+
+**Error Responses**:
+- `401 Unauthorized` - Missing or invalid JWT token
+- `422 Unprocessable Entity` - Missing `conversation_id` parameter
+- `500 Internal Server Error` - Database error
+
+---
+
+### POST /api/v1/chat/conversations
+
+Create a new conversation.
+
+**Request**: No body required.
+
+**Response** (200 OK):
+```json
+{
+  "conversation_id": "33333333-3333-3333-3333-333333333333"
+}
+```
+
+**Error Responses**:
+- `401 Unauthorized` - Missing or invalid JWT token
+- `500 Internal Server Error` - Database error
+
+---
+
+### GET /api/v1/chat/conversations
+
+List all conversations for the current user (filtered by tenant from JWT).
+
+**Response** (200 OK):
+```json
+{
+  "conversations": [
+    {
+      "id": "33333333-3333-3333-3333-333333333333",
+      "created_at": "2026-02-06T10:00:00Z",
+      "updated_at": "2026-02-06T11:30:00Z"
+    },
+    {
+      "id": "44444444-4444-4444-4444-444444444444",
+      "created_at": "2026-02-05T14:00:00Z",
+      "updated_at": "2026-02-05T14:15:00Z"
+    }
+  ]
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `conversations` | array | List of conversations, ordered by `updated_at` DESC |
+| `conversations[].id` | string (UUID) | Conversation ID |
+| `conversations[].created_at` | string (ISO 8601) | When the conversation was created |
+| `conversations[].updated_at` | string (ISO 8601) | When the conversation was last updated |
+
+**Notes**:
+- Maximum 50 conversations returned
+- Conversations are isolated by `tenant_id` via RLS (Row-Level Security)
+
+**Error Responses**:
+- `401 Unauthorized` - Missing or invalid JWT token
+- `500 Internal Server Error` - Database error
+
+---
+
 ## Error Codes Reference
 
 | Code | HTTP Status | Description |

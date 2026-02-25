@@ -4,48 +4,31 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Historique des mouvements - bmad-stock-agent</title>
-  <style>
-    * { box-sizing: border-box; }
-    body { font-family: system-ui, sans-serif; max-width: 1000px; margin: 2rem auto; padding: 0 1rem; }
-    h1 { margin-bottom: 0.5rem; }
-    .section { margin: 1.5rem 0; padding: 1rem; border: 1px solid #ddd; border-radius: 8px; }
-    label { display: block; margin-top: 0.5rem; font-weight: 500; }
-    input[type="text"], select { margin-top: 0.25rem; padding: 0.35rem; }
-    input, select { max-width: 100%; }
-    button { margin-top: 0.5rem; margin-right: 0.5rem; padding: 0.5rem 1rem; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 4px; }
-    button:hover { background: #0056b3; }
-    button:disabled { background: #ccc; cursor: not-allowed; }
-    .error { color: #c00; }
-    .success { color: #0a0; }
-    .muted { color: #666; font-size: 0.9rem; }
-    table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
-    th, td { border: 1px solid #ddd; padding: 0.5rem; text-align: left; }
-    th { background: #f5f5f5; }
-    .hidden { display: none; }
-    .filters { display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-end; margin-bottom: 1rem; }
-    .filters label { margin-right: 0.25rem; }
-  </style>
+  <link rel="stylesheet" href="/css/design-system.css">
 </head>
 <body>
-  <h1>Historique des mouvements de stocks</h1>
-  <p>Consultez l'historique des mouvements (création, modification quantité, suppression) par produit. La rétention dépend de votre abonnement (30 / 90 / 365 jours).</p>
+  <div id="layout-nav"></div>
+  <div id="layout-header"></div>
+  <main class="page-container" data-page-title="Mouvements">
+  <h1 class="text-2xl font-semibold text-gray-800 mb-2">Historique des mouvements de stocks</h1>
+  <p class="text-gray-600 mb-4">Consultez l'historique des mouvements (création, modification quantité, suppression) par produit. La rétention dépend de votre abonnement (30 / 90 / 365 jours).</p>
 
-  <div class="section">
-    <h2>Authentification</h2>
-    <label>Token JWT :</label>
-    <input type="text" id="token" placeholder="Collez votre access_token ici" style="width: 100%;" />
+  <div class="rounded-lg border border-gray-200 bg-white shadow p-5 my-6">
+    <h2 class="text-lg font-semibold text-gray-800 mb-2">Authentification</h2>
+    <label class="block mt-2 font-medium">Token JWT :</label>
+    <input type="text" id="token" class="mt-1 p-2 w-full max-w-md border border-gray-300 rounded" placeholder="Collez votre access_token ici" />
   </div>
 
-  <div class="section">
-    <h2>Produit et filtres</h2>
-    <label>Produit</label>
-    <select id="productSelect">
+  <div class="rounded-lg border border-gray-200 bg-white shadow p-5 my-6">
+    <h2 class="text-lg font-semibold text-gray-800 mb-2">Produit et filtres</h2>
+    <label class="block font-medium">Produit</label>
+    <select id="productSelect" class="mt-1 p-2 border border-gray-300 rounded max-w-full">
       <option value="">-- Choisir un produit --</option>
     </select>
-    <div class="filters" style="margin-top: 1rem;">
+    <div class="flex flex-wrap gap-4 items-end mt-4 mb-4">
       <div>
-        <label>Type</label>
-        <select id="filterType">
+        <label class="block font-medium">Type</label>
+        <select id="filterType" class="mt-1 p-2 border border-gray-300 rounded">
           <option value="">Tous</option>
           <option value="creation">Création</option>
           <option value="quantity_update">Modification quantité</option>
@@ -54,37 +37,39 @@
         </select>
       </div>
       <div>
-        <label>Date début (ISO)</label>
-        <input type="datetime-local" id="dateFrom" />
+        <label class="block font-medium">Date début (ISO)</label>
+        <input type="datetime-local" id="dateFrom" class="mt-1 p-2 border border-gray-300 rounded" />
       </div>
       <div>
-        <label>Date fin (ISO)</label>
-        <input type="datetime-local" id="dateTo" />
+        <label class="block font-medium">Date fin (ISO)</label>
+        <input type="datetime-local" id="dateTo" class="mt-1 p-2 border border-gray-300 rounded" />
       </div>
       <div>
-        <button id="refreshBtn">Rafraîchir</button>
-        <button id="exportBtn">Exporter CSV</button>
+        <button type="button" id="refreshBtn" class="px-4 py-2 bg-primary text-white border-0 rounded cursor-pointer hover:opacity-90 disabled:bg-gray-400 disabled:cursor-not-allowed">Rafraîchir</button>
+        <button type="button" id="exportBtn" class="px-4 py-2 bg-primary text-white border-0 rounded cursor-pointer hover:opacity-90">Exporter CSV</button>
       </div>
     </div>
-    <p id="retentionNotice" class="muted hidden"></p>
-    <div id="listError" class="error hidden"></div>
-    <table id="movementsTable" class="hidden">
+    <p id="retentionNotice" class="hidden text-gray-500 text-sm"></p>
+    <div id="listError" class="hidden text-error font-medium"></div>
+    <table id="movementsTable" class="hidden table-auto w-full text-sm border-collapse">
       <thead>
         <tr>
-          <th>Date</th>
-          <th>Type</th>
-          <th>Utilisateur</th>
-          <th>Ancienne qté</th>
-          <th>Nouvelle qté</th>
-          <th>Raison</th>
+          <th class="border-b border-gray-200 bg-gray-50 px-4 py-2 text-left">Date</th>
+          <th class="border-b border-gray-200 bg-gray-50 px-4 py-2 text-left">Type</th>
+          <th class="border-b border-gray-200 bg-gray-50 px-4 py-2 text-left">Utilisateur</th>
+          <th class="border-b border-gray-200 bg-gray-50 px-4 py-2 text-left">Ancienne qté</th>
+          <th class="border-b border-gray-200 bg-gray-50 px-4 py-2 text-left">Nouvelle qté</th>
+          <th class="border-b border-gray-200 bg-gray-50 px-4 py-2 text-left">Raison</th>
         </tr>
       </thead>
       <tbody id="movementsBody"></tbody>
     </table>
-    <p id="emptyList" class="hidden">Sélectionnez un produit pour afficher l'historique.</p>
-    <p id="noMovements" class="hidden muted">Aucun mouvement pour ce produit sur la période (rétention appliquée).</p>
+    <p id="emptyList" class="hidden text-gray-600">Sélectionnez un produit pour afficher l'historique.</p>
+    <p id="noMovements" class="hidden text-gray-500 text-sm">Aucun mouvement pour ce produit sur la période (rétention appliquée).</p>
   </div>
+  </main>
 
+  <script src="/js/layout.js"></script>
   <script>
     const API_BASE = '';
     const tokenEl = document.getElementById('token');
@@ -169,13 +154,13 @@
         noMovements.classList.add('hidden');
         movementsTable.classList.remove('hidden');
         movementsBody.innerHTML = list.map((m) => `
-          <tr>
-            <td>${escapeHtml(m.created_at.replace('T', ' ').slice(0, 19))}</td>
-            <td>${escapeHtml(m.movement_type)}</td>
-            <td>${escapeHtml(m.user_email || m.user_id || '—')}</td>
-            <td>${m.quantity_before != null ? m.quantity_before : '—'}</td>
-            <td>${m.quantity_after != null ? m.quantity_after : '—'}</td>
-            <td>${escapeHtml(m.reason || '—')}</td>
+          <tr class="hover:bg-gray-50 border-b border-gray-100">
+            <td class="px-4 py-2 text-left">${escapeHtml(m.created_at.replace('T', ' ').slice(0, 19))}</td>
+            <td class="px-4 py-2 text-left">${escapeHtml(m.movement_type)}</td>
+            <td class="px-4 py-2 text-left">${escapeHtml(m.user_email || m.user_id || '—')}</td>
+            <td class="px-4 py-2 text-left">${m.quantity_before != null ? m.quantity_before : '—'}</td>
+            <td class="px-4 py-2 text-left">${m.quantity_after != null ? m.quantity_after : '—'}</td>
+            <td class="px-4 py-2 text-left">${escapeHtml(m.reason || '—')}</td>
           </tr>
         `).join('');
       }

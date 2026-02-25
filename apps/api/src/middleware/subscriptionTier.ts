@@ -37,7 +37,7 @@ export function requireTier(allowedTiers: SubscriptionTier[]) {
     } catch {
       res.status(500).json({
         success: false,
-        error: 'Feature not available in current subscription tier',
+        error: 'Internal server error',
       });
     }
   };

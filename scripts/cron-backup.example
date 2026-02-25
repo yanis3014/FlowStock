@@ -1,0 +1,6 @@
+# Example: daily PostgreSQL backup (Story 1.2)
+# Copy to crontab (crontab -e) or use in systemd/scheduler.
+# Ensure DATABASE_URL or POSTGRES_* (including PGPASSWORD) are set in the environment.
+
+# Run backup every day at 02:00, output to /backups (adjust path)
+# 0 2 * * * /path/to/bmad-stock-agent/scripts/backup-database.sh /backups

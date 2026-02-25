@@ -1,0 +1,25 @@
+{
+  "name": "bmad-stock-agent",
+  "private": true,
+  "packageManager": "npm@10.9.2",
+  "version": "0.1.0",
+  "description": "SaaS de gestion de stocks pour PME avec IA, monorepo fullstack.",
+  "scripts": {
+    "dev": "turbo run dev --parallel",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "e2e": "playwright test --config=e2e/playwright.config.ts",
+    "e2e:ui": "playwright test --config=e2e/playwright.config.ts --ui",
+    "e2e:debug": "playwright test --config=e2e/playwright.config.ts --debug"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "devDependencies": {
+    "@playwright/test": "^1.49.0",
+    "turbo": "^2.2.3"
+  }
+}
+
