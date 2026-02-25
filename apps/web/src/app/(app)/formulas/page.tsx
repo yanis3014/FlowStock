@@ -106,7 +106,7 @@ export default function FormulasPage() {
     if (!token) return;
     setLoadingProducts(true);
     try {
-      const res = await fetchApi('/products?limit=200');
+      const res = await fetchApi('/products?limit=100');
       if (!res.ok) throw new Error('Erreur chargement produits');
       const json = await res.json();
       setProducts(Array.isArray(json?.data) ? json.data : []);

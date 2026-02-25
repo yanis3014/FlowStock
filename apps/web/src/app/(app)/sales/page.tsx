@@ -89,7 +89,7 @@ export default function SalesPage() {
     fetchApi('/products?limit=500')
       .then((r) => r.ok ? r.json() : null)
       .then((j) => j?.success && j?.data && setProducts(j.data.map((p: { id: string; name: string; sku?: string }) => ({ id: p.id, name: p.name, sku: p.sku }))));
-    fetchApi('/locations?limit=200')
+    fetchApi('/locations?limit=100')
       .then((r) => r.ok ? r.json() : null)
       .then((j) => j?.success && j?.data && setLocations(j.data.map((l: { id: string; name: string }) => ({ id: l.id, name: l.name }))));
   }, [token, fetchApi]);

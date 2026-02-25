@@ -42,16 +42,19 @@ export default function LocationsPage() {
     if (!token) return;
     setLoading(true);
     setError('');
-    fetchApi('/locations?limit=200')
-      .then((res) => {
-        if (!res.ok) throw new Error('Erreur chargement');
+    fetchApi('/locations?limit=100')
+      .then(async (res) => {
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          throw new Error(body?.error || `Erreur ${res.status}`);
+        }
         return res.json();
       })
       .then((json) => {
         if (json?.success && json?.data) setList(json.data);
         else setError('Données invalides.');
       })
-      .catch(() => setError('Erreur réseau.'))
+      .catch((err: Error) => setError(err.message || 'Erreur réseau.'))
       .finally(() => setLoading(false));
   }, [token, fetchApi]);
 
