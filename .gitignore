@@ -63,6 +63,7 @@ checkpoints/
 !tsconfig*.json
 !package-lock.json
 !turbo.json
+!.eslintrc.json
 
 # Logs
 logs/
