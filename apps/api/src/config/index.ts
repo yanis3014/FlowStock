@@ -15,18 +15,20 @@ const envTestCandidates = [
   resolve(__dirname, '../../../../.env.test'),
 ];
 
-for (const envPath of envCandidates) {
-  if (existsSync(envPath)) {
-    dotenvConfig({ path: envPath });
-    break;
-  }
-}
-
-if (process.env.NODE_ENV === 'test') {
-  for (const envTestPath of envTestCandidates) {
-    if (existsSync(envTestPath)) {
-      dotenvConfig({ path: envTestPath, override: true });
+if (!process.env.CI) {
+  for (const envPath of envCandidates) {
+    if (existsSync(envPath)) {
+      dotenvConfig({ path: envPath });
       break;
+    }
+  }
+
+  if (process.env.NODE_ENV === 'test') {
+    for (const envTestPath of envTestCandidates) {
+      if (existsSync(envTestPath)) {
+        dotenvConfig({ path: envTestPath, override: true });
+        break;
+      }
     }
   }
 }

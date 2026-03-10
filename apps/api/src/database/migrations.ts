@@ -4,50 +4,49 @@ import { Pool } from 'pg';
 import { config } from 'dotenv';
 import { existsSync } from 'fs';
 
-// Load .env from project root
-const possibleEnvPaths = [
-  resolve(process.cwd(), '../../.env'), // apps/api -> workspace root
-  resolve(process.cwd(), '.env'), // current working directory
-  resolve(__dirname, '../../../../.env'), // src/dist -> workspace root
-];
+const isCi = Boolean(process.env.CI);
 
-const possibleEnvTestPaths = [
-  resolve(process.cwd(), '../../.env.test'),
-  resolve(process.cwd(), '.env.test'),
-  resolve(__dirname, '../../../../.env.test'),
-];
+if (!isCi) {
+  // Load .env from project root for local/dev runs
+  const possibleEnvPaths = [
+    resolve(process.cwd(), '../../.env'), // apps/api -> workspace root
+    resolve(process.cwd(), '.env'), // current working directory
+    resolve(__dirname, '../../../../.env'), // src/dist -> workspace root
+  ];
 
-let envLoaded = false;
-for (const envPath of possibleEnvPaths) {
-  if (existsSync(envPath)) {
-    config({ path: envPath });
-    if (process.env.NODE_ENV !== 'production') {
-      console.log(`📄 Loaded .env from: ${envPath}`);
-    }
-    envLoaded = true;
-    break;
-  }
-}
-// In test, override with .env.test so Jest and migrations use same DB credentials
-if (process.env.NODE_ENV === 'test') {
-  const envTestPath = join(resolve(process.cwd(), '../..'), '.env.test');
-  if (existsSync(envTestPath)) {
-    config({ path: envTestPath, override: true });
-  }
-}
-if (!envLoaded) {
-  config();
-  if (process.env.NODE_ENV !== 'production') {
-    console.log('⚠️  .env not found in standard locations, using default dotenv behavior');
-  }
-}
+  const possibleEnvTestPaths = [
+    resolve(process.cwd(), '../../.env.test'),
+    resolve(process.cwd(), '.env.test'),
+    resolve(__dirname, '../../../../.env.test'),
+  ];
 
-if (process.env.NODE_ENV === 'test') {
-  for (const envTestPath of possibleEnvTestPaths) {
-    if (existsSync(envTestPath)) {
-      config({ path: envTestPath, override: true });
-      console.log(`📄 Loaded .env.test from: ${envTestPath}`);
+  let envLoaded = false;
+  for (const envPath of possibleEnvPaths) {
+    if (existsSync(envPath)) {
+      config({ path: envPath });
+      if (process.env.NODE_ENV !== 'production') {
+        console.log(`📄 Loaded .env from: ${envPath}`);
+      }
+      envLoaded = true;
       break;
+    }
+  }
+
+  if (!envLoaded) {
+    config();
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('⚠️  .env not found in standard locations, using default dotenv behavior');
+    }
+  }
+
+  // In test, override with .env.test so Jest and migrations use same DB credentials locally.
+  if (process.env.NODE_ENV === 'test') {
+    for (const envTestPath of possibleEnvTestPaths) {
+      if (existsSync(envTestPath)) {
+        config({ path: envTestPath, override: true });
+        console.log(`📄 Loaded .env.test from: ${envTestPath}`);
+        break;
+      }
     }
   }
 }
