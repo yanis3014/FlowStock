@@ -9,7 +9,7 @@ const ITEMS = [
   { href: '/dashboard', label: 'Accueil', icon: Home },
   { href: '/stocks', label: 'Stocks', icon: Package },
   { href: '/suggestions', label: 'IA', icon: Sparkles },
-  { href: '/dashboard', label: 'Profil', icon: User },
+  { href: '/parametres', label: 'Profil', icon: User },
 ];
 
 interface MobileBottomNavProps {

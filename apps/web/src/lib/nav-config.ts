@@ -1,7 +1,7 @@
 /**
  * Configuration des liens de navigation et titres de page (Shell 9.2).
  */
-export const NAV_ITEMS: { href: string; label: string }[] = [
+export const NAV_ITEMS: { href: string; label: string; hidden?: boolean }[] = [
   { href: '/rush', label: 'Mode Rush' },
   { href: '/dashboard', label: 'Dashboard' },
   { href: '/stocks', label: 'Stocks' },
@@ -17,7 +17,7 @@ export const NAV_ITEMS: { href: string; label: string }[] = [
   { href: '/custom-formulas', label: 'Formules personnalisées' },
   { href: '/sales', label: 'Ventes' },
   { href: '/import-stocks', label: 'Import stocks' },
-  { href: '/import-sales', label: 'Import ventes' },
+  { href: '/import-sales', label: 'Import ventes', hidden: true }, // TODO Sprint 2 : Import ventes
   { href: '/movements', label: 'Mouvements' },
   { href: '/locations', label: 'Emplacements' },
   { href: '/suppliers', label: 'Fournisseurs' },

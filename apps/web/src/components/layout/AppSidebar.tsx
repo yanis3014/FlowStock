@@ -78,7 +78,7 @@ export function AppSidebar({
       </div>
       {showNav && (
         <nav className="flex flex-col gap-0.5 p-2">
-          {NAV_ITEMS.map(({ href, label }) => (
+          {NAV_ITEMS.filter((item) => !item.hidden).map(({ href, label }) => (
             <Link
               key={href}
               href={href}
