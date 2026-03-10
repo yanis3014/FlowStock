@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { useApi } from '@/hooks/useApi';
@@ -41,9 +40,8 @@ const emptyForm = {
 };
 
 export default function StocksPage() {
-  const { token, isLoading } = useAuth();
+  const { token } = useAuth();
   const { fetchApi } = useApi();
-  const router = useRouter();
   const [products, setProducts] = useState<Product[]>([]);
   const [pagination, setPagination] = useState({ page: 1, limit: 20, total: 0, total_pages: 0 });
   const [search, setSearch] = useState('');
@@ -97,10 +95,6 @@ export default function StocksPage() {
       })
       .finally(() => setLoading(false));
   }, [token, fetchApi, pagination.page, pagination.limit, search, filterStatus, filterLocationId]);
-
-  useEffect(() => {
-    if (!token && !isLoading) router.push('/login?returnUrl=/stocks');
-  }, [token, isLoading, router]);
 
   useEffect(() => {
     if (token) loadProducts();
@@ -264,9 +258,6 @@ export default function StocksPage() {
     filterStatus === 'all'
       ? products
       : products.filter((p) => p.stock_status === filterStatus);
-
-  if (!token && isLoading) return null;
-  if (!token) return null;
 
   return (
     <div className="min-h-full bg-cream font-body">

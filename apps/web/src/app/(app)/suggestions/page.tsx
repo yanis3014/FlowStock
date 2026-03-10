@@ -1,7 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Check, X, RefreshCw, AlertTriangle, Lock, Sparkles } from 'lucide-react';
 
@@ -32,17 +31,9 @@ const MOCK_ALERTE_GASPILLAGE = {
 const IS_STARTER = true; // Mock : version Starter = bloc verrouillé
 
 export default function SuggestionsPage() {
-  const { token, isLoading } = useAuth();
-  const router = useRouter();
+  useAuth(); // Auth guard in layout
   const [validated, setValidated] = useState(false);
   const [refused, setRefused] = useState(false);
-
-  useEffect(() => {
-    if (!token && !isLoading) router.push('/login?returnUrl=/suggestions');
-  }, [token, isLoading, router]);
-
-  if (!token && isLoading) return null;
-  if (!token) return null;
 
   return (
     <div className="min-h-full bg-cream font-body">

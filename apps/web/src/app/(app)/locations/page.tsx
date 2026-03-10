@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState, useMemo, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
 import { Search, Trash2, Plus, Pencil, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useApi } from '@/hooks/useApi';
@@ -17,9 +16,8 @@ const emptyForm = {
 };
 
 export default function LocationsPage() {
-  const { token, isLoading } = useAuth();
+  const { token } = useAuth();
   const { fetchApi } = useApi();
-  const router = useRouter();
   const [list, setList] = useState<Location[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -35,13 +33,6 @@ export default function LocationsPage() {
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [locationToDelete, setLocationToDelete] = useState<Location | null>(null);
   const debouncedSearch = useDebouncedValue(search, 300);
-
-  useEffect(() => {
-    if (!token && !isLoading) {
-      router.push('/login?returnUrl=/locations');
-      return;
-    }
-  }, [token, isLoading, router]);
 
   const load = useCallback(() => {
     if (!token) return;

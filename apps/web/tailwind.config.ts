@@ -22,6 +22,9 @@ const config: Config = {
         'gray-warm': '#6B7B76',
         'red-alert': '#E53E3E',
         'orange-warn': '#ED8936',
+        terracotta: '#C1440E',
+        gold: '#D4A843',
+        'forest-green': '#153029',
       },
       fontFamily: {
         display: ['var(--font-display)', 'Sora', 'sans-serif'],

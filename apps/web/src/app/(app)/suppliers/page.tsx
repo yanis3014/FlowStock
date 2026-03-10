@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
-import { useRouter } from 'next/navigation';
 import { Search, Trash2, Plus, Pencil, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useApi } from '@/hooks/useApi';
@@ -44,13 +43,6 @@ export default function SuppliersPage() {
   const debouncedSearch = useDebouncedValue(search, 300);
   const modalFirstInputRef = useRef<HTMLInputElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
-
-  useEffect(() => {
-    if (!token && !isLoading) {
-      router.push('/login?returnUrl=/suppliers');
-      return;
-    }
-  }, [token, isLoading, router]);
 
   const load = useCallback(
     (pageNum: number = 1) => {
@@ -278,9 +270,6 @@ export default function SuppliersPage() {
       render: (s) => (s.products_count != null ? String(s.products_count) : '—'),
     },
   ];
-
-  if (!token && isLoading) return null;
-  if (!token) return null;
 
   return (
     <div className="min-h-full bg-cream font-body">

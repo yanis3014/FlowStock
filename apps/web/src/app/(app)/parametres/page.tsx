@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { Download, Link2 } from 'lucide-react';
@@ -22,8 +22,7 @@ const MOCK_USERS = [
 ];
 
 export default function ParametresPage() {
-  const { token, isLoading } = useAuth();
-  const router = useRouter();
+  useAuth(); // Auth guard in layout
   const [nom, setNom] = useState(MOCK_RESTAURANT.nom);
   const [adresse, setAdresse] = useState(MOCK_RESTAURANT.adresse);
   const [typeEtablissement, setTypeEtablissement] = useState(MOCK_RESTAURANT.typeEtablissement);
@@ -35,13 +34,6 @@ export default function ParametresPage() {
   const [email, setEmail] = useState(MOCK_NOTIF.email);
   const [langue, setLangue] = useState('fr');
   const [fuseau, setFuseau] = useState('Europe/Paris');
-
-  useEffect(() => {
-    if (!token && !isLoading) router.push('/login?returnUrl=/parametres');
-  }, [token, isLoading, router]);
-
-  if (!token && isLoading) return null;
-  if (!token) return null;
 
   return (
     <div className="min-h-full bg-cream font-body">

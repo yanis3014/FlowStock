@@ -1,21 +1,11 @@
 'use client';
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { Clock } from 'lucide-react';
 
 export default function ImportSalesPage() {
-  const { token, isLoading } = useAuth();
-  const router = useRouter();
-
-  useEffect(() => {
-    if (!token && !isLoading) router.push('/login?returnUrl=/import-sales');
-  }, [token, isLoading, router]);
-
-  if (!token && isLoading) return null;
-  if (!token) return null;
+  useAuth(); // Auth guard in layout
 
   return (
     <div className="min-h-full bg-cream font-body">

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { useApi } from '@/hooks/useApi';
@@ -48,9 +48,8 @@ interface ImportResult {
 }
 
 export default function ImportStocksPage() {
-  const { token, isLoading } = useAuth();
+  const { token } = useAuth();
   const { fetchApi } = useApi();
-  const router = useRouter();
   const searchParams = useSearchParams();
   const fromOnboarding = searchParams.get('from') === 'onboarding';
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -63,10 +62,6 @@ export default function ImportStocksPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [messageSuccess, setMessageSuccess] = useState('');
-
-  useEffect(() => {
-    if (!token && !isLoading) router.push('/login?returnUrl=/import-stocks');
-  }, [token, isLoading, router]);
 
   const downloadTemplate = useCallback(async () => {
     if (!token) return;

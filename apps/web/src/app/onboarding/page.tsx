@@ -38,7 +38,13 @@ export default function OnboardingPage() {
 
   const goNext = useCallback(() => {
     if (step < 4) setStep((s) => s + 1);
-    else router.push('/dashboard');
+    else {
+      // TODO Sprint 3 : remplacer localStorage par user.onboardingCompleted depuis l'API
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('flowstock_onboarding_completed', 'true');
+      }
+      router.push('/dashboard');
+    }
   }, [step, router]);
 
   const goPrev = useCallback(() => {

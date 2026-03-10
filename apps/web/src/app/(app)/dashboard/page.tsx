@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { TrendingUp, Package, AlertTriangle, Loader2, Check, Zap } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -83,9 +82,8 @@ function formatCurrency(val: number | undefined): string {
 }
 
 export default function DashboardPage() {
-  const { token, user, isLoading } = useAuth();
+  const { token, user } = useAuth();
   const { fetchApi } = useApi();
-  const router = useRouter();
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [posSyncStatus, setPosSyncStatus] = useState<PosSyncStatus | null>(null);
   const [posNotification, setPosNotification] = useState<'degraded' | 'recovered' | null>(null);
@@ -93,13 +91,6 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [actionStates, setActionStates] = useState<Record<string, 'idle' | 'loading' | 'confirmed'>>({});
-
-  useEffect(() => {
-    if (!token && !isLoading) {
-      router.push('/login?returnUrl=/dashboard');
-      return;
-    }
-  }, [token, isLoading, router]);
 
   useEffect(() => {
     if (!token) return;
@@ -178,18 +169,6 @@ export default function DashboardPage() {
     },
     []
   );
-
-  if (isLoading) {
-    return (
-      <div className="flex min-h-[40vh] items-center justify-center">
-        <DashboardSkeleton />
-      </div>
-    );
-  }
-
-  if (!token) {
-    return null;
-  }
 
   if (loading) {
     return <DashboardSkeleton />;

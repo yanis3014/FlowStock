@@ -1,24 +1,24 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useState, useCallback, useRef } from 'react';
+import { Plus, Trash2, Pencil, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useApi } from '@/hooks/useApi';
 import { DataTable, type DataTableColumn, type PaginationState } from '@/components/ui/DataTable';
-import { TableSkeleton } from '@/components/ui/TableSkeleton';
+import type { Sale, SaleCreateInput, SaleUpdateInput } from '@bmad/shared';
 
-interface Sale {
-  id: string;
-  product_id: string;
-  product_name?: string;
-  sale_date: string;
-  quantity_sold: number;
-  unit_price: number | null;
-  total_amount: number | null;
-  location_id: string | null;
-  location_name?: string | null;
-  source: string;
-  created_at: string;
+const PAGE_SIZE = 25;
+
+const emptyForm = {
+  sale_date: '',
+  product_id: '',
+  quantity_sold: '',
+  unit_price: '',
+  location_id: '',
+};
+
+function todayDateStr() {
+  return new Date().toISOString().slice(0, 10);
 }
 
 interface ProductRef {
@@ -28,13 +28,14 @@ interface ProductRef {
 }
 
 export default function SalesPage() {
-  const { token, isLoading } = useAuth();
+  const { token } = useAuth();
   const { fetchApi } = useApi();
-  const router = useRouter();
   const [list, setList] = useState<Sale[]>([]);
   const [pagination, setPagination] = useState<PaginationState | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [messageSuccess, setMessageSuccess] = useState('');
+  const [messageError, setMessageError] = useState('');
   const [page, setPage] = useState(1);
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
@@ -44,21 +45,28 @@ export default function SalesPage() {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [products, setProducts] = useState<ProductRef[]>([]);
   const [locations, setLocations] = useState<{ id: string; name: string }[]>([]);
+  const [modalOpen, setModalOpen] = useState<'create' | 'edit' | null>(null);
+  const [editingSale, setEditingSale] = useState<Sale | null>(null);
+  const [form, setForm] = useState(emptyForm);
+  const [submitLoading, setSubmitLoading] = useState(false);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [saleToDelete, setSaleToDelete] = useState<Sale | null>(null);
+  const [editLoadingId, setEditLoadingId] = useState<string | null>(null);
+  const modalFirstInputRef = useRef<HTMLInputElement>(null);
+  const modalContentRef = useRef<HTMLDivElement>(null);
+  const modalDeleteRef = useRef<HTMLDivElement>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
 
-  useEffect(() => {
-    if (!token && !isLoading) {
-      router.push('/login?returnUrl=/sales');
-      return;
-    }
-  }, [token, isLoading, router]);
+  const FOCUSABLE_SELECTOR = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
 
-  const loadSales = useCallback(() => {
-    if (!token) return;
-    setLoading(true);
-    setError('');
-    const params = new URLSearchParams();
-    params.set('page', String(page));
-    params.set('limit', '20');
+  const loadSales = useCallback(
+    (pageOverride?: number) => {
+      if (!token) return;
+      setLoading(true);
+      setError('');
+      const params = new URLSearchParams();
+      params.set('page', String(pageOverride ?? page));
+      params.set('limit', String(PAGE_SIZE));
     if (dateFrom) params.set('date_from', dateFrom);
     if (dateTo) params.set('date_to', dateTo);
     if (productId) params.set('product_id', productId);
@@ -78,7 +86,9 @@ export default function SalesPage() {
       })
       .catch(() => setError('Erreur réseau.'))
       .finally(() => setLoading(false));
-  }, [token, fetchApi, page, dateFrom, dateTo, productId, locationId, sortKey, sortOrder]);
+    },
+    [token, fetchApi, page, dateFrom, dateTo, productId, locationId, sortKey, sortOrder]
+  );
 
   useEffect(() => {
     if (token) loadSales();
@@ -86,13 +96,218 @@ export default function SalesPage() {
 
   useEffect(() => {
     if (!token) return;
+    // Limite 500 produits / 100 emplacements pour les selects (au-delà, envisager recherche)
     fetchApi('/products?limit=500')
-      .then((r) => r.ok ? r.json() : null)
-      .then((j) => j?.success && j?.data && setProducts(j.data.map((p: { id: string; name: string; sku?: string }) => ({ id: p.id, name: p.name, sku: p.sku }))));
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) =>
+        j?.success && j?.data
+          ? setProducts(j.data.map((p: { id: string; name: string; sku?: string }) => ({ id: p.id, name: p.name, sku: p.sku })))
+          : undefined
+      );
     fetchApi('/locations?limit=100')
-      .then((r) => r.ok ? r.json() : null)
-      .then((j) => j?.success && j?.data && setLocations(j.data.map((l: { id: string; name: string }) => ({ id: l.id, name: l.name }))));
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) =>
+        j?.success && j?.data ? setLocations(j.data.map((l: { id: string; name: string }) => ({ id: l.id, name: l.name }))) : undefined
+      );
   }, [token, fetchApi]);
+
+  const openCreate = () => {
+    setEditingSale(null);
+    setForm({
+      sale_date: todayDateStr(),
+      product_id: '',
+      quantity_sold: '',
+      unit_price: '',
+      location_id: '',
+    });
+    setModalOpen('create');
+    setMessageError('');
+    setMessageSuccess('');
+  };
+
+  const openEdit = async (sale: Sale) => {
+    setMessageError('');
+    setEditLoadingId(sale.id);
+    previousFocusRef.current = document.activeElement as HTMLElement | null;
+    try {
+      const res = await fetchApi(`/sales/${sale.id}`);
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        setMessageError(j?.error ?? 'Impossible de charger la vente.');
+        return;
+      }
+      const json = await res.json();
+      const fresh = json?.success && json?.data ? json.data : sale;
+      setEditingSale(fresh);
+      const saleDate = fresh.sale_date ? fresh.sale_date.slice(0, 10) : todayDateStr();
+      setForm({
+        sale_date: saleDate,
+        product_id: fresh.product_id ?? '',
+        quantity_sold: String(fresh.quantity_sold ?? ''),
+        unit_price: fresh.unit_price != null ? String(fresh.unit_price) : '',
+        location_id: fresh.location_id ?? '',
+      });
+      setModalOpen('edit');
+    } catch {
+      setMessageError('Erreur réseau.');
+    } finally {
+      setEditLoadingId(null);
+    }
+  };
+
+  const closeModal = () => {
+    setModalOpen(null);
+    setEditingSale(null);
+    setForm(emptyForm);
+    setMessageError('');
+    if (previousFocusRef.current?.focus) previousFocusRef.current.focus();
+  };
+
+  const validateForm = (): string | null => {
+    if (!form.product_id.trim()) return 'Le produit est obligatoire.';
+    const qty = parseFloat(form.quantity_sold);
+    if (isNaN(qty) || qty <= 0) return 'La quantité doit être supérieure à 0.';
+    if (form.unit_price.trim()) {
+      const price = parseFloat(form.unit_price);
+      if (isNaN(price) || price < 0) return 'Le prix unitaire doit être >= 0.';
+    }
+    if (form.sale_date.trim()) {
+      const d = new Date(form.sale_date);
+      if (isNaN(d.getTime())) return 'Date invalide.';
+    }
+    return null;
+  };
+
+  const handleSubmitCreate = async () => {
+    const err = validateForm();
+    if (err) {
+      setMessageError(err);
+      return;
+    }
+    setSubmitLoading(true);
+    setMessageError('');
+    const body: SaleCreateInput = {
+      product_id: form.product_id.trim(),
+      sale_date: form.sale_date.trim() ? `${form.sale_date}T12:00:00.000Z` : undefined,
+      quantity_sold: parseFloat(form.quantity_sold),
+      unit_price: form.unit_price.trim() ? parseFloat(form.unit_price) : null,
+      location_id: form.location_id.trim() || null,
+    };
+    fetchApi('/sales', { method: 'POST', body: JSON.stringify(body) })
+      .then(async (res) => {
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          setMessageError(json?.error ?? 'Erreur lors de la création.');
+          return;
+        }
+        setMessageSuccess('Vente enregistrée avec succès.');
+        closeModal();
+        setPage(1);
+        loadSales(1);
+      })
+      .catch(() => setMessageError('Erreur réseau.'))
+      .finally(() => setSubmitLoading(false));
+  };
+
+  const handleSubmitEdit = async () => {
+    if (!editingSale) return;
+    const err = validateForm();
+    if (err) {
+      setMessageError(err);
+      return;
+    }
+    setSubmitLoading(true);
+    setMessageError('');
+    const body: SaleUpdateInput = {
+      product_id: form.product_id.trim(),
+      sale_date: form.sale_date.trim() ? `${form.sale_date}T12:00:00.000Z` : undefined,
+      quantity_sold: parseFloat(form.quantity_sold),
+      unit_price: form.unit_price.trim() ? parseFloat(form.unit_price) : null,
+      location_id: form.location_id.trim() || null,
+    };
+    fetchApi(`/sales/${editingSale.id}`, { method: 'PUT', body: JSON.stringify(body) })
+      .then(async (res) => {
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          setMessageError(json?.error ?? 'Erreur lors de la modification.');
+          return;
+        }
+        setMessageSuccess('Vente modifiée avec succès.');
+        closeModal();
+        loadSales();
+      })
+      .catch(() => setMessageError('Erreur réseau.'))
+      .finally(() => setSubmitLoading(false));
+  };
+
+  useEffect(() => {
+    if (modalOpen && modalFirstInputRef.current) {
+      modalFirstInputRef.current.focus();
+    }
+  }, [modalOpen]);
+
+  const setupFocusTrap = (container: HTMLElement | null) => {
+    if (!container) return () => {};
+    const focusable = container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR);
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Tab') return;
+      if (focusable.length <= 1) return;
+      if (e.shiftKey) {
+        if (document.activeElement === first) {
+          e.preventDefault();
+          last?.focus();
+        }
+      } else {
+        if (document.activeElement === last) {
+          e.preventDefault();
+          first?.focus();
+        }
+      }
+    };
+
+    container.addEventListener('keydown', handleKeyDown);
+    return () => container.removeEventListener('keydown', handleKeyDown);
+  };
+
+  useEffect(() => {
+    if (modalOpen && modalContentRef.current) {
+      return setupFocusTrap(modalContentRef.current);
+    }
+  }, [modalOpen]);
+
+  useEffect(() => {
+    if (saleToDelete && modalDeleteRef.current) {
+      return setupFocusTrap(modalDeleteRef.current);
+    }
+  }, [saleToDelete]);
+
+  const openDeleteConfirm = (sale: Sale) => setSaleToDelete(sale);
+
+  const confirmDelete = () => {
+    if (!saleToDelete) return;
+    const id = saleToDelete.id;
+    setDeleteConfirmId(id);
+    const wasLastOnPage = list.length === 1 && (pagination?.total ?? 0) > 1;
+    fetchApi(`/sales/${id}`, { method: 'DELETE' })
+      .then((res) => {
+        if (res.status === 204 || res.ok) {
+          setMessageSuccess('Vente supprimée.');
+          setSaleToDelete(null);
+          if (wasLastOnPage) setPage(1);
+          loadSales(wasLastOnPage ? 1 : undefined);
+        } else {
+          res
+            .json()
+            .then((j) => setMessageError(j?.error ?? 'Erreur lors de la suppression.'))
+            .catch(() => setMessageError('Erreur lors de la suppression.'));
+        }
+      })
+      .catch(() => setMessageError('Erreur réseau.'))
+      .finally(() => setDeleteConfirmId(null));
+  };
 
   const handleSort = useCallback((key: string) => {
     setSortKey(key);
@@ -115,13 +330,18 @@ export default function SalesPage() {
   const formatCurrency = (n: number | null) =>
     n != null ? new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', minimumFractionDigits: 2 }).format(n) : '—';
 
+  const formatSource = (s: string) => {
+    const map: Record<string, string> = { manual: 'Manuelle', csv_import: 'Import CSV', pos_terminal: 'POS', api: 'API' };
+    return map[s] ?? s;
+  };
+
   const columns: DataTableColumn<Sale>[] = [
-    { key: 'product_name', label: 'Produit', sortKey: 'sale_date', render: (s) => s.product_name ?? '—' },
+    { key: 'product_name', label: 'Produit', render: (s) => s.product_name ?? '—' },
     { key: 'quantity_sold', label: 'Quantité', sortKey: 'quantity_sold', render: (s) => String(s.quantity_sold) },
     { key: 'unit_price', label: 'Prix unitaire', sortKey: 'total_amount', render: (s) => formatCurrency(s.unit_price) },
     { key: 'total_amount', label: 'Montant', sortKey: 'total_amount', render: (s) => formatCurrency(s.total_amount) },
     { key: 'sale_date', label: 'Date', sortKey: 'sale_date', render: (s) => formatDate(s.sale_date) },
-    { key: 'source', label: 'Source', render: (s) => s.source ?? '—' },
+    { key: 'source', label: 'Source', render: (s) => formatSource(s.source ?? '') },
     { key: 'location_name', label: 'Emplacement', render: (s) => s.location_name ?? '—' },
   ];
 
@@ -129,75 +349,322 @@ export default function SalesPage() {
   if (!token) return null;
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-end gap-3 rounded-lg border border-gray-200 bg-white p-4">
-        <div>
-          <label className="mb-1 block text-xs font-medium text-gray-600">Du</label>
-          <input
-            type="date"
-            value={dateFrom}
-            onChange={(e) => { setDateFrom(e.target.value); setPage(1); }}
-            className="rounded border border-gray-300 px-3 py-2 text-sm"
-          />
-        </div>
-        <div>
-          <label className="mb-1 block text-xs font-medium text-gray-600">Au</label>
-          <input
-            type="date"
-            value={dateTo}
-            onChange={(e) => { setDateTo(e.target.value); setPage(1); }}
-            className="rounded border border-gray-300 px-3 py-2 text-sm"
-          />
-        </div>
-        <div>
-          <label className="mb-1 block text-xs font-medium text-gray-600">Produit</label>
-          <select
-            value={productId}
-            onChange={(e) => { setProductId(e.target.value); setPage(1); }}
-            className="rounded border border-gray-300 px-3 py-2 text-sm min-w-[180px]"
+    <div className="min-h-full bg-cream font-body">
+      <div className="mx-auto max-w-6xl space-y-6 p-4 pb-24 md:pb-6">
+        {messageSuccess && (
+          <div
+            className="rounded-xl border border-green-deep/30 bg-green-deep/10 px-4 py-3 text-sm text-green-deep"
+            role="status"
+            aria-live="polite"
           >
-            <option value="">Tous</option>
-            {products.map((p) => (
-              <option key={p.id} value={p.id}>{p.name}</option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="mb-1 block text-xs font-medium text-gray-600">Emplacement</label>
-          <select
-            value={locationId}
-            onChange={(e) => { setLocationId(e.target.value); setPage(1); }}
-            className="rounded border border-gray-300 px-3 py-2 text-sm min-w-[160px]"
+            {messageSuccess}
+            <button type="button" onClick={() => setMessageSuccess('')} className="ml-2 underline">
+              Fermer
+            </button>
+          </div>
+        )}
+        {messageError && (
+          <div
+            id="sale-form-error"
+            className="rounded-xl border border-red-alert/30 bg-red-alert/10 px-4 py-3 text-sm text-red-alert"
+            role="alert"
+            aria-live="assertive"
           >
-            <option value="">Tous</option>
-            {locations.map((l) => (
-              <option key={l.id} value={l.id}>{l.name}</option>
-            ))}
-          </select>
+            {messageError}
+            <button type="button" onClick={() => setMessageError('')} className="ml-2 underline">
+              Fermer
+            </button>
+          </div>
+        )}
+        {error && (
+          <div className="rounded-xl border border-red-alert/30 bg-red-alert/10 px-4 py-3 text-sm text-red-alert">{error}</div>
+        )}
+
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="font-display text-2xl font-bold text-green-deep">Ventes</h1>
+            <p className="text-sm text-gray-warm">Saisie manuelle · Liste et historique des ventes</p>
+          </div>
+          <button
+            type="button"
+            onClick={openCreate}
+            className="inline-flex items-center gap-2 rounded-xl border-2 border-green-mid bg-transparent px-4 py-2.5 font-display text-sm font-bold text-green-deep"
+          >
+            <Plus className="h-4 w-4" />
+            Nouvelle vente
+          </button>
         </div>
+
+        <div className="flex flex-wrap items-end gap-3 rounded-xl border border-green-deep/10 bg-white p-4">
+          <div>
+            <label className="mb-1 block text-xs font-semibold text-gray-warm">Du</label>
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => {
+                setDateFrom(e.target.value);
+                setPage(1);
+              }}
+              className="rounded-lg border border-green-deep/20 px-3 py-2 text-sm"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-semibold text-gray-warm">Au</label>
+            <input
+              type="date"
+              value={dateTo}
+              onChange={(e) => {
+                setDateTo(e.target.value);
+                setPage(1);
+              }}
+              className="rounded-lg border border-green-deep/20 px-3 py-2 text-sm"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-semibold text-gray-warm">Produit</label>
+            <select
+              value={productId}
+              onChange={(e) => {
+                setProductId(e.target.value);
+                setPage(1);
+              }}
+              className="min-w-[180px] rounded-lg border border-green-deep/20 px-3 py-2 text-sm"
+            >
+              <option value="">Tous</option>
+              {products.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-semibold text-gray-warm">Emplacement</label>
+            <select
+              value={locationId}
+              onChange={(e) => {
+                setLocationId(e.target.value);
+                setPage(1);
+              }}
+              className="min-w-[160px] rounded-lg border border-green-deep/20 px-3 py-2 text-sm"
+            >
+              <option value="">Tous</option>
+              {locations.map((l) => (
+                <option key={l.id} value={l.id}>
+                  {l.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className="overflow-x-auto rounded-2xl border border-green-deep/10 bg-white shadow-sm">
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-green-mid" />
+            </div>
+          ) : (
+            <DataTable<Sale>
+              columns={columns}
+              data={list}
+              getRowId={(s) => s.id}
+              sortKey={sortKey}
+              sortOrder={sortOrder}
+              onSort={handleSort}
+              pagination={pagination ?? undefined}
+              onPageChange={handlePageChange}
+              emptyMessage="Aucune vente. Cliquez sur « Nouvelle vente » pour en ajouter."
+              renderActions={(s) => (
+                <div className="flex justify-end gap-1">
+                  <button
+                    type="button"
+                    onClick={() => openEdit(s)}
+                    disabled={editLoadingId === s.id}
+                    className="rounded p-1.5 text-charcoal hover:bg-cream-dark disabled:opacity-50"
+                    title="Modifier"
+                  >
+                    {editLoadingId === s.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Pencil className="h-4 w-4" />}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => openDeleteConfirm(s)}
+                    disabled={deleteConfirmId === s.id}
+                    className="rounded p-1.5 text-red-alert hover:bg-red-alert/10 disabled:opacity-50"
+                    title="Supprimer"
+                  >
+                    {deleteConfirmId === s.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                  </button>
+                </div>
+              )}
+            />
+          )}
+        </div>
+
+        {/* Modal Création / Édition */}
+        {modalOpen && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-charcoal/50 p-4"
+            onClick={(e) => e.target === e.currentTarget && closeModal()}
+            onKeyDown={(e) => e.key === 'Escape' && closeModal()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="modal-title"
+          >
+            <div
+              ref={modalContentRef}
+              className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl border border-green-deep/20 bg-white p-6 shadow-xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h2 id="modal-title" className="font-display text-lg font-bold text-green-deep">
+                {modalOpen === 'create' ? 'Nouvelle vente' : 'Modifier la vente'}
+              </h2>
+              <div className="mt-4 space-y-3">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-warm" htmlFor="sale-date">
+                    Date *
+                  </label>
+                  <input
+                    id="sale-date"
+                    ref={modalFirstInputRef}
+                    type="date"
+                    value={form.sale_date}
+                    onChange={(e) => setForm((f) => ({ ...f, sale_date: e.target.value }))}
+                    className="mt-1 w-full rounded-lg border border-green-deep/20 px-3 py-2 text-sm"
+                    aria-invalid={!!messageError}
+                    aria-describedby={messageError ? 'sale-form-error' : undefined}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-warm" htmlFor="sale-product">
+                    Produit *
+                  </label>
+                  <select
+                    id="sale-product"
+                    value={form.product_id}
+                    onChange={(e) => setForm((f) => ({ ...f, product_id: e.target.value }))}
+                    className="mt-1 w-full rounded-lg border border-green-deep/20 px-3 py-2 text-sm"
+                  >
+                    <option value="">Sélectionner un produit</option>
+                    {products.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-warm" htmlFor="sale-quantity">
+                    Quantité *
+                  </label>
+                  <input
+                    id="sale-quantity"
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    value={form.quantity_sold}
+                    onChange={(e) => setForm((f) => ({ ...f, quantity_sold: e.target.value }))}
+                    className="mt-1 w-full rounded-lg border border-green-deep/20 px-3 py-2 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-warm" htmlFor="sale-unit-price">
+                    Prix unitaire (optionnel)
+                  </label>
+                  <input
+                    id="sale-unit-price"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={form.unit_price}
+                    onChange={(e) => setForm((f) => ({ ...f, unit_price: e.target.value }))}
+                    className="mt-1 w-full rounded-lg border border-green-deep/20 px-3 py-2 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-warm" htmlFor="sale-location">
+                    Emplacement (optionnel)
+                  </label>
+                  <select
+                    id="sale-location"
+                    value={form.location_id}
+                    onChange={(e) => setForm((f) => ({ ...f, location_id: e.target.value }))}
+                    className="mt-1 w-full rounded-lg border border-green-deep/20 px-3 py-2 text-sm"
+                  >
+                    <option value="">Aucun</option>
+                    {locations.map((l) => (
+                      <option key={l.id} value={l.id}>
+                        {l.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="mt-6 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={closeModal}
+                  className="rounded-xl border border-green-deep/30 px-4 py-2 font-display text-sm font-bold text-green-deep"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="button"
+                  onClick={modalOpen === 'create' ? handleSubmitCreate : handleSubmitEdit}
+                  disabled={submitLoading}
+                  className="inline-flex items-center gap-2 rounded-xl bg-green-mid px-4 py-2 font-display text-sm font-bold text-white disabled:opacity-70"
+                >
+                  {submitLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+                  {modalOpen === 'create' ? 'Enregistrer' : 'Modifier'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal confirmation suppression */}
+        {saleToDelete && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-charcoal/50 p-4"
+            onClick={(e) => e.target === e.currentTarget && setSaleToDelete(null)}
+            onKeyDown={(e) => e.key === 'Escape' && setSaleToDelete(null)}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="delete-modal-title"
+          >
+            <div
+              ref={modalDeleteRef}
+              className="w-full max-w-md rounded-2xl border border-green-deep/20 bg-white p-6 shadow-xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h2 id="delete-modal-title" className="font-display text-lg font-bold text-green-deep">
+                Supprimer cette vente ?
+              </h2>
+              <p className="mt-2 text-sm text-charcoal">
+                Êtes-vous sûr de vouloir supprimer la vente « {saleToDelete.product_name ?? '—'} » du{' '}
+                {formatDate(saleToDelete.sale_date)} ?
+              </p>
+              <div className="mt-6 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSaleToDelete(null)}
+                  className="rounded-xl border border-green-deep/30 px-4 py-2 font-display text-sm font-bold text-green-deep"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmDelete}
+                  disabled={deleteConfirmId === saleToDelete.id}
+                  className="inline-flex items-center gap-2 rounded-xl bg-red-alert px-4 py-2 font-display text-sm font-bold text-white disabled:opacity-70"
+                >
+                  {deleteConfirmId === saleToDelete.id ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                  Supprimer
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
-
-      {error && (
-        <div className="rounded-lg border border-error/20 bg-error/10 p-3 text-sm text-error">
-          {error}
-        </div>
-      )}
-
-      {loading ? (
-        <TableSkeleton rows={8} cols={7} />
-      ) : (
-        <DataTable<Sale>
-          columns={columns}
-          data={list}
-          getRowId={(s) => s.id}
-          sortKey={sortKey}
-          sortOrder={sortOrder}
-          onSort={handleSort}
-          pagination={pagination ?? undefined}
-          onPageChange={handlePageChange}
-          emptyMessage="Aucune vente"
-        />
-      )}
     </div>
   );
 }

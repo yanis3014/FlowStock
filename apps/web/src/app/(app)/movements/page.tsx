@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useApi } from '@/hooks/useApi';
 import { History, Download, Loader2 } from 'lucide-react';
@@ -22,9 +22,8 @@ function isValidUuid(value: string): boolean {
 }
 
 export default function MovementsPage() {
-  const { token, isLoading } = useAuth();
+  const { token } = useAuth();
   const { fetchApi } = useApi();
-  const router = useRouter();
   const searchParams = useSearchParams();
   const productIdFromUrl = searchParams.get('product_id');
   const validProductIdFromUrl =
@@ -44,10 +43,6 @@ export default function MovementsPage() {
   const [exportLoading, setExportLoading] = useState(false);
   const [error, setError] = useState('');
   const [exportTruncated, setExportTruncated] = useState(false);
-
-  useEffect(() => {
-    if (!token && !isLoading) router.push('/login?returnUrl=/movements');
-  }, [token, isLoading, router]);
 
   useEffect(() => {
     if (validProductIdFromUrl && !selectedProductId) setSelectedProductId(validProductIdFromUrl);
