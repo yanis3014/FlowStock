@@ -5,6 +5,7 @@ import { getDatabase, closeDatabase } from '../../database/connection';
 import { runMigrations } from '../../database/migrations';
 import { Pool } from 'pg';
 import dotenv from 'dotenv';
+import { generateEmailVerificationToken, generatePasswordResetToken } from '../../utils/jwt';
 
 // Load project root .env so DATABASE_URL matches migration runner
 dotenv.config({ path: resolve(process.cwd(), '../../.env') });
@@ -12,7 +13,6 @@ dotenv.config();
 
 describe('Auth Integration Tests', () => {
   let pool: Pool;
-  let testTenantId: string;
   const testDbUrl = process.env.DATABASE_URL || 
     `postgresql://${process.env.POSTGRES_USER || 'bmad'}:${process.env.POSTGRES_PASSWORD || 'bmad'}@${process.env.POSTGRES_HOST || 'localhost'}:${process.env.POSTGRES_PORT || '5432'}/${process.env.POSTGRES_DB || 'bmad_stock_agent'}`;
 
@@ -23,12 +23,10 @@ describe('Auth Integration Tests', () => {
     await runMigrations();
     
     // Create a test tenant for some tests
-    const tenantResult = await pool.query(`
+    await pool.query(`
       INSERT INTO tenants (company_name, slug, industry)
       VALUES ('Test Tenant', 'test-tenant', 'retail')
-      RETURNING id
     `);
-    testTenantId = tenantResult.rows[0].id;
   });
 
   afterAll(async () => {
@@ -134,8 +132,7 @@ describe('Auth Integration Tests', () => {
   });
 
   describe('POST /auth/login', () => {
-    let registeredUser: any;
-    let registeredTenant: any;
+    let registeredTenantId: string;
 
     beforeAll(async () => {
       // Register a user for login tests
@@ -149,13 +146,16 @@ describe('Auth Integration Tests', () => {
           company_name: 'Login Company',
         });
 
-      registeredUser = registerResponse.body.data.user;
-      registeredTenant = registerResponse.body.data.tenant;
+      const tenantIdFromRegister = registerResponse.body?.data?.tenant?.id as string | undefined;
+      if (!tenantIdFromRegister) {
+        throw new Error('Tenant id missing from register response');
+      }
+      registeredTenantId = tenantIdFromRegister;
 
       // Verify email with tenant context so RLS allows the UPDATE
       const db = getDatabase();
       await db.queryWithTenant(
-        registeredTenant.id,
+        registeredTenantId,
         `UPDATE users SET email_verified = true, email_verified_at = CURRENT_TIMESTAMP 
          WHERE email = $1`,
         ['loginuser@example.com']
@@ -230,7 +230,6 @@ describe('Auth Integration Tests', () => {
     beforeAll(async () => {
       // Register a user and get verification token from console logs
       // For this test, we'll generate token manually
-      const { generateEmailVerificationToken } = require('../../utils/jwt');
       const db = getDatabase();
       
       const userResult = await db.query(
@@ -376,7 +375,6 @@ describe('Auth Integration Tests', () => {
 
     beforeAll(async () => {
       // Generate reset token via SECURITY DEFINER (bypasses RLS)
-      const { generatePasswordResetToken } = require('../../utils/jwt');
       const db = getDatabase();
       const userResult = await db.query(
         'SELECT * FROM get_user_for_password_reset($1)',

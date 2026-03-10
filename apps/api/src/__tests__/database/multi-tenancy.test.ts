@@ -1,4 +1,4 @@
-import { Pool } from 'pg';
+import { Pool, PoolClient } from 'pg';
 import { resolve } from 'path';
 import { getDatabase, closeDatabase } from '../../database/connection';
 import { runMigrations } from '../../database/migrations';
@@ -98,7 +98,7 @@ describe('Multi-Tenancy Isolation Tests', () => {
     it('should execute transaction with tenant context', async () => {
       const db = getDatabase();
       
-      await db.transactionWithTenant(tenant1Id, async (client: any) => {
+      await db.transactionWithTenant(tenant1Id, async (client: PoolClient) => {
         const result = await client.query(
           'SELECT current_setting($1, true) as tenant_id',
           ['app.current_tenant']
@@ -196,7 +196,7 @@ describe('Multi-Tenancy Isolation Tests', () => {
         expect(result.rows[0].name).toBe('Product A');
         expect(result.rows[1].name).toBe('Product B');
         // Verify all rows belong to tenant1
-        expect(result.rows.every((row: any) => row.tenant_id === tenant1Id)).toBe(true);
+        expect(result.rows.every((row: { tenant_id: string }) => row.tenant_id === tenant1Id)).toBe(true);
       } finally {
         client.release();
       }
@@ -213,7 +213,7 @@ describe('Multi-Tenancy Isolation Tests', () => {
         expect(result.rows[0].name).toBe('Product X');
         expect(result.rows[1].name).toBe('Product Y');
         // Verify all rows belong to tenant2
-        expect(result.rows.every((row: any) => row.tenant_id === tenant2Id)).toBe(true);
+        expect(result.rows.every((row: { tenant_id: string }) => row.tenant_id === tenant2Id)).toBe(true);
       } finally {
         client.release();
       }

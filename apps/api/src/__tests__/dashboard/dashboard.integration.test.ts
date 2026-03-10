@@ -64,7 +64,7 @@ describe('Dashboard Integration Tests', () => {
       purchase_price: 15.0,
     });
 
-    const product3 = await createProduct(tenantId, {
+    await createProduct(tenantId, {
       sku: 'DASH-003',
       name: 'Product Critical',
       quantity: 0,
@@ -161,11 +161,11 @@ describe('Dashboard Integration Tests', () => {
         .set('Authorization', `Bearer ${accessToken}`);
 
       expect(res.status).toBe(200);
-      const alerts = res.body.data.alerts;
+      const alerts = res.body.data.alerts as Array<{ severity?: string }>;
       expect(alerts.length).toBeGreaterThan(0);
       
       // Should have alerts for low and critical stock
-      const hasLowStockAlert = alerts.some((a: any) => a.severity === 'medium' || a.severity === 'high');
+      const hasLowStockAlert = alerts.some((a) => a.severity === 'medium' || a.severity === 'high');
       expect(hasLowStockAlert).toBe(true);
     });
   });
