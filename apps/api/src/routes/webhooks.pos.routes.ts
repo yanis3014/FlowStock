@@ -61,7 +61,7 @@ async function handleDedicatedPosWebhook<T>(req: Request, res: Response, options
   const body = req.body as Record<string, unknown> | null | undefined;
   const tenantIdFromHeader = typeof req.headers['x-tenant-id'] === 'string' ? req.headers['x-tenant-id'].trim() : null;
   const tenantIdFromBody = body != null && typeof body.tenant_id === 'string' ? body.tenant_id.trim() : null;
-  let tenantId: string | null = tenantIdFromHeader || tenantIdFromBody;
+  const tenantId: string | null = tenantIdFromHeader || tenantIdFromBody;
   const secret = getBearerSecret(req);
 
   if (!tenantId || !secret) {
@@ -141,7 +141,7 @@ router.post('/', async (req: Request, res: Response) => {
     typeof req.headers['x-tenant-id'] === 'string' ? req.headers['x-tenant-id'].trim() : null;
   const tenantIdFromBody =
     body != null && typeof body.tenant_id === 'string' ? body.tenant_id.trim() : null;
-  let tenantId: string | null = tenantIdFromHeader || tenantIdFromBody;
+  const tenantId: string | null = tenantIdFromHeader || tenantIdFromBody;
   const secret = getBearerSecret(req);
 
   if (!tenantId || !secret) {
