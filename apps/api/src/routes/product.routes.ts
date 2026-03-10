@@ -227,7 +227,7 @@ router.get(
     param('id').isUUID(),
     query('page').optional().isInt({ min: 1 }).toInt(),
     query('limit').optional().isInt({ min: 1, max: 100 }).toInt(),
-    query('movement_type').optional().isIn(['creation', 'quantity_update', 'deletion', 'import']),
+    query('movement_type').optional().isIn(['creation', 'quantity_update', 'deletion', 'import', 'pos_sale']),
     query('user_id').optional().isUUID(),
     query('date_from').optional().isISO8601(),
     query('date_to').optional().isISO8601(),
@@ -285,7 +285,7 @@ router.get(
   [
     param('id').isUUID(),
     query('format').optional().isIn(['csv']),
-    query('movement_type').optional().isIn(['creation', 'quantity_update', 'deletion', 'import']),
+    query('movement_type').optional().isIn(['creation', 'quantity_update', 'deletion', 'import', 'pos_sale']),
     query('user_id').optional().isUUID(),
     query('date_from').optional().isISO8601(),
     query('date_to').optional().isISO8601(),

@@ -18,6 +18,7 @@ import {
   registerUser,
   loginUser,
   verifyEmail,
+  verifyEmailByAddress,
   refreshAccessToken,
   logoutUser,
   requestPasswordReset,
@@ -103,6 +104,25 @@ router.post(
     }
   }
 );
+
+/**
+ * POST /auth/dev/verify-email
+ * Dev-only: verify email by address (for demo user / create-user script)
+ */
+router.post('/dev/verify-email', (req: Request, res: Response) => {
+  if (process.env.NODE_ENV === 'production') {
+    res.status(404).json({ success: false, error: 'Not found' });
+    return;
+  }
+  const email = req.body?.email;
+  if (!email || typeof email !== 'string') {
+    res.status(400).json({ success: false, error: 'email is required' });
+    return;
+  }
+  verifyEmailByAddress(email.trim())
+    .then((result) => res.status(200).json(result))
+    .catch((err) => sendAuthErrorResponse(res, err, 'Verify failed'));
+});
 
 /**
  * GET /auth/verify-email

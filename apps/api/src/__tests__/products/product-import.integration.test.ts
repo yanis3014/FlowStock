@@ -146,7 +146,8 @@ describe('Product Import Integration Tests', () => {
     it('should return 400 when no file uploaded', async () => {
       const res = await request(app)
         .post('/products/import')
-        .set('Authorization', `Bearer ${accessToken}`);
+        .set('Authorization', `Bearer ${accessToken}`)
+        .field('dummy', '');
       expect(res.status).toBe(400);
     });
 

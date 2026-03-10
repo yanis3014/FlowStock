@@ -308,6 +308,32 @@ export async function loginUser(input: LoginInput) {
 }
 
 /**
+ * Dev-only: Mark email as verified by address (for demo user / scripts).
+ * Only available when NODE_ENV is development or test.
+ */
+export async function verifyEmailByAddress(email: string) {
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('verifyEmailByAddress is not available in production');
+  }
+  const db = getDatabase();
+  const userResult = await db.query(
+    'SELECT * FROM get_user_by_email_for_login($1)',
+    [email]
+  );
+  if (userResult.rows.length === 0) {
+    throw new Error('User not found');
+  }
+  const user = userResult.rows[0];
+  await db.queryWithTenant(
+    user.tenant_id,
+    `UPDATE users SET email_verified = true, email_verified_at = CURRENT_TIMESTAMP
+     WHERE id = $1 AND email = $2`,
+    [user.id, email]
+  );
+  return { success: true, message: 'Email verified' };
+}
+
+/**
  * Verify email
  */
 export async function verifyEmail(token: string) {

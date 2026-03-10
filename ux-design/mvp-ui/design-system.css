@@ -1,0 +1,50 @@
+/**
+ * Design System — Warm Tech
+ * SaaS Gestion de stocks restauration
+ * Polices: Sora (titres), DM Sans (texte)
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap');
+
+:root {
+  /* Vert */
+  --green-deep:   #1A3C34;
+  --green-mid:    #2D6A4F;
+  --green-bright: #40916C;
+  --green-light:  #B7E4C7;
+
+  /* Neutres & fonds */
+  --cream:        #FAF7F2;
+  --cream-dark:   #F0EBE1;
+  --charcoal:     #1C2B2A;
+  --gray-warm:    #6B7B76;
+  --white:        #FFFFFF;
+
+  /* Accents */
+  --terracotta:   #C1440E;
+  --terra-light:  #F5C4A8;
+  --gold:         #D4A843;
+  --gold-light:   #FBF0D0;
+
+  /* Alertes */
+  --red-alert:    #E53E3E;
+  --orange-warn:  #ED8936;
+
+  /* Typo */
+  --font-display: 'Sora', sans-serif;
+  --font-body:    'DM Sans', sans-serif;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: var(--font-body);
+  background: var(--charcoal);
+  color: var(--cream);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Utilitaires typo */
+.font-display { font-family: var(--font-display); }
+.font-body { font-family: var(--font-body); }

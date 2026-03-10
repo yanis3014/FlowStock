@@ -170,6 +170,27 @@ export async function listProducts(
 }
 
 /**
+ * Get a single product by SKU (tenant-scoped). SKU is unique per tenant.
+ */
+export async function getProductBySku(tenantId: string, sku: string): Promise<Product | null> {
+  if (!sku?.trim()) return null;
+  const db = getDatabase();
+  const query = `
+    SELECT p.id, p.tenant_id, p.sku, p.name, p.description, p.unit, p.quantity::text, p.min_quantity::text,
+           p.location_id, p.supplier_id, l.name as location_name, s.name as supplier_name,
+           p.purchase_price::text, p.selling_price::text, p.lead_time_days, p.is_active,
+           p.created_at, p.updated_at
+    FROM products p
+    LEFT JOIN locations l ON p.location_id = l.id AND l.tenant_id = p.tenant_id
+    LEFT JOIN suppliers s ON p.supplier_id = s.id AND s.tenant_id = p.tenant_id
+    WHERE p.tenant_id = $1 AND p.sku = $2 AND p.is_active = true
+  `;
+  const result = await db.queryWithTenant<ProductRow>(tenantId, query, [tenantId, sku.trim()]);
+  if (result.rows.length === 0) return null;
+  return rowToProduct(result.rows[0]);
+}
+
+/**
  * Get a single product by id (tenant-scoped)
  */
 export async function getProductById(tenantId: string, productId: string): Promise<Product | null> {

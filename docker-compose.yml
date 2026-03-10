@@ -87,6 +87,7 @@ services:
       - "5433:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+      - ./docker/init-pg-hba.sh:/docker-entrypoint-initdb.d/init-pg-hba.sh:ro
     networks:
       - bmad-network
     command: postgres -c listen_addresses='*' -c password_encryption=md5

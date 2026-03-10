@@ -1,0 +1,1322 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Moodboard — Agent IA Stocks Restaurant</title>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --green-deep:   #1A3C34;
+    --green-mid:    #2D6A4F;
+    --green-bright: #40916C;
+    --green-light:  #B7E4C7;
+    --cream:        #FAF7F2;
+    --cream-dark:   #F0EBE1;
+    --terracotta:   #C1440E;
+    --terra-light:  #F5C4A8;
+    --gold:         #D4A843;
+    --gold-light:   #FBF0D0;
+    --charcoal:     #1C2B2A;
+    --gray-warm:    #6B7B76;
+    --white:        #FFFFFF;
+    --red-alert:    #E53E3E;
+    --orange-warn:  #ED8936;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--charcoal);
+    color: var(--cream);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── HEADER ── */
+  .header {
+    padding: 60px 60px 40px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+  .header-left h1 {
+    font-family: 'Sora', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--green-bright);
+    margin-bottom: 12px;
+  }
+  .header-left h2 {
+    font-family: 'Sora', sans-serif;
+    font-size: 42px;
+    font-weight: 800;
+    line-height: 1.1;
+    color: var(--cream);
+  }
+  .header-left h2 span {
+    color: var(--gold);
+  }
+  .header-right {
+    text-align: right;
+  }
+  .header-right p {
+    font-size: 13px;
+    color: var(--gray-warm);
+    line-height: 1.8;
+  }
+  .tag {
+    display: inline-block;
+    padding: 5px 14px;
+    background: rgba(64,145,108,0.15);
+    border: 1px solid var(--green-bright);
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--green-bright);
+    margin-bottom: 16px;
+  }
+
+  /* ── GRID ── */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    gap: 16px;
+    padding: 40px 60px 60px;
+  }
+
+  .card {
+    border-radius: 16px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* ── PALETTE ── */
+  .palette { grid-column: span 4; }
+  .palette-inner {
+    background: var(--green-deep);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 16px;
+    padding: 28px;
+    height: 100%;
+  }
+  .palette-title {
+    font-family: 'Sora', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--gray-warm);
+    margin-bottom: 20px;
+  }
+  .swatch-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+    align-items: center;
+  }
+  .swatch {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    flex-shrink: 0;
+  }
+  .swatch-info { flex: 1; }
+  .swatch-name {
+    font-family: 'Sora', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--cream);
+    display: block;
+  }
+  .swatch-hex {
+    font-size: 11px;
+    color: var(--gray-warm);
+    font-family: monospace;
+  }
+  .swatch-divider {
+    height: 1px;
+    background: rgba(255,255,255,0.06);
+    margin: 16px 0;
+  }
+
+  /* ── TYPOGRAPHY ── */
+  .typography { grid-column: span 5; }
+  .typo-inner {
+    background: var(--cream);
+    border-radius: 16px;
+    padding: 32px;
+    height: 100%;
+  }
+  .typo-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--gray-warm);
+    margin-bottom: 6px;
+  }
+  .typo-display {
+    font-family: 'Sora', sans-serif;
+    font-size: 40px;
+    font-weight: 800;
+    color: var(--green-deep);
+    line-height: 1.1;
+    margin-bottom: 24px;
+  }
+  .typo-display span { color: var(--terracotta); }
+  .typo-heading {
+    font-family: 'Sora', sans-serif;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--green-deep);
+    margin-bottom: 16px;
+  }
+  .typo-body {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    color: var(--charcoal);
+    line-height: 1.7;
+    margin-bottom: 20px;
+    opacity: 0.8;
+  }
+  .typo-caption {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    color: var(--gray-warm);
+    font-style: italic;
+  }
+
+  /* ── KEYWORD TOKENS ── */
+  .tokens { grid-column: span 3; }
+  .tokens-inner {
+    background: var(--green-deep);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 16px;
+    padding: 28px;
+    height: 100%;
+  }
+  .token-word {
+    display: block;
+    font-family: 'Sora', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--cream);
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .token-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  /* ── MOBILE RUSH SCREEN ── */
+  .rush-screen { grid-column: span 3; grid-row: span 2; }
+  .phone-frame {
+    background: #0F1B19;
+    border-radius: 36px;
+    padding: 20px 16px;
+    border: 2px solid rgba(255,255,255,0.1);
+    height: 100%;
+    min-height: 520px;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+  }
+  .phone-notch {
+    width: 80px;
+    height: 6px;
+    background: rgba(255,255,255,0.15);
+    border-radius: 3px;
+    margin: 0 auto 20px;
+  }
+  .phone-status {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+  .status-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(64,145,108,0.2);
+    border: 1px solid var(--green-bright);
+    border-radius: 20px;
+    padding: 4px 10px;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--green-bright);
+    font-family: 'Sora', sans-serif;
+    letter-spacing: 0.05em;
+  }
+  .status-dot {
+    width: 5px;
+    height: 5px;
+    background: var(--green-bright);
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+  .phone-time {
+    font-family: 'Sora', sans-serif;
+    font-size: 11px;
+    color: var(--gray-warm);
+  }
+  .phone-title {
+    font-family: 'Sora', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--cream);
+    margin-bottom: 4px;
+  }
+  .phone-sub {
+    font-size: 11px;
+    color: var(--gray-warm);
+    margin-bottom: 20px;
+  }
+  .alert-card {
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .alert-card.red {
+    background: rgba(229,62,62,0.12);
+    border: 1px solid rgba(229,62,62,0.4);
+  }
+  .alert-card.orange {
+    background: rgba(237,137,54,0.12);
+    border: 1px solid rgba(237,137,54,0.4);
+  }
+  .alert-card.green {
+    background: rgba(64,145,108,0.12);
+    border: 1px solid rgba(64,145,108,0.3);
+  }
+  .alert-icon {
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+  .alert-content { flex: 1; }
+  .alert-name {
+    font-family: 'Sora', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--cream);
+    display: block;
+  }
+  .alert-detail {
+    font-size: 10px;
+    color: var(--gray-warm);
+    margin-top: 2px;
+  }
+  .alert-badge {
+    font-family: 'Sora', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 6px;
+  }
+  .alert-badge.red { background: rgba(229,62,62,0.3); color: #FC8181; }
+  .alert-badge.orange { background: rgba(237,137,54,0.3); color: #FBD38D; }
+  .alert-badge.green { background: rgba(64,145,108,0.3); color: var(--green-light); }
+  .phone-btn {
+    margin-top: auto;
+    background: var(--green-mid);
+    color: var(--white);
+    border: none;
+    border-radius: 12px;
+    padding: 14px;
+    width: 100%;
+    font-family: 'Sora', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: 0.05em;
+  }
+  .phone-btn-ghost {
+    margin-top: 8px;
+    background: transparent;
+    color: var(--gray-warm);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 12px;
+    padding: 12px;
+    width: 100%;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    cursor: pointer;
+  }
+
+  /* ── DASHBOARD PREVIEW ── */
+  .dashboard { grid-column: span 6; }
+  .dash-inner {
+    background: var(--cream);
+    border-radius: 16px;
+    padding: 24px;
+    height: 100%;
+  }
+  .dash-topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+  .dash-logo {
+    font-family: 'Sora', sans-serif;
+    font-size: 15px;
+    font-weight: 800;
+    color: var(--green-deep);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .dash-logo-dot {
+    width: 8px;
+    height: 8px;
+    background: var(--terracotta);
+    border-radius: 50%;
+  }
+  .dash-nav {
+    display: flex;
+    gap: 6px;
+  }
+  .dash-nav-item {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--gray-warm);
+    padding: 6px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .dash-nav-item.active {
+    background: var(--green-deep);
+    color: var(--white);
+    font-weight: 600;
+  }
+  .kpi-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .kpi-box {
+    background: var(--cream-dark);
+    border-radius: 10px;
+    padding: 12px;
+    border-left: 3px solid transparent;
+  }
+  .kpi-box.g { border-color: var(--green-mid); }
+  .kpi-box.t { border-color: var(--terracotta); }
+  .kpi-box.o { border-color: var(--gold); }
+  .kpi-box.b { border-color: #3B82F6; }
+  .kpi-label {
+    font-size: 9px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--gray-warm);
+    margin-bottom: 4px;
+    font-family: 'Sora', sans-serif;
+  }
+  .kpi-val {
+    font-family: 'Sora', sans-serif;
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--green-deep);
+    line-height: 1;
+  }
+  .kpi-change {
+    font-size: 10px;
+    color: var(--green-mid);
+    font-weight: 600;
+    margin-top: 2px;
+  }
+  .stock-table { width: 100%; border-collapse: collapse; }
+  .stock-table th {
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--gray-warm);
+    text-align: left;
+    padding: 6px 8px;
+    background: rgba(26,60,52,0.05);
+    border-bottom: 1px solid var(--cream-dark);
+    font-family: 'Sora', sans-serif;
+  }
+  .stock-table td {
+    font-size: 11px;
+    color: var(--charcoal);
+    padding: 8px;
+    border-bottom: 1px solid var(--cream-dark);
+    font-family: 'DM Sans', sans-serif;
+  }
+  .stock-table tr:last-child td { border-bottom: none; }
+  .level-bar {
+    width: 80px;
+    height: 6px;
+    background: var(--cream-dark);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .level-fill {
+    height: 100%;
+    border-radius: 3px;
+  }
+  .badge-s {
+    font-size: 9px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-family: 'Sora', sans-serif;
+    letter-spacing: 0.04em;
+  }
+  .badge-s.ok { background: #D1FAE5; color: #065F46; }
+  .badge-s.warn { background: #FEF3C7; color: #92400E; }
+  .badge-s.crit { background: #FEE2E2; color: #991B1B; }
+
+  /* ── SUGGESTION CARD ── */
+  .suggestion { grid-column: span 3; }
+  .sug-inner {
+    background: var(--green-deep);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 16px;
+    padding: 24px;
+    height: 100%;
+  }
+  .sug-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(212,168,67,0.15);
+    border: 1px solid rgba(212,168,67,0.4);
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--gold);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+    font-family: 'Sora', sans-serif;
+  }
+  .sug-title {
+    font-family: 'Sora', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--cream);
+    margin-bottom: 8px;
+    line-height: 1.3;
+  }
+  .sug-body {
+    font-size: 12px;
+    color: rgba(250,247,242,0.6);
+    line-height: 1.6;
+    margin-bottom: 16px;
+  }
+  .sug-items {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  .sug-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(255,255,255,0.04);
+    border-radius: 8px;
+    padding: 8px 12px;
+  }
+  .sug-item-name {
+    font-size: 12px;
+    color: var(--cream);
+    font-weight: 500;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .sug-item-qty {
+    font-size: 11px;
+    color: var(--gold);
+    font-weight: 700;
+    font-family: 'Sora', sans-serif;
+  }
+  .sug-cta {
+    background: var(--gold);
+    color: var(--charcoal);
+    border: none;
+    border-radius: 10px;
+    padding: 10px 16px;
+    width: 100%;
+    font-family: 'Sora', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: 0.05em;
+  }
+
+  /* ── COMPONENTS ── */
+  .components { grid-column: span 6; }
+  .comp-inner {
+    background: var(--cream-dark);
+    border-radius: 16px;
+    padding: 24px;
+    height: 100%;
+  }
+  .comp-section-title {
+    font-family: 'Sora', sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--gray-warm);
+    margin-bottom: 14px;
+  }
+  .comp-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+  }
+  .btn-primary {
+    background: var(--green-mid);
+    color: var(--white);
+    border: none;
+    border-radius: 10px;
+    padding: 10px 20px;
+    font-family: 'Sora', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: 0.04em;
+  }
+  .btn-secondary {
+    background: transparent;
+    color: var(--green-deep);
+    border: 2px solid var(--green-mid);
+    border-radius: 10px;
+    padding: 9px 20px;
+    font-family: 'Sora', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .btn-danger {
+    background: rgba(229,62,62,0.1);
+    color: var(--red-alert);
+    border: 1px solid rgba(229,62,62,0.3);
+    border-radius: 10px;
+    padding: 10px 20px;
+    font-family: 'Sora', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .btn-gold {
+    background: var(--gold);
+    color: var(--charcoal);
+    border: none;
+    border-radius: 10px;
+    padding: 10px 20px;
+    font-family: 'Sora', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .input-demo {
+    background: var(--white);
+    border: 1.5px solid rgba(26,60,52,0.15);
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    color: var(--charcoal);
+    outline: none;
+    width: 180px;
+  }
+  .input-demo:focus { border-color: var(--green-mid); }
+  .notif-toast {
+    background: var(--green-deep);
+    border: 1px solid rgba(64,145,108,0.4);
+    border-radius: 12px;
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    max-width: 280px;
+  }
+  .notif-icon { font-size: 16px; }
+  .notif-text { font-size: 11px; color: var(--cream); font-family: 'DM Sans', sans-serif; line-height: 1.4; }
+  .notif-text strong { font-family: 'Sora', sans-serif; font-weight: 700; font-size: 12px; }
+  .progress-demo {
+    background: rgba(26,60,52,0.1);
+    border-radius: 10px;
+    padding: 14px;
+    width: 100%;
+  }
+  .progress-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+  .progress-name { font-size: 12px; font-weight: 600; color: var(--green-deep); font-family: 'Sora', sans-serif; }
+  .progress-pct { font-size: 12px; color: var(--gray-warm); font-family: monospace; }
+  .progress-track {
+    height: 8px;
+    background: rgba(26,60,52,0.1);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    border-radius: 4px;
+    background: linear-gradient(90deg, var(--green-mid), var(--green-bright));
+  }
+
+  /* ── VISION BOARD ── */
+  .vision { grid-column: span 3; }
+  .vision-inner {
+    background: linear-gradient(135deg, var(--green-deep), #0D2420);
+    border-radius: 16px;
+    padding: 28px;
+    height: 100%;
+    position: relative;
+    overflow: hidden;
+  }
+  .vision-inner::before {
+    content: '';
+    position: absolute;
+    top: -40px; right: -40px;
+    width: 180px; height: 180px;
+    background: radial-gradient(circle, rgba(64,145,108,0.2) 0%, transparent 70%);
+    border-radius: 50%;
+  }
+  .vision-inner::after {
+    content: '';
+    position: absolute;
+    bottom: -30px; left: -30px;
+    width: 120px; height: 120px;
+    background: radial-gradient(circle, rgba(212,168,67,0.15) 0%, transparent 70%);
+    border-radius: 50%;
+  }
+  .vision-quote {
+    font-family: 'Sora', sans-serif;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--cream);
+    line-height: 1.4;
+    margin-bottom: 20px;
+    position: relative;
+    z-index: 1;
+  }
+  .vision-quote span { color: var(--gold); }
+  .vision-principles {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    position: relative;
+    z-index: 1;
+  }
+  .principle {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .principle-num {
+    font-family: 'Sora', sans-serif;
+    font-size: 10px;
+    font-weight: 800;
+    color: var(--gold);
+    background: rgba(212,168,67,0.1);
+    border: 1px solid rgba(212,168,67,0.3);
+    border-radius: 6px;
+    padding: 3px 7px;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+  .principle-text {
+    font-size: 12px;
+    color: rgba(250,247,242,0.75);
+    line-height: 1.5;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  /* ── ONBOARDING STEP ── */
+  .onboarding { grid-column: span 6; }
+  .onb-inner {
+    background: var(--white);
+    border-radius: 16px;
+    padding: 28px;
+    height: 100%;
+  }
+  .onb-steps {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    margin-bottom: 28px;
+  }
+  .onb-step {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+  }
+  .onb-step-num {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    font-family: 'Sora', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .onb-step-num.done { background: var(--green-mid); color: var(--white); }
+  .onb-step-num.active { background: var(--green-deep); color: var(--white); }
+  .onb-step-num.todo { background: var(--cream-dark); color: var(--gray-warm); }
+  .onb-step-label {
+    font-size: 11px;
+    font-family: 'DM Sans', sans-serif;
+    color: var(--gray-warm);
+  }
+  .onb-step-label.active { color: var(--green-deep); font-weight: 600; }
+  .onb-line {
+    flex: 1;
+    height: 2px;
+    background: var(--cream-dark);
+    margin: 0 8px;
+    max-width: 40px;
+  }
+  .onb-line.done { background: var(--green-mid); }
+  .onb-content {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    align-items: start;
+  }
+  .onb-photo-zone {
+    border: 2px dashed rgba(26,60,52,0.2);
+    border-radius: 12px;
+    padding: 24px;
+    text-align: center;
+    background: var(--cream);
+  }
+  .onb-photo-icon { font-size: 32px; margin-bottom: 10px; }
+  .onb-photo-text {
+    font-family: 'Sora', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--green-deep);
+    margin-bottom: 4px;
+  }
+  .onb-photo-sub { font-size: 11px; color: var(--gray-warm); }
+  .onb-result { }
+  .onb-result-title {
+    font-family: 'Sora', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--green-deep);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .ai-badge {
+    background: rgba(26,60,52,0.08);
+    color: var(--green-mid);
+    font-size: 9px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-family: 'Sora', sans-serif;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .recipe-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 7px 10px;
+    background: var(--cream);
+    border-radius: 8px;
+    margin-bottom: 6px;
+  }
+  .recipe-name { font-size: 12px; color: var(--charcoal); font-family: 'DM Sans', sans-serif; }
+  .recipe-qty { font-family: 'Sora', sans-serif; font-size: 11px; font-weight: 700; color: var(--green-mid); }
+  .recipe-edit {
+    font-size: 10px;
+    color: var(--terracotta);
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 600;
+    text-decoration: underline;
+  }
+
+  /* ── FOOTER ── */
+  .footer {
+    padding: 20px 60px 40px;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .footer-brand {
+    font-family: 'Sora', sans-serif;
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--cream);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .footer-brand-dot {
+    width: 10px;
+    height: 10px;
+    background: var(--terracotta);
+    border-radius: 50%;
+  }
+  .footer-note {
+    font-size: 11px;
+    color: var(--gray-warm);
+    font-style: italic;
+  }
+  .footer-tags {
+    display: flex;
+    gap: 8px;
+  }
+  .footer-tag {
+    font-size: 10px;
+    font-family: 'Sora', sans-serif;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 5px 12px;
+    border-radius: 6px;
+  }
+  .footer-tag.g { background: rgba(64,145,108,0.15); color: var(--green-bright); border: 1px solid rgba(64,145,108,0.3); }
+  .footer-tag.t { background: rgba(193,68,14,0.15); color: #E8835A; border: 1px solid rgba(193,68,14,0.3); }
+  .footer-tag.o { background: rgba(212,168,67,0.15); color: var(--gold); border: 1px solid rgba(212,168,67,0.3); }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-left">
+    <div class="tag">Moodboard Design</div>
+    <h2>Warm Tech —<br>L'IA <span>au service</span><br>du restaurant</h2>
+  </div>
+  <div class="header-right">
+    <p>Direction artistique · Identité visuelle<br>Composants UI · Architecture écrans<br><br>
+    <strong style="color:var(--cream);font-family:'Sora',sans-serif;">Sora</strong> · <strong style="color:var(--cream);font-family:'DM Sans',sans-serif;">DM Sans</strong><br>
+    Vert profond · Terracotta · Or chaud</p>
+  </div>
+</div>
+
+<!-- GRID -->
+<div class="grid">
+
+  <!-- PALETTE -->
+  <div class="palette card">
+    <div class="palette-inner">
+      <div class="palette-title">Palette Couleurs</div>
+
+      <div class="swatch-row">
+        <div class="swatch" style="background:#1A3C34"></div>
+        <div class="swatch-info">
+          <span class="swatch-name">Vert Profond</span>
+          <span class="swatch-hex">#1A3C34 · Primaire</span>
+        </div>
+      </div>
+      <div class="swatch-row">
+        <div class="swatch" style="background:#2D6A4F"></div>
+        <div class="swatch-info">
+          <span class="swatch-name">Vert Milieu</span>
+          <span class="swatch-hex">#2D6A4F · Actions</span>
+        </div>
+      </div>
+      <div class="swatch-row">
+        <div class="swatch" style="background:#40916C"></div>
+        <div class="swatch-info">
+          <span class="swatch-name">Vert Vif</span>
+          <span class="swatch-hex">#40916C · Succès / Live</span>
+        </div>
+      </div>
+
+      <div class="swatch-divider"></div>
+
+      <div class="swatch-row">
+        <div class="swatch" style="background:#C1440E"></div>
+        <div class="swatch-info">
+          <span class="swatch-name">Terracotta</span>
+          <span class="swatch-hex">#C1440E · Accent / CTA</span>
+        </div>
+      </div>
+      <div class="swatch-row">
+        <div class="swatch" style="background:#D4A843"></div>
+        <div class="swatch-info">
+          <span class="swatch-name">Or Chaud</span>
+          <span class="swatch-hex">#D4A843 · IA / Premium</span>
+        </div>
+      </div>
+
+      <div class="swatch-divider"></div>
+
+      <div class="swatch-row">
+        <div class="swatch" style="background:#FAF7F2; border:1px solid rgba(255,255,255,0.1)"></div>
+        <div class="swatch-info">
+          <span class="swatch-name">Crème</span>
+          <span class="swatch-hex">#FAF7F2 · Fond clair</span>
+        </div>
+      </div>
+      <div class="swatch-row">
+        <div class="swatch" style="background:#1C2B2A"></div>
+        <div class="swatch-info">
+          <span class="swatch-name">Charcoal</span>
+          <span class="swatch-hex">#1C2B2A · Fond sombre</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TYPOGRAPHY -->
+  <div class="typography card">
+    <div class="typo-inner">
+      <div class="typo-label">Typographie</div>
+      <div class="typo-display">Votre stock,<br><span>sous contrôle.</span></div>
+      <div class="typo-heading">Sora — Display & Titres</div>
+      <div class="typo-body">DM Sans pour le corps de texte — lisible, chaleureux, moderne. Parfait pour une interface utilisée dans des conditions de rush, avec un fort contraste et des formes ouvertes qui facilitent la lecture rapide.</div>
+      <div class="typo-caption">ABCDEFGHIJKLMNOPQRSTUVWXYZ · 0123456789 · Sora 300 400 600 700 800</div>
+    </div>
+  </div>
+
+  <!-- TOKENS -->
+  <div class="tokens card">
+    <div class="tokens-inner">
+      <div class="palette-title">Direction Créative</div>
+      <span class="token-word"><span class="token-dot" style="background:#40916C"></span>Chaleureux</span>
+      <span class="token-word"><span class="token-dot" style="background:#D4A843"></span>Intelligent</span>
+      <span class="token-word"><span class="token-dot" style="background:#FAF7F2"></span>Épuré</span>
+      <span class="token-word"><span class="token-dot" style="background:#C1440E"></span>Direct</span>
+      <span class="token-word"><span class="token-dot" style="background:#2D6A4F"></span>Rassurant</span>
+      <span class="token-word"><span class="token-dot" style="background:#B7E4C7"></span>Vivant</span>
+      <span class="token-word"><span class="token-dot" style="background:#D4A843"></span>Premium</span>
+      <span class="token-word"><span class="token-dot" style="background:#40916C"></span>Mobile-first</span>
+    </div>
+  </div>
+
+  <!-- MOBILE RUSH SCREEN -->
+  <div class="rush-screen card">
+    <div class="phone-frame">
+      <div class="phone-notch"></div>
+      <div class="phone-status">
+        <div class="status-badge">
+          <div class="status-dot"></div>
+          RUSH EN COURS
+        </div>
+        <div class="phone-time">12:34</div>
+      </div>
+      <div class="phone-title">Alertes Stock</div>
+      <div class="phone-sub">14 tables · Service midi</div>
+
+      <div class="alert-card red">
+        <div class="alert-icon">🐟</div>
+        <div class="alert-content">
+          <span class="alert-name">Saumon atlantique</span>
+          <span class="alert-detail">2 portions restantes</span>
+        </div>
+        <span class="alert-badge red">CRITIQUE</span>
+      </div>
+
+      <div class="alert-card orange">
+        <div class="alert-icon">🥩</div>
+        <div class="alert-content">
+          <span class="alert-name">Filet de bœuf</span>
+          <span class="alert-detail">5 portions · 6 tables en cours</span>
+        </div>
+        <span class="alert-badge orange">FAIBLE</span>
+      </div>
+
+      <div class="alert-card orange">
+        <div class="alert-icon">🍮</div>
+        <div class="alert-content">
+          <span class="alert-name">Crème brûlée</span>
+          <span class="alert-detail">4 portions restantes</span>
+        </div>
+        <span class="alert-badge orange">FAIBLE</span>
+      </div>
+
+      <div class="alert-card green">
+        <div class="alert-icon">🥗</div>
+        <div class="alert-content">
+          <span class="alert-name">Salade niçoise</span>
+          <span class="alert-detail">Stock suffisant · 18 portions</span>
+        </div>
+        <span class="alert-badge green">OK</span>
+      </div>
+
+      <button class="phone-btn">✓ Tout acquitter</button>
+      <button class="phone-btn-ghost">Voir tous les stocks →</button>
+    </div>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div class="dashboard card">
+    <div class="dash-inner">
+      <div class="dash-topbar">
+        <div class="dash-logo">
+          <div class="dash-logo-dot"></div>
+          StockIA
+        </div>
+        <div class="dash-nav">
+          <div class="dash-nav-item active">Dashboard</div>
+          <div class="dash-nav-item">Stocks</div>
+          <div class="dash-nav-item">Suggestions IA</div>
+          <div class="dash-nav-item">Commandes</div>
+        </div>
+      </div>
+
+      <div class="kpi-row">
+        <div class="kpi-box g">
+          <div class="kpi-label">Food Cost</div>
+          <div class="kpi-val">28.4%</div>
+          <div class="kpi-change">↓ -2.1pts ce mois</div>
+        </div>
+        <div class="kpi-box t">
+          <div class="kpi-label">Gaspillage évité</div>
+          <div class="kpi-val">340€</div>
+          <div class="kpi-change">↑ cette semaine</div>
+        </div>
+        <div class="kpi-box o">
+          <div class="kpi-label">Ruptures évitées</div>
+          <div class="kpi-val">7</div>
+          <div class="kpi-change">↑ vs sem. préc.</div>
+        </div>
+        <div class="kpi-box b">
+          <div class="kpi-label">Couverts servis</div>
+          <div class="kpi-val">186</div>
+          <div class="kpi-change">→ cette semaine</div>
+        </div>
+      </div>
+
+      <table class="stock-table">
+        <thead>
+          <tr>
+            <th>Ingrédient</th>
+            <th>Stock actuel</th>
+            <th>Niveau</th>
+            <th>DLC</th>
+            <th>Prévision 7j</th>
+            <th>Statut</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Saumon atlantique</strong></td>
+            <td>0.8 kg</td>
+            <td><div class="level-bar"><div class="level-fill" style="width:12%;background:#E53E3E"></div></div></td>
+            <td>Auj.</td>
+            <td>Rupture</td>
+            <td><span class="badge-s crit">CRITIQUE</span></td>
+          </tr>
+          <tr>
+            <td><strong>Filet de bœuf</strong></td>
+            <td>1.2 kg</td>
+            <td><div class="level-bar"><div class="level-fill" style="width:28%;background:#ED8936"></div></div></td>
+            <td>+2j</td>
+            <td>Faible</td>
+            <td><span class="badge-s warn">ATTENTION</span></td>
+          </tr>
+          <tr>
+            <td><strong>Magret de canard</strong></td>
+            <td>3.4 kg</td>
+            <td><div class="level-bar"><div class="level-fill" style="width:65%;background:#40916C"></div></div></td>
+            <td>+5j</td>
+            <td>OK</td>
+            <td><span class="badge-s ok">OK</span></td>
+          </tr>
+          <tr>
+            <td><strong>Burrata</strong></td>
+            <td>8 pcs</td>
+            <td><div class="level-bar"><div class="level-fill" style="width:80%;background:#40916C"></div></div></td>
+            <td>+3j</td>
+            <td>OK</td>
+            <td><span class="badge-s ok">OK</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- SUGGESTION IA -->
+  <div class="suggestion card">
+    <div class="sug-inner">
+      <div class="sug-chip">✦ Suggestion IA</div>
+      <div class="sug-title">Plat du jour recommandé pour demain</div>
+      <div class="sug-body">Basé sur vos invendus et les DLC proches, l'agent recommande un tartare de saumon en entrée et un risotto de canard en plat.</div>
+      <div class="sug-items">
+        <div class="sug-item">
+          <span class="sug-item-name">🐟 Saumon — à écouler</span>
+          <span class="sug-item-qty">0.8 kg</span>
+        </div>
+        <div class="sug-item">
+          <span class="sug-item-name">🦆 Magret — stock élevé</span>
+          <span class="sug-item-qty">3.4 kg</span>
+        </div>
+        <div class="sug-item">
+          <span class="sug-item-name">💰 Économie estimée</span>
+          <span class="sug-item-qty" style="color:#B7E4C7">~65€</span>
+        </div>
+      </div>
+      <button class="sug-cta">Valider ce plat du jour →</button>
+    </div>
+  </div>
+
+  <!-- VISION -->
+  <div class="vision card">
+    <div class="vision-inner">
+      <div class="vision-quote">
+        "Conçu pour les mains dans la farine à <span>7h du matin</span>."
+      </div>
+      <div class="vision-principles">
+        <div class="principle">
+          <span class="principle-num">01</span>
+          <span class="principle-text">Mobile-first absolu — chaque écran pensé pour un pouce, pas une souris</span>
+        </div>
+        <div class="principle">
+          <span class="principle-num">02</span>
+          <span class="principle-text">Lisible en 2 secondes — pendant le rush, pas le temps de chercher</span>
+        </div>
+        <div class="principle">
+          <span class="principle-num">03</span>
+          <span class="principle-text">L'IA parle, le manager décide — suggestions, pas d'automatisme forcé</span>
+        </div>
+        <div class="principle">
+          <span class="principle-num">04</span>
+          <span class="principle-text">Warm Tech — la rigueur du SaaS, la chaleur du monde restaurant</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- COMPONENTS -->
+  <div class="components card">
+    <div class="comp-inner">
+      <div class="comp-section-title">Composants UI</div>
+      <div class="comp-row">
+        <button class="btn-primary">Valider commande</button>
+        <button class="btn-secondary">Modifier</button>
+        <button class="btn-danger">Rupture signalée</button>
+        <button class="btn-gold">✦ Passer en Pro</button>
+      </div>
+      <div class="comp-row">
+        <input class="input-demo" placeholder="Rechercher un ingrédient…">
+        <div class="notif-toast">
+          <div class="notif-icon">⚡</div>
+          <div class="notif-text"><strong>Alerte Rush</strong><br>Saumon : dernière portion servie</div>
+        </div>
+      </div>
+      <div class="progress-demo">
+        <div class="progress-header">
+          <span class="progress-name">Magret de canard</span>
+          <span class="progress-pct">65%</span>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill" style="width:65%"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ONBOARDING -->
+  <div class="onboarding card">
+    <div class="onb-inner">
+      <div class="comp-section-title" style="margin-bottom:18px">Écran Onboarding — Étape 2/4 : Photo de carte</div>
+      <div class="onb-steps">
+        <div class="onb-step">
+          <div class="onb-step-num done">✓</div>
+          <span class="onb-step-label">Connexion caisse</span>
+        </div>
+        <div class="onb-line done"></div>
+        <div class="onb-step">
+          <div class="onb-step-num active">2</div>
+          <span class="onb-step-label active">Photo de carte</span>
+        </div>
+        <div class="onb-line"></div>
+        <div class="onb-step">
+          <div class="onb-step-num todo">3</div>
+          <span class="onb-step-label">Stocks initiaux</span>
+        </div>
+        <div class="onb-line"></div>
+        <div class="onb-step">
+          <div class="onb-step-num todo">4</div>
+          <span class="onb-step-label">Premier test</span>
+        </div>
+      </div>
+      <div class="onb-content">
+        <div class="onb-photo-zone">
+          <div class="onb-photo-icon">📷</div>
+          <div class="onb-photo-text">Photographiez votre carte</div>
+          <div class="onb-photo-sub">L'IA génère les fiches techniques automatiquement</div>
+        </div>
+        <div class="onb-result">
+          <div class="onb-result-title">
+            Résultat IA <span class="ai-badge">Auto-généré</span>
+          </div>
+          <div class="recipe-item">
+            <span class="recipe-name">🍔 Burger maison</span>
+            <span class="recipe-qty">Steak 180g · Salade 30g · Tomate 60g</span>
+            <span class="recipe-edit">Éditer</span>
+          </div>
+          <div class="recipe-item">
+            <span class="recipe-name">🐟 Dos de saumon</span>
+            <span class="recipe-qty">Saumon 200g · Beurre 20g · Citron ½</span>
+            <span class="recipe-edit">Éditer</span>
+          </div>
+          <div class="recipe-item">
+            <span class="recipe-name">🥗 Salade César</span>
+            <span class="recipe-qty">Salade 120g · Poulet 150g · Parmesan 25g</span>
+            <span class="recipe-edit">Éditer</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- FOOTER -->
+<div class="footer">
+  <div class="footer-brand">
+    <div class="footer-brand-dot"></div>
+    StockIA
+  </div>
+  <div class="footer-tags">
+    <span class="footer-tag g">Sora + DM Sans</span>
+    <span class="footer-tag t">Warm Tech</span>
+    <span class="footer-tag o">Mobile-first</span>
+  </div>
+  <div class="footer-note">Direction artistique — Moodboard v1 · Février 2026</div>
+</div>
+
+</body>
+</html>

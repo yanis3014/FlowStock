@@ -12,12 +12,14 @@ export const openApiDocument = {
   servers: [{ url: 'http://localhost:3000', description: 'Development' }],
   tags: [
     { name: 'Health', description: 'Santé du service' },
+    { name: 'Webhooks', description: 'Webhooks POS (Story 2.1) — pas de CSRF' },
     { name: 'Auth', description: 'Inscription, connexion, tokens' },
     { name: 'Products', description: 'CRUD produits' },
     { name: 'Locations', description: 'Emplacements (entrepôts, magasins) - Story 2.3' },
     { name: 'Suppliers', description: 'Fournisseurs - Story 2.5' },
     { name: 'Sales', description: 'Ventes (saisie manuelle) - Story 3.1' },
     { name: 'Subscriptions', description: 'Abonnements tenant' },
+    { name: 'Dashboard', description: 'Dashboard et statut POS (Story 2.5)' },
   ],
   paths: {
     '/health': {
@@ -41,6 +43,230 @@ export const openApiDocument = {
               },
             },
           },
+        },
+      },
+    },
+    '/webhooks/pos': {
+      post: {
+        tags: ['Webhooks'],
+        summary: 'Réception événement de vente POS',
+        description:
+          "Endpoint webhook pour les systèmes POS (Lightspeed, L'Addition, Square). Authentification : X-Tenant-Id + Authorization: Bearer <webhook_secret>. Pas de CSRF. " +
+          "The API always returns 200 with a detailed body (processed_lines, unmapped_lines, errors) to prevent unnecessary POS retries on partial failures; the POS system should inspect the body to determine if lines were processed.",
+        security: [{ webhookBearer: [] }],
+        parameters: [
+          { name: 'X-Tenant-Id', in: 'header', required: true, schema: { type: 'string', format: 'uuid' }, description: 'UUID du tenant' },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['external_id', 'lines', 'sold_at'],
+                properties: {
+                  external_id: { type: 'string', description: 'Identifiant externe de la vente (idempotence)' },
+                  lines: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      required: ['quantity'],
+                      properties: {
+                        product_id: { type: 'string' },
+                        sku: { type: 'string' },
+                        quantity: { type: 'number', minimum: 1 },
+                      },
+                    },
+                  },
+                  sold_at: { type: 'string', description: 'Date/heure de vente (ISO 8601 ou timestamp)' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '200': {
+            description: 'Événement reçu (ou déjà reçu, idempotence). Détail : processed_lines, unmapped_lines, errors, details si échec partiel.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/PosWebhook200Response' },
+              },
+            },
+          },
+          '400': { description: 'Payload invalide (external_id, lines, sold_at requis et valides) ou X-Tenant-Id non UUID' },
+          '401': { description: 'X-Tenant-Id ou Authorization Bearer manquant' },
+          '403': { description: 'Tenant introuvable ou secret webhook invalide' },
+          '500': { description: 'Erreur serveur' },
+        },
+      },
+    },
+    '/webhooks/pos/lightspeed': {
+      post: {
+        tags: ['Webhooks'],
+        summary: 'Webhook Lightspeed (Story 2.3)',
+        description:
+          'Endpoint dédié aux webhooks Lightspeed X-Series (sale:complete, sale:update). ' +
+          'Body: JSON ou application/x-www-form-urlencoded avec champ "payload" (JSON). ' +
+          'Auth: X-Tenant-Id + Authorization: Bearer <webhook_secret> ; tenant_pos_config doit avoir pos_type=lightspeed. ' +
+          'Réponse 2xx sous 5 s recommandée (limite Lightspeed). Idempotence via sale ID → external_id. ' +
+          'Mapping Lightspeed product ID → Flowstock via table pos_product_mapping (API /pos-mapping).',
+        security: [{ webhookBearer: [] }],
+        parameters: [
+          { name: 'X-Tenant-Id', in: 'header', required: true, schema: { type: 'string', format: 'uuid' } },
+        ],
+        requestBody: {
+          content: {
+            'application/json': { schema: { type: 'object', description: 'Sale payload (saleID, lineItems with itemID/productID, quantity, createTime)' } },
+            'application/x-www-form-urlencoded': { schema: { type: 'object', properties: { payload: { type: 'string', description: 'JSON string of sale payload' } } } },
+          },
+        },
+        responses: {
+          '200': {
+            description: 'Événement reçu et traité (même format que POST /webhooks/pos)',
+            content: {
+              'application/json': { schema: { $ref: '#/components/schemas/PosWebhook200Response' } },
+            },
+          },
+          '400': { description: 'Payload Lightspeed invalide ou vide' },
+          '401': { description: 'X-Tenant-Id ou Bearer manquant' },
+          '403': { description: 'Secret invalide ou pos_type != lightspeed' },
+          '500': { description: 'Erreur serveur' },
+        },
+      },
+    },
+    '/webhooks/pos/laddition': {
+      post: {
+        tags: ['Webhooks'],
+        summary: "Webhook L'Addition (Story 2.4)",
+        description:
+          "Endpoint dédié aux webhooks L'Addition. Body: JSON ou application/x-www-form-urlencoded avec champ \"payload\" (JSON). " +
+          "Auth: X-Tenant-Id + Authorization: Bearer <webhook_secret> ; tenant_pos_config pos_type=laddition. " +
+          "Réponse 2xx rapidement. Idempotence via sale/order ID → external_id. Mapping via pos_product_mapping (API /pos-mapping).",
+        security: [{ webhookBearer: [] }],
+        parameters: [
+          { name: 'X-Tenant-Id', in: 'header', required: true, schema: { type: 'string', format: 'uuid' } },
+        ],
+        requestBody: {
+          content: {
+            'application/json': { schema: { type: 'object', description: "Sale payload (sale_id/order_id, line_items/lines avec product_id/sku, quantity, created_at)" } },
+            'application/x-www-form-urlencoded': { schema: { type: 'object', properties: { payload: { type: 'string', description: 'JSON string of sale payload' } } } },
+          },
+        },
+        responses: {
+          '200': { description: 'Événement reçu et traité (même format que POST /webhooks/pos)' },
+          '400': { description: "Payload L'Addition invalide ou vide" },
+          '401': { description: 'X-Tenant-Id ou Bearer manquant' },
+          '403': { description: "Secret invalide ou pos_type != laddition" },
+          '500': { description: 'Erreur serveur' },
+        },
+      },
+    },
+    '/webhooks/pos/square': {
+      post: {
+        tags: ['Webhooks'],
+        summary: 'Webhook Square (Story 2.4)',
+        description:
+          'Endpoint dédié aux webhooks Square Orders API (order.created / order.updated). Body: JSON. ' +
+          'Auth: X-Tenant-Id + Authorization: Bearer <webhook_secret> ; tenant_pos_config pos_type=square. ' +
+          'Réponse 2xx rapidement. Idempotence via order ID / event_id → external_id. Mapping via pos_product_mapping (API /pos-mapping).',
+        security: [{ webhookBearer: [] }],
+        parameters: [
+          { name: 'X-Tenant-Id', in: 'header', required: true, schema: { type: 'string', format: 'uuid' } },
+        ],
+        requestBody: {
+          content: {
+            'application/json': { schema: { type: 'object', description: 'Square event (event_id, created_at, data.object with order/order_updated, line_items)' } },
+          },
+        },
+        responses: {
+          '200': {
+            description: 'Événement reçu et traité (même format que POST /webhooks/pos). Si square_signature_key et square_notification_url sont configurés, la signature x-square-hmacsha256-signature est vérifiée.',
+            content: {
+              'application/json': { schema: { $ref: '#/components/schemas/PosWebhook200Response' } },
+            },
+          },
+          '400': { description: 'Payload Square invalide ou vide' },
+          '401': { description: 'X-Tenant-Id ou Bearer manquant, ou signature Square invalide' },
+          '403': { description: 'Secret invalide ou pos_type != square' },
+          '500': { description: 'Erreur serveur' },
+        },
+      },
+    },
+    '/pos-mapping': {
+      get: {
+        tags: ['Webhooks'],
+        summary: 'Liste des mappings POS → Flowstock (Story 2.3)',
+        description: 'Liste les mappings par tenant. Filtre optionnel: ?pos_type=lightspeed. Auth JWT requise.',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'pos_type', in: 'query', schema: { type: 'string', enum: ['lightspeed', 'laddition', 'square', 'manual'] } },
+        ],
+        responses: { '200': { description: 'Liste des mappings' } },
+      },
+      post: {
+        tags: ['Webhooks'],
+        summary: 'Créer un mapping POS → Flowstock',
+        description: 'Body: pos_type, pos_identifier, flowstock_product_id (optionnel), flowstock_sku (optionnel). Au moins un des deux Flowstock requis.',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['pos_type', 'pos_identifier'],
+                properties: {
+                  pos_type: { type: 'string', enum: ['lightspeed', 'laddition', 'square', 'manual'] },
+                  pos_identifier: { type: 'string' },
+                  flowstock_product_id: { type: 'string', format: 'uuid' },
+                  flowstock_sku: { type: 'string' },
+                },
+              },
+            },
+          },
+        },
+        responses: { '201': { description: 'Mapping créé' }, '400': { description: 'Validation ou doublon' } },
+      },
+    },
+    '/pos-mapping/{id}': {
+      delete: {
+        tags: ['Webhooks'],
+        summary: 'Supprimer un mapping',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+        responses: { '204': { description: 'Supprimé' }, '404': { description: 'Non trouvé' } },
+      },
+    },
+    '/dashboard/pos-sync-status': {
+      get: {
+        tags: ['Dashboard'],
+        summary: 'Statut de synchro POS (Story 2.5)',
+        description: 'Retourne is_degraded, last_event_at, degraded_since, failure_count pour le tenant. Utilisé pour afficher le bandeau "Synchro POS interrompue" et les métriques support.',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          '200': {
+            description: 'Statut POS sync',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean' },
+                    data: {
+                      type: 'object',
+                      properties: {
+                        is_degraded: { type: 'boolean', description: 'true si mode dégradé actif' },
+                        last_event_at: { type: 'string', format: 'date-time', nullable: true, description: 'Dernier événement reçu' },
+                        degraded_since: { type: 'string', format: 'date-time', nullable: true, description: 'Depuis quand le mode dégradé est actif' },
+                        failure_count: { type: 'integer', description: 'Nombre d\'échecs webhook (récent)' },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          '401': { description: 'Non authentifié' },
         },
       },
     },
@@ -745,12 +971,39 @@ export const openApiDocument = {
     },
   },
   components: {
+    schemas: {
+      /** Réponse 200 commune aux webhooks POS (générique, Lightspeed, L\'Addition, Square). En cas d\'échec partiel (lignes non mappées ou stock insuffisant), l\'API renvoie 200 avec processed_lines / unmapped_lines / errors pour éviter les retries massifs côté POS. */
+      PosWebhook200Response: {
+        type: 'object',
+        properties: {
+          received: { type: 'boolean', example: true },
+          duplicate: { type: 'boolean', description: 'Présent si l’événement était déjà traité (idempotence)' },
+          processed_lines: { type: 'integer', description: 'Nombre de lignes décrémentées avec succès' },
+          unmapped_lines: { type: 'integer', description: 'Nombre de lignes sans mapping POS → Flowstock' },
+          errors: { type: 'integer', description: 'Nombre d’erreurs (ex. stock insuffisant)' },
+          details: {
+            type: 'object',
+            description: 'Présent si unmapped_lines > 0 ou errors > 0',
+            properties: {
+              unmapped: { type: 'array', items: { type: 'object' }, description: 'Lignes non mappées' },
+              insufficient_stock: { type: 'array', items: { type: 'object' }, description: 'Erreurs stock insuffisant' },
+            },
+          },
+        },
+      },
+    },
     securitySchemes: {
       bearerAuth: {
         type: 'http',
         scheme: 'bearer',
         bearerFormat: 'JWT',
         description: 'Token JWT retourné par /auth/login ou /auth/register',
+      },
+      webhookBearer: {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'opaque',
+        description: 'Secret webhook configuré par tenant (tenant_pos_config.webhook_secret). En-tête: Authorization: Bearer <secret>.',
       },
     },
   },

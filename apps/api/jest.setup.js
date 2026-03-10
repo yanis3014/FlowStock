@@ -1,6 +1,10 @@
 /**
- * Load project root .env before any test (and thus before config/connection are used).
+ * Load env before any test (and thus before config/connection are used).
+ * 1. Load repo root .env (base).
+ * 2. Load repo root .env.test if present (overrides for DB credentials etc.).
  * Ensures getDatabaseUrl() and test pools use the same DATABASE_URL.
  */
 const path = require('path');
-require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
+const root = path.resolve(__dirname, '../..');
+require('dotenv').config({ path: path.join(root, '.env') });
+require('dotenv').config({ path: path.join(root, '.env.test'), override: true });

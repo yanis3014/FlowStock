@@ -2,7 +2,14 @@
  * Configuration des liens de navigation et titres de page (Shell 9.2).
  */
 export const NAV_ITEMS: { href: string; label: string }[] = [
+  { href: '/rush', label: 'Mode Rush' },
   { href: '/dashboard', label: 'Dashboard' },
+  { href: '/stocks', label: 'Stocks' },
+  { href: '/fiches-techniques', label: 'Fiches techniques' },
+  { href: '/suggestions', label: 'Suggestions IA' },
+  { href: '/parametres', label: 'Paramètres' },
+  { href: '/abonnement', label: 'Abonnement' },
+  { href: '/onboarding', label: 'Onboarding' },
   { href: '/stats', label: 'Stats' },
   { href: '/forecast', label: 'Prévisions' },
   { href: '/chat', label: 'Chat' },
@@ -14,6 +21,7 @@ export const NAV_ITEMS: { href: string; label: string }[] = [
   { href: '/movements', label: 'Mouvements' },
   { href: '/locations', label: 'Emplacements' },
   { href: '/suppliers', label: 'Fournisseurs' },
+  { href: '/admin', label: 'Admin' },
 ];
 
 const PATH_TITLES: Record<string, string> = Object.fromEntries(
