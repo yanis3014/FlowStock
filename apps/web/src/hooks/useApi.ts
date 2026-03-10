@@ -10,6 +10,7 @@ function isAuthRoute(path: string): boolean {
   return p.indexOf('auth/') === 0 || p === 'auth';
 }
 
+/** Body is replayable for CSRF retry. FormData cannot be replayed. */
 function isBodyReplayable(body: unknown): boolean {
   if (body == null) return true;
   return typeof body === 'string';
@@ -96,6 +97,14 @@ export function useApi() {
       }
 
       if (res.status === 401 || res.status === 403) {
+        if (res.status === 403) {
+          try {
+            const j = await res.clone().json();
+            if (j?.error && String(j.error).toLowerCase().includes('csrf')) {
+              return res;
+            }
+          } catch {}
+        }
         const path = (url || '').split('?')[0];
         if (!isAuthRoute(path)) {
           setToken(null);

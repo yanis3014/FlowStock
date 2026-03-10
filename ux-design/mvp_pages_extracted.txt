@@ -1,0 +1,439 @@
+﻿DOCUMENT MVP
+Architecture des Pages
+Agent IA — Gestion des Stocks en Restauration
+Espace Client  +  Back-Office Fondateur  |  Février 2026
+
+
+Ce document recense l’ensemble des pages et écrans nécessaires au MVP.
+Il est structuré en deux grandes parties : l’Espace Client (ce que voit le restaurateur) et le Back-Office Fondateur (ce que vous voyez pour piloter le produit). Pour chaque page, vous trouverez son contenu, sa priorité MVP, et le type d’interface cible.
+● MVP Core
+  Indispensable au lancement   
+● MVP
+  Important mais peut arriver en semaine 2-3   
+● Post-MVP
+  Après product-market fit
+
+SOMMAIRE
+
+PARTIE A — Espace Client (Restaurateur)
+A.1  Authentification & Onboarding  (4 écrans)
+A.2  Mode Rush  (2 écrans)
+A.3  Gestion des Stocks  (3 écrans)
+A.4  Suggestions & Plats du Jour  (1 écran)
+A.5  Compte & Paramètres  (2 écrans)
+
+PARTIE B — Back-Office Fondateur (Admin)
+B.1  Dashboard Global  (1 écran)
+B.2  Gestion Clients  (2 écrans)
+B.3  Moniteur Technique  (1 écran)
+B.4  Gestion Abonnements  (1 écran)
+B.5  Feedback & Support  (1 écran)
+
+TOTAL MVP : 12 pages client + 6 pages admin = 18 écrans à développer
+🍽️  PARTIE A
+Espace Client
+Ce que voit et utilise le restaurateur au quotidien
+
+A.1  Authentification & Onboarding  —  4 écrans
+
+Ces 4 écrans constituent la porte d’entrée du produit. Leur qualité détermine le taux d’activation — si l’utilisateur ne finit pas l’onboarding, il ne revient jamais. Chaque étape doit être court, guidante, et montrer de la valeur immédiatement.
+
+🔐  
+Page Connexion / Inscription
+   —   Première impression du produit
+Priorité : 
+MVP Core   
+  |  Interface : 
+Mobile + Desktop   
+  |  MVP : 
+OUI
+Contenu & fonctionnalités :
+Formulaire inscription : email, mot de passe, nom du restaurant, ville
+Connexion classique email + mot de passe
+Bouton « Essai gratuit 30 jours — sans carte bancaire » bien visible
+Option « Connexion avec Google » (simplifie l’adoption mobile)
+Lien mot de passe oublié avec reset par email
+Design minimaliste, logo, une seule action principale par écran
+Message de bienvenue personnalisé après inscription : « Bonjour [Prénom], votre restaurant [Nom] est maintenant configuré »
+
+📷  
+Étape Onboarding 1 — Photo de carte
+   —   La fonctionnalité « wow » qui supprime la friction
+Priorité : 
+MVP Core   
+  |  Interface : 
+Mobile + Desktop   
+  |  MVP : 
+OUI
+Contenu & fonctionnalités :
+Barre de progression visible en haut : Étape 1/4
+Zone de dépôt photo ou prise de vue directe depuis mobile (caméra)
+Import alternatif : saisie manuelle des plats si pas de photo
+Traitement IA en temps réel avec indicateur de chargement animé
+Résultat : liste des plats détectés avec leurs ingrédients et grammages estimés
+Interface de réajustement : modifier nom, ingrédient, quantité, unité par plat
+Bouton « Ajouter un plat manuellement » pour les absents
+Sauvegarde automatique à chaque modification
+Message d’encouragement après validation : « Parfait — 12 plats configurés en 3 min »
+
+📦  
+Étape Onboarding 2 — Stocks initiaux
+   —   Alimenter le moteur avec la réalité du stock actuel
+Priorité : 
+MVP Core   
+  |  Interface : 
+Mobile + Desktop   
+  |  MVP : 
+OUI
+Contenu & fonctionnalités :
+Barre de progression : Étape 2/4
+Option A : Import fichier Excel / CSV — glisser-déposer avec parsing intelligent
+Option B : Saisie rapide ingrédient par ingrédient (quantité + unité)
+Pré-remplissage automatique depuis les ingrédients détectés à l’étape précédente
+Écran de validation du parsing Excel avec correction manuelle si nécessaire
+Champ DLC optionnel par ingrédient
+Résumé visuel : « X ingrédients importés, Y manquants » avec liste des manquants
+Possibilité de passer cette étape et de saisir plus tard (ne pas bloquer)
+
+🔌  
+Étape Onboarding 3 — Connexion caisse
+   —   Le pont entre la caisse et l’agent IA
+Priorité : 
+MVP Core   
+  |  Interface : 
+Mobile + Desktop   
+  |  MVP : 
+OUI
+Contenu & fonctionnalités :
+Barre de progression : Étape 3/4
+Liste des caisses supportées avec logos : Lightspeed, L’Addition, Square, Zelty
+Bouton « Connecter » par caisse — redirection OAuth ou saisie de clé API
+Indicateur de statut en temps réel : En attente / Connecté / Échec
+Option « Je n’ai pas de logiciel de caisse » — bascule vers mode saisie manuelle
+Message de confirmation quand la connexion est établie avec test de synchronisation
+Étape 4/4 : récapitulatif de configuration + bouton « Lancer mon premier service »
+
+A.2  Mode Rush  —  2 écrans  (le cœur du produit)
+
+C’est l’écran le plus important de tout le produit. Il doit être accessible en 1 tap depuis l’écran d’accueil, fonctionner sous une luminosité forte ou faible, et être lisible en 2 secondes maximum. Chaque décision de design doit être validée par la question : « est-ce qu’un manager qui court en salle peut comprendre ça en un coup d’œil ? »
+
+⚡  
+Mode Rush — Alertes Temps Réel
+   —   L’écran central pendant le service
+Priorité : 
+MVP Core   
+  |  Interface : 
+Mobile   
+  |  MVP : 
+OUI
+Contenu & fonctionnalités :
+Bandeau « RUSH EN COURS » avec indicateur vert pulsant et heure de service
+Liste des alertes triées par criticité : CRITIQUE (rouge) / FAIBLE (orange) / OK (vert)
+Chaque alerte affiche : émoji ingrédient, nom, nombre de portions restantes, badge couleur
+Indication « X tables en cours, Y portions restantes » pour les alertes critiques
+Bouton « Tout acquitter » pour effacer les alertes vues
+Bouton « Voir tous les stocks » en bas pour accès rapide au détail
+Pas de menu, pas de navigation complexe — 2 actions maximum visibles
+Notification push si l’appli est en arrière-plan (écran verrouillé)
+Mode nuit automatique si détection heure de service soirée
+
+📊  
+Mode Rush — Détail Stock Rapide
+   —   Vue complète accessible en 1 tap depuis les alertes
+Priorité : 
+MVP Core   
+  |  Interface : 
+Mobile   
+  |  MVP : 
+OUI
+Contenu & fonctionnalités :
+Liste scrollable de tous les ingrédients avec leur niveau en temps réel
+Barre de niveau colorée par ingrédient (rouge / orange / vert)
+Quantité restante + unité affichées en grand pour lisibilité rapide
+Filtre rapide par catégorie : Viandes / Poissons / Légumes / Desserts
+Champ de recherche ingrédient en haut de page
+Bouton « Ajustement manuel » par ingrédient (si comptage physique diffère)
+Retour en 1 tap vers les alertes rush
+Synchro automatique toutes les 30 secondes avec la caisse
+
+A.3  Gestion des Stocks  —  3 écrans
+
+Ces écrans sont utilisés hors service — le matin avant l’ouverture, après le service, ou lors de la réception d’une livraison. Ils peuvent être légèrement plus denses que le mode rush car l’utilisateur a le temps de regarder.
+
+🏠  
+Dashboard Accueil
+   —   La page d’accueil après connexion
+Priorité : 
+MVP Core   
+  |  Interface : 
+Mobile + Desktop   
+  |  MVP : 
+OUI
+Contenu & fonctionnalités :
+Message de bienvenue personnalisé : « Bonjour [Prénom] — Service midi dans 2h »
+Gros bouton « LANCER LE MODE RUSH » — accès en 1 tap
+4 KPIs de la semaine : Food cost / Gaspillage évité / Ruptures évitées / Couverts
+Bloc « Alertes urgentes » : ingrédients à DLC proche ou stock critique
+Bloc « Suggestion IA du jour » : plat du jour recommandé en 1 ligne
+Navigation bas (mobile) : Accueil / Stocks / IA / Profil
+Navigation latérale (desktop) : les mêmes 4 sections + sous-menus
+
+📋  
+Page Stocks — Vue Complète
+   —   Pilotage complet du stock hors service
+Priorité : 
+MVP Core   
+  |  Interface : 
+Mobile + Desktop   
+  |  MVP : 
+OUI
+Contenu & fonctionnalités :
+Tableau de tous les ingrédients avec : nom, quantité, unité, DLC, niveau, statut
+Barres de niveau colorées par ingrédient (rouge / orange / vert)
+Filtres : catégorie, statut (critique / attention / ok), DLC proche
+Recherche par nom d’ingrédient
+Ajout d’un ingrédient manuel ou par scan code-barres (post-MVP)
+Modification rapide de la quantité en tap sur la ligne
+Historique des mouvements de stock par ingrédient (7 derniers jours)
+Export CSV de l’état des stocks (post-MVP)
+
+✏️  
+Page Fiches Techniques
+   —   Gérer les recettes et décompositions des plats
+Priorité : 
+MVP   
+  |  Interface : 
+Mobile + Desktop   
+  |  MVP : 
+OUI
+Contenu & fonctionnalités :
+Liste de tous les plats avec leur fiche technique associée
+Détail d’un plat : liste des ingrédients + quantités + unités
+Modification d’une fiche : ajouter / supprimer un ingrédient, changer les grammages
+Création d’une nouvelle fiche manuelle ou par photo supplémentaire
+Duplication d’une fiche (utile pour les variations d’un même plat)
+Calcul automatique du coût matière par plat (si prix ingrédients renseignés)
+Alerte si une fiche détecte un ingrédient non présent dans le stock
+
+A.4  Suggestions & Plats du Jour  —  1 écran
+
+C’est la section « or » du produit — celle qui justifie le passage en Pro et qui crée le plus de valeur percéue. Elle doit être aesthtiquement soignée, avec une tonnalité de « conseiller personnel » plutôt que de tableau de bord froid.
+
+✨  
+Page Suggestions IA
+   —   Le copilote stratégique du restaurateur
+Priorité : 
+MVP   
+  |  Interface : 
+Mobile + Desktop   
+  |  MVP : 
+OUI
+Contenu & fonctionnalités :
+Carte « Plat du jour recommandé » : nom du plat, ingrédients utilisés, économie estimée
+Explication en langage naturel : « Votre saumon arrive à DLC demain — un tartare en entrée vous évite 45€ de perte »
+Bouton « Valider ce plat du jour » — enregistre la décision
+Bouton « Proposer une autre option » — l’IA génère une alternative
+Liste des ingrédients à écouler en priorité (DLC < 48h)
+Historique des suggestions acceptées / refusées (améliore le modèle)
+Section « Alerte gaspillage » : économies générées ce mois via les suggestions
+En version Starter : section verrouill00e9e avec aper00e7u flou + CTA upgrade Pro
+
+A.5  Compte & Paramètres  —  2 écrans
+
+⚙️  
+Page Paramètres Restaurant
+   —   Configuration générale de l’établissement
+Priorité : 
+MVP   
+  |  Interface : 
+Mobile + Desktop   
+  |  MVP : 
+OUI
+Contenu & fonctionnalités :
+Informations restaurant : nom, adresse, type d’établissement, horaires de service
+Gestion des intégrations POS : statut de connexion, reconnexion, déconnexion
+Paramètres d’alertes : seuils de déclenchement par catégorie (ex : alerter à 20% du stock)
+Préférences de notifications : push, SMS, email — activer / désactiver par type
+Gestion des utilisateurs : inviter un employé ou un associé (accès limité en Starter)
+Export des données (RGPD) et suppression de compte
+Langue et fuseau horaire
+
+💳  
+Page Abonnement & Facturation
+   —   Gestion du plan et des paiements
+Priorité : 
+MVP   
+  |  Interface : 
+Mobile + Desktop   
+  |  MVP : 
+OUI
+Contenu & fonctionnalités :
+Affichage du plan actuel : Starter / Pro / Multi-sites avec date de renouvellement
+Comparatif des plans avec mise en valeur des fonctionnalités débloquées en Pro
+Bouton « Passer en Pro » avec argument ROI : « Vous avez évité X€ de gaspillage ce mois »
+Intégration Stripe : saisie CB, gestion des échéances, téléchargement des factures
+Historique des paiements
+Gestion de la période d’essai : jours restants bien visibles
+Bouton résiliation avec parcours de rétention (question « pourquoi vous partez ? »)
+💼  PARTIE B
+Back-Office Fondateur
+Votre espace privé pour piloter le produit, les clients et la croissance
+
+
+Ce back-office est votre cockpit fondateur. Il ne sera jamais visible de vos clients.
+Il vous permet de surveiller la santé du produit, d’identifier les clients à risque de churn, de piloter les abonnements, et d’itérer vite sur le produit. En phase MVP il peut être simplifié (même un tableau Notion ou Retool suffit au début) — mais mieux vaut le concevoir dès le départ pour ne pas accumuler de dette.
+
+B.1  Dashboard Global  —  1 écran
+
+📈  
+Dashboard Admin — Vue Générale
+   —   Le premier écran que vous voyez chaque matin
+Priorité : 
+Admin MVP   
+  |  Interface : 
+Desktop   
+  |  MVP : 
+OUI
+Contenu & fonctionnalités :
+KPIs business en temps réel : MRR total, ARR, nombre de clients actifs, churn du mois
+Graphique MRR sur 90 jours avec courbe de tendance
+Nouveaux inscrits du jour / de la semaine avec détail par plan (Starter / Pro / Multi)
+Taux de conversion essai gratuit → payant (objectif > 30%)
+Alertes internes : clients sans activité depuis 7j (risque churn), erreurs API POS, échecs de paiement
+Top 5 restaurants les plus actifs (signal produit utile)
+Récapitulatif hebdomadaire auto-généré : croissance, churn, tickets support
+
+B.2  Gestion Clients  —  2 écrans
+
+👥  
+Liste Clients
+   —   Vision 360° de tous vos abonniés
+Priorité : 
+Admin MVP   
+  |  Interface : 
+Desktop   
+  |  MVP : 
+OUI
+Contenu & fonctionnalités :
+Tableau de tous les restaurants avec : nom, ville, plan, date d’inscription, MRR, dernière connexion
+Badge de santé : Actif / Risque churn / Inactif (codé couleur)
+Filtre par plan, statut, date d’inscription, intégration POS connectée
+Recherche par nom ou email
+Accès au profil détaillé d’un client en 1 clic
+Export CSV de la liste clients (CRM ou tableau de bord externe)
+Indication des clients en essai gratuit + jours restants
+
+🔍  
+Profil Client Détaillé
+   —   Tout ce qu’il faut savoir sur un client spécifique
+Priorité : 
+Admin MVP   
+  |  Interface : 
+Desktop   
+  |  MVP : 
+OUI
+Contenu & fonctionnalités :
+Informations générales : nom, email, restaurant, ville, plan, date d’inscription
+Statut de l’intégration POS : connectée / déconnectée / erreur
+Indicateurs d’engagement : connexions / semaine, nb d’alertes répondues, suggestions validées
+Historique des paiements et statut de l’abonnement Stripe
+Notes internes fondateur (champ libre pour contextualiser un client bêta)
+Bouton « Envoyer un email » ou « Offrir X jours gratuits » (actions manuelles)
+Journal des événements : dernière connexion, dernière alerte, dernier paiement
+
+B.3  Moniteur Technique  —  1 écran
+
+🛠️  
+Moniteur Technique & Intégrations
+   —   Surveiller la santé des connexions en temps réel
+Priorité : 
+Admin MVP   
+  |  Interface : 
+Desktop   
+  |  MVP : 
+OUI
+Contenu & fonctionnalités :
+Statut de chaque intégration POS : Lightspeed / L’Addition / Square / Zelty — UP ou DOWN
+Latence moyenne des appels API par intégration (objectif < 500ms)
+Taux d’erreur sur les 24 dernières heures par intégration
+Liste des clients impactés quand une intégration est en erreur
+Logs des erreurs API avec message d’erreur, timestamp, client concerné
+Statut des appels LLM (OpenAI / Anthropic) : disponibilité, latence, coût/jour
+Alertes automatiques par email si une intégration tombe pendant un service
+Historique de disponibilité sur 30 jours (type Status Page)
+
+B.4  Gestion Abonnements  —  1 écran
+
+💰  
+Gestion Abonnements & Revenus
+   —   Piloter les revenus et les échecs de paiement
+Priorité : 
+Admin MVP   
+  |  Interface : 
+Desktop   
+  |  MVP : 
+OUI
+Contenu & fonctionnalités :
+Liste des abonnements actifs avec plan, montant, date de renouvellement, statut Stripe
+Échecs de paiement en cours : client, montant, nombre de tentatives, action à faire
+MRR par plan : répartition Starter / Pro / Multi-sites en graphique
+Mouvements du mois : nouveaux abonniés, upgrades, downgrades, résiliations
+Remboursements et avoirs manuels via lien direct Stripe Dashboard
+Codes promo actifs et leur utilisation (si vous lançez des campagnes)
+Prévision MRR mois prochain basée sur les renouvellements prévus
+
+B.5  Feedback & Support  —  1 écran
+
+💬  
+Feedback Clients & Support
+   —   Centraliser ce que disent vos clients pour itérer vite
+Priorité : 
+Admin MVP   
+  |  Interface : 
+Desktop   
+  |  MVP : 
+OUI
+Contenu & fonctionnalités :
+Liste de tous les feedbacks reçus : depuis l’appli, emails, appels — avec date et client
+Tagging par catégorie : Bug / Amélioration / Incompréhension / Complément
+Statut de chaque feedback : Nouveau / En cours / Résolu / Won't Fix
+Votes internes (votre équipe) pour prioriser les demandes les plus fréquentes
+Lien vers le client concerné pour contextualiser rapidement
+Tickets support en cours : sujet, client, priorité, personne assignée
+Statistiques : nb feedbacks / semaine, délai moyen de résolution, satisfaction (NPS simple)
+
+RÉCAPITULATIF & ORDRE DE DÉVELOPPEMENT
+
+Voici l’ordre recommandé pour développer les pages du MVP. L’objectif est d’avoir un produit testable par de vrais restaurateurs le plus tôt possible, même si toutes les pages ne sont pas finies.
+
+Sprint
+Période
+Pages à livrer
+Objectif
+Sprint 1
+Semaines 1-2
+Connexion, Onboarding (4 écrans), Dashboard Accueil
+Premier restaurant qui termine l’onboarding
+Sprint 2
+Semaines 3-4
+Mode Rush (2 écrans), Page Stocks, Admin Dashboard
+Premier rush testé avec un vrai client
+Sprint 3
+Semaines 5-6
+Fiches Techniques, Suggestions IA, Admin Clients
+Boucle complète : stock → rush → suggestion
+Sprint 4
+Semaines 7-8
+Paramètres, Abonnement/Stripe, Moniteur Technique
+Première facturation réelle
+Sprint 5
+Semaines 9-10
+Admin Abonnements, Feedback, Profil Client Admin
+Infrastructure de pilotage complète
+
+
+Rappel stratégique
+Ces 18 écrans sont suffisants pour la bêta et le premier lancement public. Résistez à la tentation d’ajouter des pages avant d’avoir validé le product-market fit. Chaque écran supplémentaire non validé par un vrai utilisateur est de la dette produit.
+La règle d’or : un écran qui n’est pas utilisé chaque semaine par au moins un client est un écran à supprimer ou à fusionner.
+
+—  Fin du document MVP  —

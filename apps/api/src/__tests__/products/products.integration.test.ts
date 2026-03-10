@@ -350,5 +350,14 @@ describe('Products Integration Tests', () => {
       expect(res.text).toContain('date');
       expect(res.text).toContain('type');
     });
+
+    it('should accept movement_type=pos_sale filter (Story 3.4)', async () => {
+      const res = await request(app)
+        .get(`/products/${movementProductId}/movements?movement_type=pos_sale`)
+        .set('Authorization', `Bearer ${accessToken}`);
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(Array.isArray(res.body.data)).toBe(true);
+    });
   });
 });

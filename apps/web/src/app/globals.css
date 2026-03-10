@@ -1,29 +1,36 @@
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ── Design System Warm Tech (moodboard_saas_restaurant) ── */
+:root {
+  --green-deep: #1A3C34;
+  --green-mid: #2D6A4F;
+  --green-bright: #40916C;
+  --green-light: #B7E4C7;
+  --cream: #FAF7F2;
+  --cream-dark: #F0EBE1;
+  --terracotta: #C1440E;
+  --terra-light: #F5C4A8;
+  --gold: #D4A843;
+  --gold-light: #FBF0D0;
+  --charcoal: #1C2B2A;
+  --gray-warm: #6B7B76;
+  --white: #FFFFFF;
+  --red-alert: #E53E3E;
+  --orange-warn: #ED8936;
+  --font-display: 'Sora', sans-serif;
+  --font-body: 'DM Sans', sans-serif;
+}
 
 @layer base {
   html {
     @apply box-border;
   }
   body {
-    @apply m-0 min-h-screen antialiased text-gray-900 bg-gray-50;
+    @apply m-0 min-h-screen antialiased text-gray-900 bg-gray-50 font-[family-name:var(--font-body)];
   }
 }
 
-@layer utilities {
-  @keyframes shimmer {
-    0% { background-position: -200% 0; }
-    100% { background-position: 200% 0; }
-  }
-  .animate-shimmer {
-    background: linear-gradient(
-      90deg,
-      rgb(229 231 235) 0%,
-      rgb(243 244 246) 50%,
-      rgb(229 231 235) 100%
-    );
-    background-size: 200% 100%;
-    animation: shimmer 1.5s ease-in-out infinite;
-  }
-}

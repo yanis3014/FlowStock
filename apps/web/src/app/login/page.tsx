@@ -10,11 +10,16 @@ function LoginForm() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const { login, setToken } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const sessionExpired = searchParams.get('session_expired') === '1';
   const returnUrl = searchParams.get('returnUrl') || '/dashboard';
+
+  const handleDemo = () => {
+    setToken('demo');
+    router.push(returnUrl);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,9 +38,10 @@ function LoginForm() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gray-50">
-      <div className="w-full max-w-md p-6 bg-white rounded-lg shadow-md">
-        <h1 className="text-xl font-bold text-gray-800 mb-4">Connexion</h1>
+    <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-cream overflow-y-auto">
+      <div className="w-full max-w-md p-6 bg-white rounded-xl shadow-md border border-green-deep/10 my-4">
+        <h1 className="font-display text-xl font-bold text-green-deep mb-2">Connexion</h1>
+        <p className="text-sm text-gray-warm mb-4">Accédez à votre espace FlowStock</p>
 
         {sessionExpired && (
           <div className="mb-4 p-3 rounded-md bg-warning/20 text-warning text-sm">
@@ -44,7 +50,7 @@ function LoginForm() {
         )}
 
         {error && (
-          <div className="mb-4 p-3 rounded-md bg-error/10 text-error text-sm">{error}</div>
+          <div className="mb-4 p-3 rounded-md bg-red-alert/10 text-red-alert text-sm">{error}</div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -60,7 +66,7 @@ function LoginForm() {
               required
               autoComplete="email"
               placeholder="vous@exemple.com"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full px-3 py-2 border border-green-deep/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-mid focus:border-green-mid"
             />
           </div>
 
@@ -76,24 +82,49 @@ function LoginForm() {
               required
               autoComplete="current-password"
               placeholder="••••••••"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full px-3 py-2 border border-green-deep/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-mid focus:border-green-mid"
             />
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-2 px-4 rounded-md bg-primary text-white font-medium hover:bg-primary/90 disabled:opacity-50"
+            className="w-full py-3 px-4 rounded-xl bg-green-mid font-display font-bold text-white hover:bg-green-deep hover:opacity-95 disabled:opacity-50 transition-colors"
           >
             {loading ? 'Connexion...' : 'Se connecter'}
           </button>
         </form>
 
-        <p className="mt-4 text-sm text-gray-600">
-          Pas encore de compte ?{' '}
-          <Link href="/register" className="text-primary hover:underline">
-            Créer un compte
+        <div className="mt-4 flex justify-center">
+          <button
+            type="button"
+            className="text-sm text-gray-warm hover:text-green-deep flex items-center gap-2"
+            aria-label="Connexion avec Google (bientôt disponible)"
+          >
+            <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-gray-300 text-xs">G</span>
+            Connexion avec Google
+          </button>
+        </div>
+
+        <p className="mt-4 text-center text-sm text-gray-600">
+          <Link href="#" className="text-gray-warm hover:text-green-deep hover:underline">
+            Mot de passe oublié ?
           </Link>
+        </p>
+        <p className="mt-2 text-center text-sm text-gray-600">
+          Pas encore de compte ?{' '}
+          <Link href="/register" className="font-semibold text-green-mid hover:underline">
+            Essai gratuit 30 jours — Créer un compte
+          </Link>
+        </p>
+        <p className="mt-4 pt-4 border-t border-gray-200 text-center">
+          <button
+            type="button"
+            onClick={handleDemo}
+            className="text-sm font-medium text-gray-warm hover:text-green-deep"
+          >
+            Accéder en démo (sans connexion)
+          </button>
         </p>
       </div>
     </div>

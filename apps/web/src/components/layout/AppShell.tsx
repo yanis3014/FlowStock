@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { AppSidebar } from './AppSidebar';
 import { AppHeader } from './AppHeader';
+import { MobileBottomNav } from './MobileBottomNav';
 
 const MOBILE_BREAKPOINT = 1024;
 
@@ -47,8 +48,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           isMobile={isMobile}
           mobileMenuOpen={mobileMenuOpen}
         />
-        <main className="flex-1 overflow-auto p-4">{children}</main>
+        <main className={`flex-1 overflow-auto p-4 ${isMobile ? 'pb-20' : ''}`}>{children}</main>
       </div>
+      <MobileBottomNav visible={isMobile} />
     </div>
   );
 }

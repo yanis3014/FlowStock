@@ -6,6 +6,8 @@
   "description": "SaaS de gestion de stocks pour PME avec IA, monorepo fullstack.",
   "scripts": {
     "dev": "turbo run dev --parallel",
+    "create-user": "node scripts/create-user.js",
+    "verify-demo-email": "node scripts/verify-demo-email.js",
     "build": "turbo run build",
     "lint": "turbo run lint",
     "test": "turbo run test",
@@ -19,6 +21,8 @@
   ],
   "devDependencies": {
     "@playwright/test": "^1.49.0",
+    "dotenv": "^16.4.5",
+    "pg": "^8.17.2",
     "turbo": "^2.2.3"
   }
 }

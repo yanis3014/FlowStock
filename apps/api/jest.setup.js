@@ -1,19 +1,10 @@
 /**
- * Load root env files before any test so all DB consumers
- * (config, migrations, pools) resolve the same connection settings.
+ * Load env before any test (and thus before config/connection are used).
+ * 1. Load repo root .env (base).
+ * 2. Load repo root .env.test if present (overrides for DB credentials etc.).
+ * Ensures getDatabaseUrl() and test pools use the same DATABASE_URL.
  */
-const fs = require('fs');
 const path = require('path');
-const dotenv = require('dotenv');
-
-const envPath = path.resolve(__dirname, '../../.env');
-const envTestPath = path.resolve(__dirname, '../../.env.test');
-
-if (fs.existsSync(envPath)) {
-  dotenv.config({ path: envPath });
-}
-
-// In test mode, .env.test must win over .env.
-if (fs.existsSync(envTestPath)) {
-  dotenv.config({ path: envTestPath, override: true });
-}
+const root = path.resolve(__dirname, '../..');
+require('dotenv').config({ path: path.join(root, '.env') });
+require('dotenv').config({ path: path.join(root, '.env.test'), override: true });

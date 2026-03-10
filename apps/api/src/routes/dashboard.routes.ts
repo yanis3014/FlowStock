@@ -5,6 +5,7 @@ import {
   updateTenantAlertThreshold,
   getTenantAlertThresholdSetting 
 } from '../services/dashboard.service';
+import { getSyncStatus } from '../services/pos-sync-status.service';
 
 const router = Router();
 
@@ -40,6 +41,28 @@ router.get('/alert-threshold', authenticateToken, async (req: Request, res: Resp
     res.status(200).json({ success: true, data: { thresholdPercent: threshold } });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed to get alert threshold';
+    res.status(500).json({ success: false, error: message });
+  }
+});
+
+/**
+ * GET /dashboard/pos-sync-status (Story 2.5)
+ * Returns POS sync status for the tenant: is_degraded, last_event_at, failure_count.
+ */
+router.get('/pos-sync-status', authenticateToken, async (req: Request, res: Response) => {
+  if (!req.user?.tenantId) {
+    res.status(401).json({ success: false, error: 'Authentication required' });
+    return;
+  }
+  try {
+    const status = await getSyncStatus(req.user.tenantId);
+    if (status === null) {
+      res.status(200).json({ success: true, data: { is_degraded: false, last_event_at: null, degraded_since: null, failure_count: 0 } });
+      return;
+    }
+    res.status(200).json({ success: true, data: status });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to get POS sync status';
     res.status(500).json({ success: false, error: message });
   }
 });

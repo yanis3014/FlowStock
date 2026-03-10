@@ -22,6 +22,9 @@ import salesRoutes from './routes/sales.routes';
 import formulaRoutes from './routes/formula.routes';
 import stockEstimateRoutes from './routes/stock-estimate.routes';
 import dashboardRoutes from './routes/dashboard.routes';
+import webhooksPosRoutes from './routes/webhooks.pos.routes';
+import posMappingRoutes from './routes/pos-mapping.routes';
+import { runPeriodicEvaluation } from './services/pos-sync-status.service';
 import { openApiDocument } from './openapi/spec';
 import type { HealthResponse } from '@bmad/shared';
 
@@ -39,7 +42,31 @@ app.use(helmet({
   },
 }));
 app.use(cors({ origin: true, credentials: true }));
-app.use(express.json());
+
+// Story 2.4 H1: Capture raw body for POST /webhooks/pos/square only (Square signature verification)
+app.use((req, res, next) => {
+  if (req.method !== 'POST' || req.path !== '/webhooks/pos/square') return next();
+  const chunks: Buffer[] = [];
+  req.on('data', (chunk: Buffer) => chunks.push(chunk));
+  req.on('end', () => {
+    const raw = Buffer.concat(chunks);
+    (req as express.Request & { rawBody?: Buffer }).rawBody = raw;
+    try {
+      (req as express.Request & { body?: unknown }).body = JSON.parse(raw.toString('utf8'));
+    } catch {
+      (req as express.Request & { body?: unknown }).body = {};
+    }
+    next();
+  });
+  req.on('error', next);
+});
+
+const jsonParser = express.json();
+app.use((req, res, next) => {
+  if (req.method === 'POST' && req.path === '/webhooks/pos/square') return next();
+  jsonParser(req, res, next);
+});
+app.use(express.urlencoded({ extended: true }));
 app.use(morgan('dev'));
 app.use(cookieParser());
 app.use(metricsMiddleware);
@@ -74,6 +101,9 @@ app.get('/csrf-token', (req, res, next) => {
   });
 });
 
+// Story 2.1: POS webhook — no CSRF (external POS systems)
+app.use('/webhooks/pos', webhooksPosRoutes);
+
 app.use((req, res, next) => {
   if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) return next();
   if (config.NODE_ENV === 'test') return next();
@@ -81,6 +111,7 @@ app.use((req, res, next) => {
 });
 
 app.use('/auth', authRoutes);
+app.use('/pos-mapping', posMappingRoutes);
 app.use('/subscriptions', subscriptionRoutes);
 app.use('/products', productRoutes);
 app.use('/locations', locationRoutes);
@@ -232,6 +263,10 @@ function startServer(): void {
   validateJwtSecret();
   server = app.listen(PORT, () => {
     logger.info(`API server listening on http://localhost:${PORT}`);
+    // Story 2.5: periodic POS sync degraded evaluation (every 2 min)
+    if (config.NODE_ENV !== 'test') {
+      setInterval(() => runPeriodicEvaluation().catch(() => {}), 2 * 60 * 1000);
+    }
   });
 }
 

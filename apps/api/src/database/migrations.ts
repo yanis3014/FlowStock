@@ -28,7 +28,13 @@ for (const envPath of possibleEnvPaths) {
     break;
   }
 }
-
+// In test, override with .env.test so Jest and migrations use same DB credentials
+if (process.env.NODE_ENV === 'test') {
+  const envTestPath = join(resolve(process.cwd(), '../..'), '.env.test');
+  if (existsSync(envTestPath)) {
+    config({ path: envTestPath, override: true });
+  }
+}
 if (!envLoaded) {
   config();
   if (process.env.NODE_ENV !== 'production') {

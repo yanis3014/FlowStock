@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Mode Rush — Alertes Stock</title>
+  <link rel="stylesheet" href="design-system.css">
+  <style>
+    /* ── Mode Rush : Mobile-First (lisible en 2 secondes) ── */
+    .rush-page {
+      min-height: 100vh;
+      min-height: 100dvh;
+      background: #0F1B19;
+      display: flex;
+      flex-direction: column;
+      padding: env(safe-area-inset-top) max(16px, env(safe-area-inset-right)) env(safe-area-inset-bottom) max(16px, env(safe-area-inset-left));
+      padding-top: 12px;
+    }
+
+    .rush-notch {
+      width: 80px;
+      height: 6px;
+      background: rgba(255,255,255,0.15);
+      border-radius: 3px;
+      margin: 0 auto 16px;
+    }
+
+    .rush-status {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .rush-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(64,145,108,0.2);
+      border: 1px solid var(--green-bright);
+      border-radius: 20px;
+      padding: 6px 12px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--green-bright);
+      font-family: var(--font-display);
+      letter-spacing: 0.05em;
+    }
+
+    .rush-badge-dot {
+      width: 6px;
+      height: 6px;
+      background: var(--green-bright);
+      border-radius: 50%;
+      animation: rush-pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes rush-pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.35; transform: scale(0.9); }
+    }
+
+    .rush-time {
+      font-family: var(--font-display);
+      font-size: 12px;
+      color: var(--gray-warm);
+    }
+
+    .rush-title {
+      font-family: var(--font-display);
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--cream);
+      margin-bottom: 2px;
+    }
+
+    .rush-sub {
+      font-size: 12px;
+      color: var(--gray-warm);
+      margin-bottom: 20px;
+    }
+
+    .rush-alerts {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      overflow-y: auto;
+    }
+
+    .alert-card {
+      border-radius: 12px;
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+
+    .alert-card.red {
+      background: rgba(229,62,62,0.12);
+      border: 1px solid rgba(229,62,62,0.4);
+    }
+
+    .alert-card.orange {
+      background: rgba(237,137,54,0.12);
+      border: 1px solid rgba(237,137,54,0.4);
+    }
+
+    .alert-card.green {
+      background: rgba(64,145,108,0.12);
+      border: 1px solid rgba(64,145,108,0.3);
+    }
+
+    .alert-icon {
+      font-size: 22px;
+      flex-shrink: 0;
+      line-height: 1;
+    }
+
+    .alert-content { flex: 1; min-width: 0; }
+
+    .alert-name {
+      font-family: var(--font-display);
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--cream);
+      display: block;
+    }
+
+    .alert-detail {
+      font-size: 11px;
+      color: var(--gray-warm);
+      margin-top: 2px;
+    }
+
+    .alert-badge {
+      font-family: var(--font-display);
+      font-size: 10px;
+      font-weight: 700;
+      padding: 4px 8px;
+      border-radius: 6px;
+      flex-shrink: 0;
+      letter-spacing: 0.03em;
+    }
+
+    .alert-badge.red {
+      background: rgba(229,62,62,0.3);
+      color: #FC8181;
+    }
+
+    .alert-badge.orange {
+      background: rgba(237,137,54,0.3);
+      color: #FBD38D;
+    }
+
+    .alert-badge.green {
+      background: rgba(64,145,108,0.3);
+      color: var(--green-light);
+    }
+
+    .rush-actions {
+      margin-top: 20px;
+      padding-bottom: env(safe-area-inset-bottom);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .rush-btn {
+      width: 100%;
+      border: none;
+      border-radius: 12px;
+      padding: 14px;
+      font-family: var(--font-display);
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      letter-spacing: 0.05em;
+    }
+
+    .rush-btn-primary {
+      background: var(--green-mid);
+      color: var(--white);
+    }
+
+    .rush-btn-ghost {
+      background: transparent;
+      color: var(--gray-warm);
+      border: 1px solid rgba(255,255,255,0.1);
+      font-family: var(--font-body);
+      font-size: 13px;
+      font-weight: 500;
+    }
+  </style>
+</head>
+<body>
+  <main class="rush-page" role="main">
+    <div class="rush-notch" aria-hidden="true"></div>
+
+    <header class="rush-status">
+      <div class="rush-badge" aria-live="polite">
+        <span class="rush-badge-dot" aria-hidden="true"></span>
+        RUSH EN COURS
+      </div>
+      <time class="rush-time" id="rush-time">12:34</time>
+    </header>
+
+    <h1 class="rush-title">Alertes Stock</h1>
+    <p class="rush-sub">14 tables · Service midi</p>
+
+    <section class="rush-alerts" aria-label="Alertes triées par criticité">
+      <article class="alert-card red" role="alert">
+        <span class="alert-icon" aria-hidden="true">🐟</span>
+        <div class="alert-content">
+          <span class="alert-name">Saumon atlantique</span>
+          <span class="alert-detail">2 portions restantes</span>
+        </div>
+        <span class="alert-badge red">CRITIQUE</span>
+      </article>
+
+      <article class="alert-card orange">
+        <span class="alert-icon" aria-hidden="true">🥩</span>
+        <div class="alert-content">
+          <span class="alert-name">Filet de bœuf</span>
+          <span class="alert-detail">5 portions · 6 tables en cours</span>
+        </div>
+        <span class="alert-badge orange">FAIBLE</span>
+      </article>
+
+      <article class="alert-card orange">
+        <span class="alert-icon" aria-hidden="true">🍮</span>
+        <div class="alert-content">
+          <span class="alert-name">Crème brûlée</span>
+          <span class="alert-detail">4 portions restantes</span>
+        </div>
+        <span class="alert-badge orange">FAIBLE</span>
+      </article>
+
+      <article class="alert-card green">
+        <span class="alert-icon" aria-hidden="true">🥗</span>
+        <div class="alert-content">
+          <span class="alert-name">Salade niçoise</span>
+          <span class="alert-detail">Stock suffisant · 18 portions</span>
+        </div>
+        <span class="alert-badge green">OK</span>
+      </article>
+    </section>
+
+    <div class="rush-actions">
+      <button type="button" class="rush-btn rush-btn-primary">✓ Tout acquitter</button>
+      <button type="button" class="rush-btn rush-btn-ghost">Voir tous les stocks →</button>
+    </div>
+  </main>
+
+  <script>
+    (function () {
+      var el = document.getElementById('rush-time');
+      if (el) {
+        var d = new Date();
+        el.textContent = d.getHours().toString().padStart(2, '0') + ':' + d.getMinutes().toString().padStart(2, '0');
+      }
+    })();
+  </script>
+</body>
+</html>

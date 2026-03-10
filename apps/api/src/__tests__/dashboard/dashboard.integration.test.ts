@@ -7,6 +7,10 @@ import { Pool } from 'pg';
 import dotenv from 'dotenv';
 import { createProduct } from '../../services/product.service';
 import { createSale } from '../../services/sales.service';
+import {
+  runPeriodicEvaluation,
+  recordWebhookSuccess,
+} from '../../services/pos-sync-status.service';
 
 dotenv.config({ path: resolve(process.cwd(), '../../.env') });
 dotenv.config();
@@ -90,6 +94,8 @@ describe('Dashboard Integration Tests', () => {
   });
 
   afterAll(async () => {
+    await pool.query('DELETE FROM pos_events_received WHERE tenant_id = $1', [tenantId]);
+    await pool.query('DELETE FROM tenant_pos_config WHERE tenant_id = $1', [tenantId]);
     await pool.query('DELETE FROM sales');
     await pool.query('DELETE FROM stock_movements');
     await pool.query('DELETE FROM products');
@@ -220,6 +226,114 @@ describe('Dashboard Integration Tests', () => {
         .set('Authorization', `Bearer ${accessToken}`);
       expect(getRes.status).toBe(200);
       expect(getRes.body.data.thresholdPercent).toBe(150);
+    });
+  });
+
+  describe('GET /dashboard/pos-sync-status (Story 2.5)', () => {
+    it('should return 401 without token', async () => {
+      const res = await request(app).get('/dashboard/pos-sync-status');
+      expect(res.status).toBe(401);
+      expect(res.body.success).toBe(false);
+    });
+
+    it('should return 200 with default status when authenticated and no POS config', async () => {
+      const res = await request(app)
+        .get('/dashboard/pos-sync-status')
+        .set('Authorization', `Bearer ${accessToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data).toBeDefined();
+      expect(res.body.data.is_degraded).toBe(false);
+      expect(res.body.data.last_event_at).toBeNull();
+      expect(res.body.data.degraded_since).toBeNull();
+      expect(res.body.data.failure_count).toBe(0);
+    });
+
+    it('should return 200 with is_degraded true when tenant has POS config in degraded mode', async () => {
+      await pool.query(
+        `INSERT INTO tenant_pos_config (tenant_id, pos_type, webhook_secret, is_active, is_degraded_since, webhook_failure_count)
+         VALUES ($1, 'lightspeed', 'secret', true, CURRENT_TIMESTAMP, 5)
+         ON CONFLICT (tenant_id) DO UPDATE SET is_degraded_since = CURRENT_TIMESTAMP, webhook_failure_count = 5`,
+        [tenantId]
+      );
+
+      const res = await request(app)
+        .get('/dashboard/pos-sync-status')
+        .set('Authorization', `Bearer ${accessToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.is_degraded).toBe(true);
+      expect(res.body.data.degraded_since).toBeDefined();
+      expect(res.body.data.failure_count).toBe(5);
+
+      await pool.query('DELETE FROM tenant_pos_config WHERE tenant_id = $1', [tenantId]);
+    });
+
+    it('should mark tenant degraded after silence (no event for > POS_DEGRADED_SILENCE_MINUTES) (Story 2.5)', async () => {
+      await pool.query(
+        `INSERT INTO tenant_pos_config (tenant_id, pos_type, webhook_secret, is_active, last_event_received_at, is_degraded_since, webhook_failure_count)
+         VALUES ($1, 'lightspeed', 'secret', true, NOW() - INTERVAL '20 minutes', NULL, 0)
+         ON CONFLICT (tenant_id) DO UPDATE SET last_event_received_at = NOW() - INTERVAL '20 minutes', is_degraded_since = NULL, webhook_failure_count = 0`,
+        [tenantId]
+      );
+
+      await runPeriodicEvaluation();
+
+      const res = await request(app)
+        .get('/dashboard/pos-sync-status')
+        .set('Authorization', `Bearer ${accessToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.is_degraded).toBe(true);
+
+      await pool.query('DELETE FROM tenant_pos_config WHERE tenant_id = $1', [tenantId]);
+    });
+
+    it('should clear degraded when webhook success is recorded (Story 2.5)', async () => {
+      await pool.query(
+        `INSERT INTO tenant_pos_config (tenant_id, pos_type, webhook_secret, is_active, last_event_received_at, is_degraded_since, webhook_failure_count)
+         VALUES ($1, 'lightspeed', 'secret', true, NOW() - INTERVAL '20 minutes', CURRENT_TIMESTAMP, 3)
+         ON CONFLICT (tenant_id) DO UPDATE SET last_event_received_at = NOW() - INTERVAL '20 minutes', is_degraded_since = CURRENT_TIMESTAMP, webhook_failure_count = 3`,
+        [tenantId]
+      );
+
+      await recordWebhookSuccess(tenantId);
+
+      const res = await request(app)
+        .get('/dashboard/pos-sync-status')
+        .set('Authorization', `Bearer ${accessToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.is_degraded).toBe(false);
+      expect(res.body.data.failure_count).toBe(0);
+
+      await pool.query('DELETE FROM tenant_pos_config WHERE tenant_id = $1', [tenantId]);
+    });
+
+    it('should mark tenant degraded after webhook_failure_count >= threshold (Story 2.5)', async () => {
+      await pool.query(
+        `INSERT INTO tenant_pos_config (tenant_id, pos_type, webhook_secret, is_active, last_event_received_at, is_degraded_since, webhook_failure_count)
+         VALUES ($1, 'lightspeed', 'secret', true, NOW(), NULL, 5)
+         ON CONFLICT (tenant_id) DO UPDATE SET last_event_received_at = NOW(), is_degraded_since = NULL, webhook_failure_count = 5`,
+        [tenantId]
+      );
+
+      await runPeriodicEvaluation();
+
+      const res = await request(app)
+        .get('/dashboard/pos-sync-status')
+        .set('Authorization', `Bearer ${accessToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.is_degraded).toBe(true);
+      expect(res.body.data.failure_count).toBe(5);
+
+      await pool.query('DELETE FROM tenant_pos_config WHERE tenant_id = $1', [tenantId]);
     });
   });
 });

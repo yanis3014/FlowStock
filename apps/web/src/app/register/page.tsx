@@ -59,8 +59,8 @@ export default function RegisterPage() {
         } catch {}
       }
 
-      setSuccess('Compte créé. Vous pouvez vous connecter.');
-      setTimeout(() => router.push('/login'), 1500);
+      setSuccess('Compte créé. Redirection vers l\'onboarding…');
+      setTimeout(() => router.push('/onboarding'), 1200);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur réseau.');
     }
@@ -68,9 +68,13 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gray-50">
-      <div className="w-full max-w-md p-6 bg-white rounded-lg shadow-md">
-        <h1 className="text-xl font-bold text-gray-800 mb-4">Créer un compte</h1>
+    <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-cream">
+      <div className="w-full max-w-md p-6 bg-white rounded-xl shadow-md border border-green-deep/10">
+        <div className="mb-3 inline-block rounded-full border border-green-bright bg-green-bright/10 px-3 py-1 font-display text-xs font-bold uppercase tracking-wider text-green-bright">
+          Essai gratuit 30 jours — sans carte bancaire
+        </div>
+        <h1 className="font-display text-xl font-bold text-green-deep mb-2">Créer un compte</h1>
+        <p className="text-sm text-gray-warm mb-4">Nom du restaurant, ville, email</p>
 
         {error && (
           <div className="mb-4 p-3 rounded-md bg-error/10 text-error text-sm">{error}</div>
@@ -92,7 +96,7 @@ export default function RegisterPage() {
               required
               autoComplete="email"
               placeholder="vous@exemple.com"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full px-3 py-2 border border-green-deep/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-mid focus:border-green-mid"
             />
           </div>
 
@@ -109,7 +113,7 @@ export default function RegisterPage() {
               minLength={8}
               autoComplete="new-password"
               placeholder="••••••••"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full px-3 py-2 border border-green-deep/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-mid focus:border-green-mid"
             />
           </div>
 
@@ -125,7 +129,7 @@ export default function RegisterPage() {
               required
               autoComplete="given-name"
               placeholder="Jean"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full px-3 py-2 border border-green-deep/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-mid focus:border-green-mid"
             />
           </div>
 
@@ -141,7 +145,7 @@ export default function RegisterPage() {
               required
               autoComplete="family-name"
               placeholder="Dupont"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full px-3 py-2 border border-green-deep/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-mid focus:border-green-mid"
             />
           </div>
 
@@ -156,24 +160,27 @@ export default function RegisterPage() {
               onChange={(e) => setForm((p) => ({ ...p, company_name: e.target.value }))}
               required
               placeholder="Ma Société"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full px-3 py-2 border border-green-deep/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-mid focus:border-green-mid"
             />
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-2 px-4 rounded-md bg-primary text-white font-medium hover:bg-primary/90 disabled:opacity-50"
+            className="w-full py-2.5 px-4 rounded-xl bg-green-mid font-display font-bold text-white hover:opacity-95 disabled:opacity-50"
           >
             {loading ? 'Création...' : 'Créer le compte'}
           </button>
         </form>
 
-        <p className="mt-4 text-sm text-gray-600">
+        <p className="mt-4 text-center text-sm text-gray-600">
           Déjà un compte ?{' '}
-          <Link href="/login" className="text-primary hover:underline">
+          <Link href="/login" className="font-semibold text-green-mid hover:underline">
             Se connecter
           </Link>
+        </p>
+        <p className="mt-2 text-center text-xs text-gray-warm">
+          <Link href="/onboarding" className="hover:text-green-deep">Commencer l&apos;onboarding sans compte (démo)</Link>
         </p>
       </div>
     </div>

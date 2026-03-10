@@ -60,6 +60,20 @@ const configSchema = z.object({
 
   APP_VERSION: z.string().default('0.1.0'),
   LOG_LEVEL: z.enum(['error', 'warn', 'info', 'debug']).default('info'),
+
+  /** Story 2.5: minutes without any POS event before marking sync as degraded (default 15) */
+  POS_DEGRADED_SILENCE_MINUTES: z
+    .string()
+    .optional()
+    .transform((v) => (v ? parseInt(v, 10) : 15))
+    .pipe(z.number().min(1).max(1440)),
+  /** Story 2.5: consecutive webhook failures before marking degraded (default 5) */
+  POS_DEGRADED_FAILURE_THRESHOLD: z
+    .string()
+    .optional()
+    .transform((v) => (v ? parseInt(v, 10) : 5))
+    .pipe(z.number().min(1).max(100)),
+
   RUN_MIGRATIONS_ON_STARTUP: z
     .string()
     .optional()

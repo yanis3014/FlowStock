@@ -106,6 +106,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
+    if (token === 'demo') {
+      setState({
+        token: 'demo',
+        user: { userId: 'demo', tenantId: 'demo', role: 'user', email: 'demo@flowstock.local' },
+        isLoading: false,
+      });
+      return;
+    }
+
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || '';
     fetch(`${apiUrl}/auth/me`, {
       headers: { Authorization: `Bearer ${token}` },
