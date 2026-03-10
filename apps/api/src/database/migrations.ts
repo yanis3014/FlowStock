@@ -5,11 +5,16 @@ import { config } from 'dotenv';
 import { existsSync } from 'fs';
 
 // Load .env from project root
-// Try multiple paths: project root (3 levels up from src/database), or current working directory
 const possibleEnvPaths = [
-  resolve(process.cwd(), '../../.env'), // From apps/api/ to project root
-  resolve(process.cwd(), '.env'), // Current directory
-  resolve(__dirname, '../../../.env'), // From dist/database/ to project root
+  resolve(process.cwd(), '../../.env'), // apps/api -> workspace root
+  resolve(process.cwd(), '.env'), // current working directory
+  resolve(__dirname, '../../../../.env'), // src/dist -> workspace root
+];
+
+const possibleEnvTestPaths = [
+  resolve(process.cwd(), '../../.env.test'),
+  resolve(process.cwd(), '.env.test'),
+  resolve(__dirname, '../../../../.env.test'),
 ];
 
 let envLoaded = false;
@@ -27,7 +32,17 @@ for (const envPath of possibleEnvPaths) {
 if (!envLoaded) {
   config();
   if (process.env.NODE_ENV !== 'production') {
-    console.log(`⚠️  .env not found in standard locations, using default dotenv behavior`);
+    console.log('⚠️  .env not found in standard locations, using default dotenv behavior');
+  }
+}
+
+if (process.env.NODE_ENV === 'test') {
+  for (const envTestPath of possibleEnvTestPaths) {
+    if (existsSync(envTestPath)) {
+      config({ path: envTestPath, override: true });
+      console.log(`📄 Loaded .env.test from: ${envTestPath}`);
+      break;
+    }
   }
 }
 

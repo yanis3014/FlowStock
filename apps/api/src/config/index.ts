@@ -1,8 +1,35 @@
 import { z } from 'zod';
 import { config as dotenvConfig } from 'dotenv';
 import { resolve } from 'path';
+import { existsSync } from 'fs';
 
-dotenvConfig({ path: resolve(__dirname, '../../../.env') });
+const envCandidates = [
+  resolve(process.cwd(), '../../.env'),
+  resolve(process.cwd(), '.env'),
+  resolve(__dirname, '../../../../.env'),
+];
+
+const envTestCandidates = [
+  resolve(process.cwd(), '../../.env.test'),
+  resolve(process.cwd(), '.env.test'),
+  resolve(__dirname, '../../../../.env.test'),
+];
+
+for (const envPath of envCandidates) {
+  if (existsSync(envPath)) {
+    dotenvConfig({ path: envPath });
+    break;
+  }
+}
+
+if (process.env.NODE_ENV === 'test') {
+  for (const envTestPath of envTestCandidates) {
+    if (existsSync(envTestPath)) {
+      dotenvConfig({ path: envTestPath, override: true });
+      break;
+    }
+  }
+}
 
 const configSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
