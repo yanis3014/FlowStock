@@ -93,7 +93,8 @@ export default function OnboardingPage() {
         if (typeof window !== 'undefined') {
           localStorage.setItem('flowstock_onboarding_completed', 'true');
         }
-        sessionStorage.removeItem(STORAGE_KEY);
+        sessionStorage.removeItem('flowstock_banner_dismissed');
+        sessionStorage.removeItem('flowstock_onboarding_progress');
         toast.success('Configuration terminée ! Bienvenue sur FlowStock.');
         router.push('/dashboard');
       } catch {

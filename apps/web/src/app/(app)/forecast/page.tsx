@@ -54,7 +54,6 @@ const CONFIDENCE_COLORS: Record<string, string> = {
 export default function ForecastPage() {
   const { token, isLoading } = useAuth();
   const { fetchApi } = useApi();
-  const router = useRouter();
   const [estimates, setEstimates] = useState<StockEstimate[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');

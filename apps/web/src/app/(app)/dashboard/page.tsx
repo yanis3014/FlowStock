@@ -6,6 +6,8 @@ import { AlertTriangle, Loader2, Check, Zap } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useApi } from '@/hooks/useApi';
 import { DashboardSkeleton } from '@/components/dashboard/DashboardSkeleton';
+import { OnboardingBanner } from '@/components/onboarding/OnboardingBanner';
+import { useOnboardingStatus } from '@/hooks/useOnboardingStatus';
 
 interface SalesYesterday {
   total_amount?: number;
@@ -67,6 +69,7 @@ function formatCurrency(val: number | undefined): string {
 export default function DashboardPage() {
   const { token, user } = useAuth();
   const { fetchApi } = useApi();
+  const { completed: onboardingCompleted, loading: onboardingLoading } = useOnboardingStatus();
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [posSyncStatus, setPosSyncStatus] = useState<PosSyncStatus | null>(null);
   const [posNotification, setPosNotification] = useState<'degraded' | 'recovered' | null>(null);
@@ -172,6 +175,8 @@ export default function DashboardPage() {
   return (
     <div className="min-h-full bg-cream font-body">
       <div className="mx-auto max-w-6xl space-y-6 p-4 pb-24 md:pb-6">
+        {!onboardingLoading && !onboardingCompleted && <OnboardingBanner />}
+
         {error && (
           <div className="rounded-xl border border-red-alert/30 bg-red-alert/10 px-4 py-3 text-sm text-red-alert">
             {error}
