@@ -53,7 +53,6 @@ function formatDateKey(key: string): string {
 export default function StatsPage() {
   const { token, isLoading } = useAuth();
   const { fetchApi } = useApi();
-  const router = useRouter();
   const [stats, setStats] = useState<SalesStats | null>(null);
   const [dailyData, setDailyData] = useState<SummaryGroup[]>([]);
   const [topProducts, setTopProducts] = useState<SummaryGroup[]>([]);

@@ -4,9 +4,11 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useApi } from '@/hooks/useApi';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function RegisterPage() {
   const { fetchApiGuest } = useApi();
+  const { setToken } = useAuth();
   const [form, setForm] = useState({
     email: '',
     password: '',
@@ -18,6 +20,14 @@ export default function RegisterPage() {
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+
+  const redirectToDashboard = () => {
+    if (typeof window !== 'undefined') {
+      window.location.assign('/dashboard');
+      return;
+    }
+    router.push('/dashboard');
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,6 +55,17 @@ export default function RegisterPage() {
         return;
       }
 
+      const accessToken = data?.data?.access_token;
+      if (typeof accessToken === 'string' && accessToken.length > 0) {
+        setToken(accessToken);
+      }
+
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('flowstock_onboarding_completed', 'false');
+        sessionStorage.removeItem('flowstock_banner_dismissed');
+        sessionStorage.removeItem('flowstock_onboarding_progress');
+      }
+
       const verifyToken = data?.data?.email_verification_token;
       if (verifyToken) {
         try {
@@ -52,15 +73,15 @@ export default function RegisterPage() {
             `/auth/verify-email?token=${encodeURIComponent(verifyToken)}`
           );
           if (verifyRes.ok) {
-            setSuccess('Compte créé et email vérifié. Redirection…');
-            setTimeout(() => router.push('/login'), 1000);
+            setSuccess('Compte créé et email vérifié. Redirection vers le dashboard…');
+            setTimeout(redirectToDashboard, 1000);
             return;
           }
         } catch {}
       }
 
-      setSuccess('Compte créé. Redirection vers l\'onboarding…');
-      setTimeout(() => router.push('/onboarding'), 1200);
+      setSuccess('Compte créé. Redirection vers le dashboard…');
+      setTimeout(redirectToDashboard, 1200);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur réseau.');
     }

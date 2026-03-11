@@ -28,7 +28,6 @@ const MOCK_PAIEMENTS = [
 export default function AbonnementPage() {
   const { token, isLoading } = useAuth();
   const { fetchApi } = useApi();
-  const router = useRouter();
   const [currentTier, setCurrentTier] = useState<SubscriptionTier>('normal');
   const [trialEndsAt, setTrialEndsAt] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);

@@ -33,7 +33,7 @@ function formatTime(iso?: string): string {
 }
 
 export default function ChatPage() {
-  const { token } = useAuth();
+  const { token, isLoading } = useAuth();
   const router = useRouter();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [conversationId, setConversationId] = useState<string | null>(null);

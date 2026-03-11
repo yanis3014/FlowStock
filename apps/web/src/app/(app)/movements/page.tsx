@@ -22,7 +22,7 @@ function isValidUuid(value: string): boolean {
 }
 
 export default function MovementsPage() {
-  const { token } = useAuth();
+  const { token, isLoading } = useAuth();
   const { fetchApi } = useApi();
   const searchParams = useSearchParams();
   const productIdFromUrl = searchParams.get('product_id');

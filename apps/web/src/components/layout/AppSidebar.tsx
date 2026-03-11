@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useCallback, useState } from 'react';
+import { useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 import { NAV_GROUPS, type NavItem } from '@/lib/nav-config';
 import { useAuth } from '@/contexts/AuthContext';
+import { useOnboardingStatus } from '@/hooks/useOnboardingStatus';
 
 const ICON_MAP: Record<string, LucideIcon> = {
   Zap,
@@ -65,11 +66,13 @@ function SidebarItem({
   item,
   isActive,
   collapsed,
+  showIndicator,
   onClick,
 }: {
   item: NavItem;
   isActive: boolean;
   collapsed: boolean;
+  showIndicator?: boolean;
   onClick?: () => void;
 }) {
   const Icon = item.icon ? ICON_MAP[item.icon] : null;
@@ -87,6 +90,7 @@ function SidebarItem({
     >
       {Icon && <Icon className="h-5 w-5 shrink-0" strokeWidth={2} />}
       {(!collapsed || !Icon) && <span className="truncate">{item.label}</span>}
+      {showIndicator && <span className="ml-auto h-2 w-2 flex-shrink-0 rounded-full bg-terracotta" aria-hidden="true" />}
     </Link>
   );
 }
@@ -100,13 +104,7 @@ export function AppSidebar({
 }: AppSidebarProps) {
   const pathname = usePathname();
   const { user } = useAuth();
-  const [onboardingDone, setOnboardingDone] = useState(false);
-
-  useEffect(() => {
-    setOnboardingDone(
-      typeof window !== 'undefined' && localStorage.getItem('flowstock_onboarding_completed') === 'true'
-    );
-  }, [pathname]);
+  const { completed: onboardingCompleted, loading: onboardingLoading } = useOnboardingStatus();
 
   const handleEscape = useCallback(
     (e: KeyboardEvent) => {
@@ -127,7 +125,7 @@ export function AppSidebar({
     ...group,
     items: group.items.filter((item) => {
       if (item.hidden) return false;
-      if (item.hideWhenOnboarded && onboardingDone) return false;
+      if (item.hideWhenOnboarded && !onboardingLoading && onboardingCompleted) return false;
       if (item.adminOnly && !isAdmin) return false;
       return true;
     }),
@@ -184,6 +182,7 @@ export function AppSidebar({
                     item={item}
                     isActive={pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href))}
                     collapsed={collapsed}
+                    showIndicator={item.href === '/onboarding' && !onboardingLoading && !onboardingCompleted}
                     onClick={isMobile ? onMobileClose : undefined}
                   />
                 ))}
