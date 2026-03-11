@@ -241,8 +241,8 @@ export function CustomFormulasContent() {
   return (
     <div className="space-y-6" role="region" aria-label="Formules personnalis├뿯½es">
       <div>
-        <h1 className="text-xl font-semibold text-gray-800">Formules personnalis뿯½es</h1>
-        <p className="mt-1 text-sm text-gray-600">
+        <h1 className="text-xl font-medium text-charcoal">Formules personnalis뿯½es</h1>
+        <p className="mt-1 text-sm text-charcoal/60">
           Cr뿯½ez vos propres formules (variables stocks/ventes) comme dans Excel.
         </p>
       </div>
@@ -258,7 +258,7 @@ export function CustomFormulasContent() {
             id={`tab-${tab.id}`}
             onClick={() => setActiveTab(tab.id)}
             className={`rounded-t px-4 py-2 text-sm font-medium ${
-              activeTab === tab.id ? 'border border-b-0 border-gray-200 bg-white text-primary' : 'text-gray-600 hover:bg-gray-100'
+              activeTab === tab.id ? 'border border-b-0 border-gray-200 bg-white text-green-deep' : 'text-charcoal/60 hover:bg-charcoal/5'
             }`}
           >
             {tab.label}
@@ -274,20 +274,20 @@ export function CustomFormulasContent() {
         hidden={activeTab !== 'editor'}
         className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm"
       >
-        <h2 className="mb-4 text-sm font-semibold text-gray-800">Cr├뿯½er / Modifier une formule</h2>
+        <h2 className="mb-4 text-sm font-medium text-charcoal">Cr├뿯½er / Modifier une formule</h2>
         {editorError && (
-          <div className="mb-3 rounded-md bg-error/10 px-3 py-2 text-sm text-error" role="alert">
+          <div className="mb-3 rounded-md bg-terracotta/10 px-3 py-2 text-sm text-terracotta" role="alert">
             {editorError}
           </div>
         )}
         {editorSuccess && (
-          <div className="mb-3 rounded-md bg-success/10 px-3 py-2 text-sm text-success" role="status">
+          <div className="mb-3 rounded-md bg-green-deep/10 px-3 py-2 text-sm text-green-deep" role="status">
             {editorSuccess}
           </div>
         )}
         <div className="space-y-4">
           <div>
-            <label htmlFor="cf-name" className="block text-sm font-medium text-gray-700">Nom de la formule *</label>
+            <label htmlFor="cf-name" className="block text-sm font-medium text-charcoal/70">Nom de la formule *</label>
             <input
               id="cf-name"
               type="text"
@@ -295,11 +295,11 @@ export function CustomFormulasContent() {
               onChange={(e) => setName(e.target.value)}
               placeholder="Ex: B뿯½n뿯½fice net par produit"
               maxLength={255}
-              className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+              className="mt-1 w-full rounded-md border border-charcoal/15 px-3 py-2 text-sm focus:border-green-deep focus:outline-none focus:ring-1 focus:ring-green-deep/20"
             />
           </div>
           <div>
-            <label htmlFor="cf-desc" className="block text-sm font-medium text-gray-700">Description (optionnel)</label>
+            <label htmlFor="cf-desc" className="block text-sm font-medium text-charcoal/70">Description (optionnel)</label>
             <input
               id="cf-desc"
               type="text"
@@ -307,11 +307,11 @@ export function CustomFormulasContent() {
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Description courte"
               maxLength={1000}
-              className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+              className="mt-1 w-full rounded-md border border-charcoal/15 px-3 py-2 text-sm focus:border-green-deep focus:outline-none focus:ring-1 focus:ring-green-deep/20"
             />
           </div>
           <div>
-            <label htmlFor="cf-expr" className="block text-sm font-medium text-gray-700">Expression de la formule *</label>
+            <label htmlFor="cf-expr" className="block text-sm font-medium text-charcoal/70">Expression de la formule *</label>
             <textarea
               id="cf-expr"
               value={expression}
@@ -319,17 +319,17 @@ export function CustomFormulasContent() {
               placeholder="Ex: (PRIX_VENTE - PRIX_ACHAT) * QUANTITE"
               maxLength={2000}
               rows={4}
-              className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 font-mono text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+              className="mt-1 w-full rounded-md border border-charcoal/15 px-3 py-2 font-mono text-sm focus:border-green-deep focus:outline-none focus:ring-1 focus:ring-green-deep/20"
             />
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label htmlFor="cf-preview-product" className="block text-sm font-medium text-gray-700">Produit (pr뿯½visualisation)</label>
+              <label htmlFor="cf-preview-product" className="block text-sm font-medium text-charcoal/70">Produit (pr뿯½visualisation)</label>
               <select
                 id="cf-preview-product"
                 value={previewProductId}
                 onChange={(e) => setPreviewProductId(e.target.value)}
-                className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                className="mt-1 w-full rounded-md border border-charcoal/15 px-3 py-2 text-sm focus:border-green-deep focus:outline-none focus:ring-1 focus:ring-green-deep/20"
                 disabled={loadingProducts}
               >
                 <option value="">— Choisir un produit —</option>
@@ -339,12 +339,12 @@ export function CustomFormulasContent() {
               </select>
             </div>
             <div>
-              <label htmlFor="cf-preview-scope" className="block text-sm font-medium text-gray-700">Port뿯½e</label>
+              <label htmlFor="cf-preview-scope" className="block text-sm font-medium text-charcoal/70">Port뿯½e</label>
               <select
                 id="cf-preview-scope"
                 value={previewScope}
                 onChange={(e) => setPreviewScope(e.target.value as 'all' | 'product')}
-                className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                className="mt-1 w-full rounded-md border border-charcoal/15 px-3 py-2 text-sm focus:border-green-deep focus:outline-none focus:ring-1 focus:ring-green-deep/20"
               >
                 <option value="product">Produit s뿯½lectionn뿯½</option>
                 <option value="all">Tous les produits</option>
@@ -356,7 +356,7 @@ export function CustomFormulasContent() {
               type="button"
               onClick={handlePreview}
               disabled={!expression.trim() || previewing}
-              className="flex items-center gap-2 rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+              className="flex items-center gap-2 rounded-md border border-charcoal/15 bg-white px-4 py-2 text-sm font-medium text-charcoal/70 hover:bg-cream/30 disabled:opacity-50"
             >
               {previewing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Eye className="h-4 w-4" />}
               Pr뿯½visualiser
@@ -365,7 +365,7 @@ export function CustomFormulasContent() {
               type="button"
               onClick={handleSave}
               disabled={!name.trim() || !expression.trim() || saving}
-              className="flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+              className="flex items-center gap-2 rounded-md bg-green-deep px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
             >
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
               {editingId ? 'Mettre 뿯½ jour' : 'Sauvegarder'}
@@ -373,16 +373,16 @@ export function CustomFormulasContent() {
             <button
               type="button"
               onClick={resetEditor}
-              className="flex items-center gap-2 rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              className="flex items-center gap-2 rounded-md border border-charcoal/15 bg-white px-4 py-2 text-sm font-medium text-charcoal/70 hover:bg-cream/30"
             >
               <RotateCcw className="h-4 w-4" />
               R뿯½initialiser
             </button>
           </div>
           {previewResult !== null && (
-            <div className="rounded-md border border-gray-200 bg-gray-50 px-4 py-3">
-              <p className="text-sm font-medium text-gray-700">R뿯½sultat pr뿯½visualisation :</p>
-              <p className="mt-1 font-mono text-gray-800">{formatPreviewResult(previewResult)}</p>
+            <div className="rounded-md border border-charcoal/8 bg-cream/30 px-4 py-3">
+              <p className="text-sm font-medium text-charcoal/70">R뿯½sultat pr뿯½visualisation :</p>
+              <p className="mt-1 font-mono text-charcoal">{formatPreviewResult(previewResult)}</p>
             </div>
           )}
         </div>
@@ -396,9 +396,9 @@ export function CustomFormulasContent() {
         hidden={activeTab !== 'library'}
         className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm"
       >
-        <h2 className="mb-4 text-sm font-semibold text-gray-800">Mes formules sauvegard뿯½es</h2>
+        <h2 className="mb-4 text-sm font-medium text-charcoal">Mes formules sauvegard뿯½es</h2>
         {libraryError && (
-          <div className="mb-3 rounded-md bg-error/10 px-3 py-2 text-sm text-error" role="alert">
+          <div className="mb-3 rounded-md bg-terracotta/10 px-3 py-2 text-sm text-terracotta" role="alert">
             {libraryError}
           </div>
         )}
@@ -408,22 +408,22 @@ export function CustomFormulasContent() {
             <Skeleton className="h-24 rounded-lg" />
           </div>
         ) : formulas.length === 0 ? (
-          <p className="text-gray-500">Aucune formule personnalisee. Creez-en une dans l&apos;onglet editeur.</p>
+          <p className="text-charcoal/50">Aucune formule personnalisee. Creez-en une dans l&apos;onglet editeur.</p>
         ) : (
           <ul className="space-y-4">
             {formulas.map((f) => (
               <li key={f.id} className="rounded-lg border border-gray-200 p-4">
-                <h3 className="font-medium text-gray-800">{f.name}</h3>
-                {f.description && <p className="mt-1 text-sm text-gray-600">{f.description}</p>}
-                <p className="mt-1 font-mono text-xs text-gray-600">{f.formula_expression}</p>
+                <h3 className="font-medium text-charcoal">{f.name}</h3>
+                {f.description && <p className="mt-1 text-sm text-charcoal/60">{f.description}</p>}
+                <p className="mt-1 font-mono text-xs text-charcoal/60">{f.formula_expression}</p>
                 {f.variables_used?.length > 0 && (
-                  <p className="mt-1 text-xs text-gray-500">Variables : {f.variables_used.join(', ')}</p>
+                  <p className="mt-1 text-xs text-charcoal/50">Variables : {f.variables_used.join(', ')}</p>
                 )}
                 <div className="mt-3 flex gap-2">
                   <button
                     type="button"
                     onClick={() => handleEdit(f)}
-                    className="flex items-center gap-1 rounded border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
+                    className="flex items-center gap-1 rounded border border-charcoal/15 bg-white px-3 py-1.5 text-sm text-charcoal/70 hover:bg-cream/30"
                   >
                     <Pencil className="h-3.5 w-3.5" />
                     Modifier
@@ -431,7 +431,7 @@ export function CustomFormulasContent() {
                   <button
                     type="button"
                     onClick={() => handleDelete(f.id)}
-                    className="flex items-center gap-1 rounded border border-error/30 bg-error/10 px-3 py-1.5 text-sm text-error hover:bg-error/20"
+                    className="flex items-center gap-1 rounded border border-terracotta/30 bg-terracotta/10 px-3 py-1.5 text-sm text-terracotta hover:bg-terracotta/10"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                     Supprimer
@@ -451,8 +451,8 @@ export function CustomFormulasContent() {
         hidden={activeTab !== 'docs'}
         className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm"
       >
-        <h2 className="mb-2 text-sm font-semibold text-gray-800">Variables disponibles</h2>
-        <p className="mb-4 text-sm text-gray-600">
+        <h2 className="mb-2 text-sm font-medium text-charcoal">Variables disponibles</h2>
+        <p className="mb-4 text-sm text-charcoal/60">
           Utilisez ces variables dans vos formules ; elles sont remplac뿯½es par les valeurs r뿯½elles.
         </p>
         {loadingVars ? (
@@ -461,28 +461,28 @@ export function CustomFormulasContent() {
           <ul className="mb-6 grid gap-2 sm:grid-cols-2">
             {variables.map((v) => (
               <li key={v.name} className="rounded border border-gray-200 p-2 text-sm">
-                <code className="font-mono text-primary">{v.name}</code>
-                <span className="ml-2 text-gray-600">— {v.description}</span>
-                {v.requiresProduct && <span className="ml-1 text-xs text-gray-500">(produit requis)</span>}
+                <code className="font-mono text-green-deep">{v.name}</code>
+                <span className="ml-2 text-charcoal/60">— {v.description}</span>
+                {v.requiresProduct && <span className="ml-1 text-xs text-charcoal/50">(produit requis)</span>}
               </li>
             ))}
           </ul>
         ) : (
-          <ul className="mb-6 space-y-1 text-sm text-gray-600">
+          <ul className="mb-6 space-y-1 text-sm text-charcoal/60">
             {['STOCK_ACTUEL', 'PRIX_ACHAT', 'PRIX_VENTE', 'QUANTITE', 'DELAI_LIVRAISON', 'VENTES_7J', 'VENTES_30J', 'CONSOMMATION_MOYENNE'].map((n) => (
-              <li key={n}><code className="text-primary">{n}</code></li>
+              <li key={n}><code className="text-green-deep">{n}</code></li>
             ))}
           </ul>
         )}
-        <h2 className="mb-2 text-sm font-semibold text-gray-800">Fonctions</h2>
-        <p className="mb-2 text-sm text-gray-600">Fonctions math뿯½matiques utilisables :</p>
-        <p className="mb-4 font-mono text-sm text-gray-700">{DOC_FUNCTIONS.join(', ')}</p>
-        <h2 className="mb-2 text-sm font-semibold text-gray-800">Exemples</h2>
+        <h2 className="mb-2 text-sm font-medium text-charcoal">Fonctions</h2>
+        <p className="mb-2 text-sm text-charcoal/60">Fonctions math뿯½matiques utilisables :</p>
+        <p className="mb-4 font-mono text-sm text-charcoal/70">{DOC_FUNCTIONS.join(', ')}</p>
+        <h2 className="mb-2 text-sm font-medium text-charcoal">Exemples</h2>
         <ul className="space-y-2 text-sm">
           {DOC_EXAMPLES.map((ex) => (
-            <li key={ex.expr} className="rounded border border-gray-100 bg-gray-50/50 p-2">
-              <code className="text-primary">{ex.expr}</code>
-              <span className="ml-2 text-gray-600">— {ex.desc}</span>
+            <li key={ex.expr} className="rounded border border-charcoal/8 bg-cream/30 p-2">
+              <code className="text-green-deep">{ex.expr}</code>
+              <span className="ml-2 text-charcoal/60">— {ex.desc}</span>
             </li>
           ))}
         </ul>

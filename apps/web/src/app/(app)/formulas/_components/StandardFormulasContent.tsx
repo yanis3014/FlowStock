@@ -174,20 +174,20 @@ export function StandardFormulasContent() {
   return (
     <div className="space-y-6" role="region" aria-label="Formules de calcul pr뿯½d뿯½finies">
       <div>
-        <h1 className="text-xl font-semibold text-gray-800">Formules de calcul pr뿯½d뿯½finies</h1>
-        <p className="mt-1 text-sm text-gray-600">
+        <h1 className="text-xl font-medium text-charcoal">Formules de calcul pr뿯½d뿯½finies</h1>
+        <p className="mt-1 text-sm text-charcoal/60">
           Utilisez les formules pr├뿯½d├뿯½finies pour des calculs standards (consommation moyenne, stock de s├뿯½curit├뿯½, etc.).
         </p>
       </div>
 
       {error && (
-        <div className="rounded-lg border border-error/20 bg-error/10 px-4 py-3 text-sm text-error" role="alert">
+        <div className="rounded-lg border border-error/20 bg-terracotta/10 px-4 py-3 text-sm text-terracotta" role="alert">
           {error}
         </div>
       )}
 
       <section className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm" aria-labelledby="formulas-heading">
-        <h2 id="formulas-heading" className="mb-4 text-sm font-semibold text-gray-800">
+        <h2 id="formulas-heading" className="mb-4 text-sm font-medium text-charcoal">
           Formules disponibles
         </h2>
         {loading ? (
@@ -197,7 +197,7 @@ export function StandardFormulasContent() {
             ))}
           </div>
         ) : formulas.length === 0 ? (
-          <p className="text-gray-500">Aucune formule disponible.</p>
+          <p className="text-charcoal/50">Aucune formule disponible.</p>
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {formulas.map((f) => (
@@ -205,23 +205,23 @@ export function StandardFormulasContent() {
                 key={f.id}
                 className={`rounded-lg border p-4 transition-colors ${
                   selectedFormula?.id === f.id
-                    ? 'border-primary bg-primary/5'
-                    : 'border-gray-200 bg-gray-50/50 hover:border-gray-300'
+                    ? 'border-green-deep bg-green-deep/5'
+                    : 'border-charcoal/8 bg-cream/30 hover:border-charcoal/15'
                 }`}
               >
-                <h3 className="font-medium text-gray-800">
+                <h3 className="font-medium text-charcoal">
                   {FORMULA_LABELS[f.name] ?? f.name}
                 </h3>
-                {f.description && <p className="mt-1 text-sm text-gray-600">{f.description}</p>}
+                {f.description && <p className="mt-1 text-sm text-charcoal/60">{f.description}</p>}
                 {f.variables_used?.length > 0 && (
-                  <p className="mt-1 text-xs text-gray-500">
+                  <p className="mt-1 text-xs text-charcoal/50">
                     Variables : {f.variables_used.join(', ')}
                   </p>
                 )}
                 <button
                   type="button"
                   onClick={() => handleSelectFormula(f)}
-                  className="mt-3 flex items-center gap-2 rounded-md bg-primary px-3 py-2 text-sm font-medium text-white hover:opacity-90"
+                  className="mt-3 flex items-center gap-2 rounded-md bg-green-deep px-3 py-2 text-sm font-medium text-white hover:opacity-90"
                   aria-label={`Calculer avec ${FORMULA_LABELS[f.name] ?? f.name}`}
                 >
                   <Calculator className="h-4 w-4" />
@@ -238,22 +238,22 @@ export function StandardFormulasContent() {
           className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm"
           aria-labelledby="params-heading"
         >
-          <h2 id="params-heading" className="mb-4 text-sm font-semibold text-gray-800">
+          <h2 id="params-heading" className="mb-4 text-sm font-medium text-charcoal">
             Param뿯½tres du calcul
           </h2>
-          <p className="mb-4 font-medium text-gray-700">
+          <p className="mb-4 font-medium text-charcoal/70">
             Formule s뿯½lectionn뿯½e : {FORMULA_LABELS[selectedFormula.name] ?? selectedFormula.name}
           </p>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div>
-              <label htmlFor="formulas-product" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="formulas-product" className="block text-sm font-medium text-charcoal/70">
                 Produit {scope === 'product' ? '(requis)' : '(optionnel)'}
               </label>
               <select
                 id="formulas-product"
                 value={productId}
                 onChange={(e) => setProductId(e.target.value)}
-                className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                className="mt-1 w-full rounded-md border border-charcoal/15 px-3 py-2 text-sm focus:border-green-deep focus:outline-none focus:ring-1 focus:ring-green-deep/20"
                 disabled={loadingProducts}
               >
                 <option value="">— Choisir un produit —</option>
@@ -265,7 +265,7 @@ export function StandardFormulasContent() {
               </select>
             </div>
             <div>
-              <label htmlFor="formulas-period" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="formulas-period" className="block text-sm font-medium text-charcoal/70">
                 P뿯½riode (jours)
               </label>
               <input
@@ -275,18 +275,18 @@ export function StandardFormulasContent() {
                 max={365}
                 value={periodDays}
                 onChange={(e) => setPeriodDays(Number(e.target.value) || 30)}
-                className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                className="mt-1 w-full rounded-md border border-charcoal/15 px-3 py-2 text-sm focus:border-green-deep focus:outline-none focus:ring-1 focus:ring-green-deep/20"
               />
             </div>
             <div>
-              <label htmlFor="formulas-scope" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="formulas-scope" className="block text-sm font-medium text-charcoal/70">
                 Port├뿯½e
               </label>
               <select
                 id="formulas-scope"
                 value={scope}
                 onChange={(e) => setScope(e.target.value as 'all' | 'product')}
-                className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                className="mt-1 w-full rounded-md border border-charcoal/15 px-3 py-2 text-sm focus:border-green-deep focus:outline-none focus:ring-1 focus:ring-green-deep/20"
               >
                 <option value="all">Tous les produits</option>
                 <option value="product">Produit s뿯½lectionn뿯½</option>
@@ -297,7 +297,7 @@ export function StandardFormulasContent() {
                 type="button"
                 onClick={handleExecute}
                 disabled={!canExecute || executing}
-                className="flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex items-center gap-2 rounded-md bg-green-deep px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
                 aria-label="Lancer le calcul"
               >
                 {executing ? (
@@ -310,7 +310,7 @@ export function StandardFormulasContent() {
               <button
                 type="button"
                 onClick={handleCancelParams}
-                className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                className="rounded-md border border-charcoal/15 bg-white px-4 py-2 text-sm font-medium text-charcoal/70 hover:bg-cream/30"
               >
                 Annuler
               </button>
@@ -321,14 +321,14 @@ export function StandardFormulasContent() {
 
       {(result !== null || resultError) && selectedFormula && (
         <section className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm" aria-live="polite">
-          <h2 className="mb-3 text-sm font-semibold text-gray-800">R뿯½sultat</h2>
+          <h2 className="mb-3 text-sm font-medium text-charcoal">R뿯½sultat</h2>
           {resultError ? (
-            <div className="rounded-md bg-error/10 px-4 py-3 text-sm text-error" role="alert">
+            <div className="rounded-md bg-terracotta/10 px-4 py-3 text-sm text-terracotta" role="alert">
               {resultError}
             </div>
           ) : result ? (
-            <div className="flex items-center gap-3 rounded-md border border-gray-200 bg-gray-50 px-4 py-3">
-              <span className="text-lg font-semibold text-gray-800">
+            <div className="flex items-center gap-3 rounded-md border border-charcoal/8 bg-cream/30 px-4 py-3">
+              <span className="text-lg font-medium text-charcoal">
                 {formatResult(result.result, result.unit)}
               </span>
             </div>
@@ -340,7 +340,7 @@ export function StandardFormulasContent() {
         <button
           type="button"
           onClick={() => setDocOpen((o) => !o)}
-          className="flex w-full items-center justify-between px-4 py-3 text-left font-semibold text-gray-800 hover:bg-gray-50"
+          className="flex w-full items-center justify-between px-4 py-3 text-left font-medium text-charcoal hover:bg-cream/30"
           aria-expanded={docOpen}
           aria-controls="formulas-doc"
         >
@@ -348,7 +348,7 @@ export function StandardFormulasContent() {
           {docOpen ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
         </button>
         <div id="formulas-doc" className="border-t border-gray-200 px-4 py-3" hidden={!docOpen}>
-          <ul className="list-inside list-disc space-y-2 text-sm text-gray-700">
+          <ul className="list-inside list-disc space-y-2 text-sm text-charcoal/70">
             {DOC_ITEMS.map((item) => (
               <li key={item.name}>
                 <strong>{item.name}</strong> — {item.desc}
