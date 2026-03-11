@@ -88,27 +88,28 @@ export default function RegisterPage() {
     setLoading(false);
   };
 
+  const inputClass = "w-full bg-white border border-charcoal/15 rounded-lg px-3 py-2.5 text-sm text-charcoal placeholder:text-charcoal/35 focus:outline-none focus:border-green-deep focus:ring-1 focus:ring-green-deep/20 transition-colors";
+  const labelClass = "block text-xs font-medium text-charcoal/60 mb-1.5";
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-cream">
-      <div className="w-full max-w-md p-6 bg-white rounded-xl shadow-md border border-green-deep/10">
-        <div className="mb-3 inline-block rounded-full border border-green-bright bg-green-bright/10 px-3 py-1 font-display text-xs font-bold uppercase tracking-wider text-green-bright">
+      <div className="w-full max-w-md p-8 bg-white rounded-2xl shadow-sm border border-charcoal/8">
+        <div className="mb-4 inline-block rounded-full border border-green-deep/20 bg-green-deep/8 px-3 py-1 font-display text-xs font-bold uppercase tracking-wider text-green-deep">
           Essai gratuit 30 jours — sans carte bancaire
         </div>
-        <h1 className="font-display text-xl font-bold text-green-deep mb-2">Créer un compte</h1>
-        <p className="text-sm text-gray-warm mb-4">Nom du restaurant, ville, email</p>
+        <h1 className="font-display text-2xl font-bold text-charcoal mb-1">Créer un compte</h1>
+        <p className="text-sm text-charcoal/50 mb-6">Nom du restaurant, ville, email</p>
 
         {error && (
-          <div className="mb-4 p-3 rounded-md bg-error/10 text-error text-sm">{error}</div>
+          <div className="mb-4 p-3 rounded-lg bg-terracotta/10 border border-terracotta/20 text-terracotta text-sm">{error}</div>
         )}
         {success && (
-          <div className="mb-4 p-3 rounded-md bg-success/20 text-success text-sm">{success}</div>
+          <div className="mb-4 p-3 rounded-lg bg-green-deep/8 border border-green-deep/20 text-green-deep text-sm">{success}</div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-              Email
-            </label>
+            <label htmlFor="email" className={labelClass}>Email</label>
             <input
               id="email"
               type="email"
@@ -117,14 +118,12 @@ export default function RegisterPage() {
               required
               autoComplete="email"
               placeholder="vous@exemple.com"
-              className="w-full px-3 py-2 border border-green-deep/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-mid focus:border-green-mid"
+              className={inputClass}
             />
           </div>
 
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-              Mot de passe
-            </label>
+            <label htmlFor="password" className={labelClass}>Mot de passe</label>
             <input
               id="password"
               type="password"
@@ -134,14 +133,12 @@ export default function RegisterPage() {
               minLength={8}
               autoComplete="new-password"
               placeholder="••••••••"
-              className="w-full px-3 py-2 border border-green-deep/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-mid focus:border-green-mid"
+              className={inputClass}
             />
           </div>
 
           <div>
-            <label htmlFor="first_name" className="block text-sm font-medium text-gray-700 mb-1">
-              Prénom
-            </label>
+            <label htmlFor="first_name" className={labelClass}>Prénom</label>
             <input
               id="first_name"
               type="text"
@@ -150,14 +147,12 @@ export default function RegisterPage() {
               required
               autoComplete="given-name"
               placeholder="Jean"
-              className="w-full px-3 py-2 border border-green-deep/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-mid focus:border-green-mid"
+              className={inputClass}
             />
           </div>
 
           <div>
-            <label htmlFor="last_name" className="block text-sm font-medium text-gray-700 mb-1">
-              Nom
-            </label>
+            <label htmlFor="last_name" className={labelClass}>Nom</label>
             <input
               id="last_name"
               type="text"
@@ -166,14 +161,12 @@ export default function RegisterPage() {
               required
               autoComplete="family-name"
               placeholder="Dupont"
-              className="w-full px-3 py-2 border border-green-deep/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-mid focus:border-green-mid"
+              className={inputClass}
             />
           </div>
 
           <div>
-            <label htmlFor="company_name" className="block text-sm font-medium text-gray-700 mb-1">
-              Nom de l&apos;entreprise
-            </label>
+            <label htmlFor="company_name" className={labelClass}>Nom de l&apos;entreprise</label>
             <input
               id="company_name"
               type="text"
@@ -181,27 +174,27 @@ export default function RegisterPage() {
               onChange={(e) => setForm((p) => ({ ...p, company_name: e.target.value }))}
               required
               placeholder="Ma Société"
-              className="w-full px-3 py-2 border border-green-deep/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-mid focus:border-green-mid"
+              className={inputClass}
             />
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-2.5 px-4 rounded-xl bg-green-mid font-display font-bold text-white hover:opacity-95 disabled:opacity-50"
+            className="w-full py-2.5 px-4 rounded-lg bg-green-deep font-display font-bold text-cream hover:bg-forest-green disabled:opacity-50 transition-colors"
           >
             {loading ? 'Création...' : 'Créer le compte'}
           </button>
         </form>
 
-        <p className="mt-4 text-center text-sm text-gray-600">
+        <p className="mt-4 text-center text-sm text-charcoal/50">
           Déjà un compte ?{' '}
-          <Link href="/login" className="font-semibold text-green-mid hover:underline">
+          <Link href="/login" className="font-medium text-green-deep hover:text-forest-green transition-colors">
             Se connecter
           </Link>
         </p>
-        <p className="mt-2 text-center text-xs text-gray-warm">
-          <Link href="/onboarding" className="hover:text-green-deep">Commencer l&apos;onboarding sans compte (démo)</Link>
+        <p className="mt-2 text-center text-xs text-charcoal/40">
+          <Link href="/onboarding" className="hover:text-green-deep transition-colors">Commencer l&apos;onboarding sans compte (démo)</Link>
         </p>
       </div>
     </div>
