@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useApi } from '@/hooks/useApi';
 import { Check, CreditCard, X } from 'lucide-react';
 import { TIER_LABELS, type SubscriptionTier } from '@/lib/subscriptions';
+import { PageHeader } from '@/components/ui/PageHeader';
 
 const PLAN_FEATURES: Record<SubscriptionTier, string[]> = {
   normal: ['Jusqu\'à 50 ingrédients', 'Mode Rush', 'Stocks de base'],
@@ -86,27 +87,27 @@ export default function AbonnementPage() {
 
   return (
     <div className="min-h-full bg-cream font-body">
-      <div className="mx-auto max-w-2xl space-y-8 p-4 pb-24 md:pb-6">
-        <div>
-          <h1 className="font-display text-2xl font-bold text-green-deep">Abonnement & Facturation</h1>
-          <p className="text-sm text-gray-warm">Votre plan et vos paiements</p>
-        </div>
+      <div className="mx-auto max-w-2xl space-y-8 p-6 pb-24 md:pb-6">
+        <PageHeader
+          title="Abonnement & Facturation"
+          subtitle="Votre plan et vos paiements"
+        />
 
         {/* Plan actuel + Jours d'essai */}
-        <section className="rounded-xl border border-green-deep/10 bg-white p-6 shadow-sm">
-          <h2 className="font-display text-lg font-bold text-green-deep">Plan actuel</h2>
+        <section className="rounded-xl border border-charcoal/8 bg-white p-6 shadow-sm">
+          <h2 className="font-display text-lg font-bold text-charcoal">Plan actuel</h2>
           <div className="mt-4 flex items-center justify-between">
             <div>
               <p className="font-display text-2xl font-bold text-charcoal">
                 {loading ? '…' : TIER_LABELS[currentTier]}
               </p>
-              <p className="text-sm text-gray-warm">
+              <p className="text-sm text-charcoal/50">
                 {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(PLAN_PRICES[currentTier])}
                 /mois
               </p>
             </div>
             {joursEssaiRestants > 0 && (
-              <span className="rounded-full bg-green-mid/20 px-3 py-1 text-sm font-semibold text-green-deep">
+              <span className="rounded-full bg-green-deep/10 px-3 py-1 text-sm font-medium text-green-deep">
                 {joursEssaiRestants} jours d&apos;essai restants
               </span>
             )}
@@ -114,8 +115,8 @@ export default function AbonnementPage() {
         </section>
 
         {/* Comparatif plans */}
-        <section className="rounded-xl border border-green-deep/10 bg-white p-6 shadow-sm">
-          <h2 className="font-display text-lg font-bold text-green-deep">Changer de plan</h2>
+        <section className="rounded-xl border border-charcoal/8 bg-white p-6 shadow-sm">
+          <h2 className="font-display text-lg font-bold text-charcoal">Changer de plan</h2>
           <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {PLANS.map((tier) => {
               const isCurrent = currentTier === tier;
@@ -125,14 +126,14 @@ export default function AbonnementPage() {
               return (
                 <div
                   key={tier}
-                  className={`rounded-xl border-2 p-5 ${
-                    isCurrent ? 'border-green-mid bg-green-mid/5' : 'border-green-deep/10 bg-white'
+                  className={`rounded-xl border p-5 ${
+                    isCurrent ? 'border-green-deep/30 bg-green-deep/5' : 'border-charcoal/8 bg-white'
                   }`}
                 >
                   <div className="flex items-center justify-between">
-                    <p className="font-display text-lg font-bold text-green-deep">{label}</p>
+                    <p className="font-display text-lg font-bold text-charcoal">{label}</p>
                     {isCurrent && (
-                      <span className="rounded-full bg-green-mid/20 px-2 py-0.5 text-xs font-semibold text-green-deep">
+                      <span className="rounded-full bg-green-deep/10 px-2 py-0.5 text-xs font-medium text-green-deep">
                         Actuel
                       </span>
                     )}
@@ -143,7 +144,7 @@ export default function AbonnementPage() {
                   <ul className="mt-3 space-y-2">
                     {features.map((f, i) => (
                       <li key={i} className="flex items-center gap-2 text-sm text-charcoal">
-                        <Check className="h-4 w-4 shrink-0 text-green-mid" />
+                        <Check className="h-4 w-4 shrink-0 text-green-deep" />
                         {f}
                       </li>
                     ))}
@@ -153,7 +154,7 @@ export default function AbonnementPage() {
                       type="button"
                       onClick={() => handleUpgrade(tier)}
                       disabled={!!upgrading}
-                      className="mt-4 w-full rounded-xl bg-green-mid py-2.5 font-display text-sm font-bold text-white hover:bg-green-deep disabled:opacity-50"
+                      className="mt-4 w-full rounded-xl bg-green-deep py-2.5 font-display text-sm font-bold text-cream hover:bg-forest-green transition-colors disabled:opacity-50"
                     >
                       {upgrading === tier ? 'En cours…' : `Passer au plan ${label}`}
                     </button>
@@ -165,15 +166,15 @@ export default function AbonnementPage() {
         </section>
 
         {/* Zone Paiement (UI type Stripe) */}
-        <section className="rounded-xl border border-green-deep/10 bg-white p-6 shadow-sm">
-          <h2 className="font-display text-lg font-bold text-green-deep">Moyen de paiement</h2>
-          <p className="mt-1 text-sm text-gray-warm">Géré de manière sécurisée (mock — pas d’appel Stripe réel)</p>
-          <div className="mt-4 rounded-lg border border-dashed border-green-deep/20 bg-cream/30 p-6 text-center">
-            <CreditCard className="mx-auto h-10 w-10 text-gray-warm" />
+        <section className="rounded-xl border border-charcoal/8 bg-white p-6 shadow-sm">
+          <h2 className="font-display text-lg font-bold text-charcoal">Moyen de paiement</h2>
+          <p className="mt-1 text-sm text-charcoal/50">Géré de manière sécurisée (mock — pas d&apos;appel Stripe réel)</p>
+          <div className="mt-4 rounded-lg border border-dashed border-charcoal/15 bg-cream/30 p-6 text-center">
+            <CreditCard className="mx-auto h-10 w-10 text-charcoal/50" />
             <p className="mt-2 text-sm font-medium text-charcoal">Carte enregistrée ·••• 4242</p>
             <button
               type="button"
-              className="mt-3 text-sm font-medium text-green-mid hover:underline"
+              className="mt-3 text-sm font-medium text-green-deep hover:underline"
             >
               Modifier la carte
             </button>
@@ -181,19 +182,19 @@ export default function AbonnementPage() {
         </section>
 
         {/* Historique paiements */}
-        <section className="rounded-xl border border-green-deep/10 bg-white p-6 shadow-sm">
-          <h2 className="font-display text-lg font-bold text-green-deep">Historique des paiements</h2>
+        <section className="rounded-xl border border-charcoal/8 bg-white p-6 shadow-sm">
+          <h2 className="font-display text-lg font-bold text-charcoal">Historique des paiements</h2>
           <ul className="mt-4 space-y-3">
             {MOCK_PAIEMENTS.map((p) => (
               <li
                 key={p.id}
-                className="flex items-center justify-between rounded-lg border border-green-deep/10 px-4 py-3"
+                className="flex items-center justify-between rounded-lg border border-charcoal/8 px-4 py-3"
               >
                 <div>
                   <p className="font-medium text-charcoal">{p.date}</p>
-                  <p className="text-xs text-gray-warm">{p.statut}</p>
+                  <p className="text-xs text-charcoal/50">{p.statut}</p>
                 </div>
-                <span className="font-display font-bold text-green-deep">
+                <span className="font-display font-bold text-charcoal">
                   {p.montant === 0 ? '—' : `${p.montant} €`}
                 </span>
               </li>
@@ -202,15 +203,15 @@ export default function AbonnementPage() {
         </section>
 
         {/* Résiliation */}
-        <section className="rounded-xl border border-red-alert/20 bg-red-alert/5 p-6">
+        <section className="rounded-xl border border-terracotta/20 bg-terracotta/5 p-6">
           <h2 className="font-display text-lg font-bold text-charcoal">Résilier l&apos;abonnement</h2>
-          <p className="mt-1 text-sm text-gray-warm">
+          <p className="mt-1 text-sm text-charcoal/50">
             Votre accès restera actif jusqu&apos;à la fin de la période en cours.
           </p>
           <button
             type="button"
             onClick={() => setModalResiliation(true)}
-            className="mt-4 text-sm font-medium text-red-alert hover:underline"
+            className="mt-4 text-sm font-medium text-terracotta hover:underline"
           >
             Demander la résiliation
           </button>
@@ -220,19 +221,19 @@ export default function AbonnementPage() {
       {/* Modal Pourquoi partez-vous ? */}
       {modalResiliation && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-charcoal/50 p-4">
-          <div className="w-full max-w-md rounded-xl border border-green-deep/10 bg-white p-6 shadow-lg">
+          <div className="w-full max-w-md rounded-xl border border-charcoal/8 bg-white p-6 shadow-lg">
             <div className="flex items-center justify-between">
-              <h3 className="font-display text-lg font-bold text-green-deep">Pourquoi partez-vous ?</h3>
+              <h3 className="font-display text-lg font-bold text-charcoal">Pourquoi partez-vous ?</h3>
               <button
                 type="button"
                 onClick={() => setModalResiliation(false)}
-                className="rounded p-2 text-gray-warm hover:bg-gray-100"
+                className="rounded p-2 text-charcoal/50 hover:bg-charcoal/5"
                 aria-label="Fermer"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <p className="mt-2 text-sm text-gray-warm">
+            <p className="mt-2 text-sm text-charcoal/50">
               Votre avis nous aide à nous améliorer (optionnel).
             </p>
             <textarea
@@ -240,7 +241,7 @@ export default function AbonnementPage() {
               onChange={(e) => setRaisonDepart(e.target.value)}
               placeholder="Ex. trop cher, pas assez utilisé…"
               rows={3}
-              className="mt-3 w-full rounded-lg border border-green-deep/20 px-4 py-2 text-sm focus:border-green-mid focus:outline-none"
+              className="mt-3 w-full rounded-lg border border-charcoal/15 px-4 py-2 text-sm focus:outline-none focus:border-green-deep focus:ring-1 focus:ring-green-deep/20 transition-colors"
             />
             <div className="mt-4 flex gap-3">
               <button
@@ -256,7 +257,7 @@ export default function AbonnementPage() {
                   setModalResiliation(false);
                   setRaisonDepart('');
                 }}
-                className="flex-1 rounded-xl bg-red-alert py-2.5 font-display text-sm font-bold text-white"
+                className="flex-1 rounded-xl bg-terracotta py-2.5 font-display text-sm font-bold text-white"
               >
                 Confirmer la résiliation
               </button>

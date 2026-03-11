@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { StandardFormulasContent } from './_components/StandardFormulasContent';
 import { CustomFormulasContent } from './_components/CustomFormulasContent';
+import { PageHeader } from '@/components/ui/PageHeader';
 
 type Tab = 'standard' | 'custom';
 
@@ -19,7 +20,7 @@ export default function FormulasPage() {
 
   return (
     <div className="min-h-full bg-cream font-body p-6">
-      <h1 className="text-2xl font-display font-bold text-charcoal mb-6">Formules</h1>
+      <PageHeader title="Formules" />
 
       <div className="flex gap-2 border-b border-charcoal/10 mb-6">
         {tabs.map((tab) => (

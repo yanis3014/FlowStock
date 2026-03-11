@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Plus, Camera, Copy, AlertTriangle } from 'lucide-react';
+import { Plus, Camera, AlertTriangle } from 'lucide-react';
+import { PageHeader } from '@/components/ui/PageHeader';
 
 interface FicheResume {
   id: string;
@@ -29,36 +30,36 @@ export default function FichesTechniquesPage() {
 
   return (
     <div className="min-h-full bg-cream font-body">
-      <div className="mx-auto max-w-4xl space-y-6 p-4 pb-24 md:pb-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="font-display text-2xl font-bold text-green-deep">Fiches techniques</h1>
-            <p className="text-sm text-gray-warm">Recettes et décompositions des plats</p>
-          </div>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              className="inline-flex items-center gap-2 rounded-xl border-2 border-green-mid bg-transparent px-4 py-2.5 font-display text-sm font-bold text-green-deep"
-            >
-              <Camera className="h-4 w-4" />
-              Par photo
-            </button>
-            <button
-              type="button"
-              className="inline-flex items-center gap-2 rounded-xl bg-green-mid px-4 py-2.5 font-display text-sm font-bold text-white"
-            >
-              <Plus className="h-4 w-4" />
-              Création manuelle
-            </button>
-          </div>
-        </div>
+      <div className="mx-auto max-w-4xl space-y-6 p-6 pb-24 md:pb-6">
+        <PageHeader
+          title="Fiches techniques"
+          subtitle="Recettes et décompositions des plats"
+          actions={
+            <div className="flex gap-2">
+              <button
+                type="button"
+                className="inline-flex items-center gap-2 rounded-xl border border-charcoal/20 bg-transparent px-4 py-2.5 font-display text-sm font-bold text-charcoal hover:bg-charcoal/5 transition-colors"
+              >
+                <Camera className="h-4 w-4" />
+                Par photo
+              </button>
+              <button
+                type="button"
+                className="inline-flex items-center gap-2 rounded-xl bg-green-deep px-4 py-2.5 font-display text-sm font-bold text-cream hover:bg-forest-green transition-colors"
+              >
+                <Plus className="h-4 w-4" />
+                Création manuelle
+              </button>
+            </div>
+          }
+        />
 
         <input
           type="search"
           placeholder="Rechercher un plat…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full rounded-xl border border-green-deep/20 bg-white px-4 py-2.5 text-sm text-charcoal placeholder-gray-warm focus:border-green-mid focus:outline-none"
+          className="w-full rounded-xl border border-charcoal/15 bg-white px-4 py-2.5 text-sm text-charcoal placeholder-charcoal/30 focus:border-green-deep focus:outline-none focus:ring-1 focus:ring-green-deep/20 transition-colors"
         />
 
         <ul className="space-y-3">
@@ -66,23 +67,23 @@ export default function FichesTechniquesPage() {
             <li key={fiche.id}>
               <Link
                 href={`/fiches-techniques/${fiche.id}`}
-                className="flex items-center justify-between rounded-xl border border-green-deep/10 bg-white p-4 shadow-sm transition-shadow hover:shadow-md"
+                className="flex items-center justify-between rounded-xl border border-charcoal/8 bg-white p-4 shadow-sm transition-shadow hover:shadow-md"
               >
                 <div className="flex items-center gap-3">
                   <div>
-                    <p className="font-display font-bold text-green-deep">{fiche.name}</p>
-                    <p className="text-sm text-gray-warm">
+                    <p className="font-display font-bold text-charcoal">{fiche.name}</p>
+                    <p className="text-sm text-charcoal/50">
                       {fiche.ingredientCount} ingrédients · Coût matière {fiche.costMatiere}
                     </p>
                   </div>
                   {fiche.hasAlert && (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-orange-warn/15 px-2 py-0.5 text-xs font-semibold text-orange-warn">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-gold/15 px-2 py-0.5 text-xs font-semibold text-gold">
                       <AlertTriangle className="h-3.5 w-3.5" />
                       Ingrédient absent
                     </span>
                   )}
                 </div>
-                <span className="text-gray-warm">→</span>
+                <span className="text-charcoal/50">→</span>
               </Link>
             </li>
           ))}
