@@ -1,9 +1,8 @@
 'use client';
 
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { TrendingUp, Package, AlertTriangle, Loader2, Check, Zap } from 'lucide-react';
+import { AlertTriangle, Loader2, Check, Zap } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useApi } from '@/hooks/useApi';
 import { DashboardSkeleton } from '@/components/dashboard/DashboardSkeleton';
@@ -47,25 +46,8 @@ interface PosSyncStatus {
 }
 
 /** Données mock pour le frontend (plan frontend-only) quand l’API ne renvoie rien. */
-const MOCK_KPIS = {
-  food_cost_pct: 28.4,
-  food_cost_change: -2.1,
-  gaspillage_evite: 340,
-  ruptures_evitees: 7,
-  couverts: 186,
-};
 
-const MOCK_ALERTES_URGENTES = [
-  { id: '1', name: 'Saumon atlantique', detail: 'DLC demain', level: 'high' as const },
-  { id: '2', name: 'Filet de bœuf', detail: 'Stock faible', level: 'medium' as const },
-];
 
-const MOCK_SUGGESTION_IA = {
-  titre: 'Plat du jour recommandé pour demain',
-  plat: 'Tartare de saumon + Risotto canard',
-  economie: '~65€',
-  raison: 'Votre saumon arrive à DLC demain — un tartare en entrée évite le gaspillage.',
-};
 
 function formatNumber(val: number | undefined): string {
   if (val == null) return '—';
@@ -83,9 +65,8 @@ function formatCurrency(val: number | undefined): string {
 }
 
 export default function DashboardPage() {
-  const { token, user, isLoading } = useAuth();
+  const { token, user } = useAuth();
   const { fetchApi } = useApi();
-  const router = useRouter();
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [posSyncStatus, setPosSyncStatus] = useState<PosSyncStatus | null>(null);
   const [posNotification, setPosNotification] = useState<'degraded' | 'recovered' | null>(null);
@@ -93,13 +74,6 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [actionStates, setActionStates] = useState<Record<string, 'idle' | 'loading' | 'confirmed'>>({});
-
-  useEffect(() => {
-    if (!token && !isLoading) {
-      router.push('/login?returnUrl=/dashboard');
-      return;
-    }
-  }, [token, isLoading, router]);
 
   useEffect(() => {
     if (!token) return;
@@ -179,18 +153,6 @@ export default function DashboardPage() {
     []
   );
 
-  if (isLoading) {
-    return (
-      <div className="flex min-h-[40vh] items-center justify-center">
-        <DashboardSkeleton />
-      </div>
-    );
-  }
-
-  if (!token) {
-    return null;
-  }
-
   if (loading) {
     return <DashboardSkeleton />;
   }
@@ -198,8 +160,7 @@ export default function DashboardPage() {
   const sales = summary?.sales_yesterday ?? {};
   const stock = summary?.current_stock ?? {};
   const alerts = summary?.alerts ?? [];
-  const useMock = !summary?.alerts?.length && !summary?.sales_yesterday && !summary?.current_stock;
-  const alertesUrgentes = useMock ? MOCK_ALERTES_URGENTES : alerts.map((a) => ({
+  const alertesUrgentes = alerts.map((a) => ({
     id: a.id,
     name: a.product?.name ?? a.message,
     detail: a.message,
@@ -268,41 +229,41 @@ export default function DashboardPage() {
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
           <div className="rounded-xl border-l-4 border-green-mid bg-cream-dark/80 p-4">
             <p className="font-display text-[10px] font-bold uppercase tracking-wider text-gray-warm">
-              Food cost
+              Chiffre d&apos;affaires (hier)
             </p>
             <p className="mt-1 font-display text-xl font-extrabold text-green-deep">
-              {useMock ? `${MOCK_KPIS.food_cost_pct}%` : `${MOCK_KPIS.food_cost_pct}%`}
+              {formatCurrency(sales.total_amount)}
             </p>
             <p className="mt-0.5 text-xs font-semibold text-green-mid">
-              {useMock ? `↓ ${MOCK_KPIS.food_cost_change}pts ce mois` : (sales.change_percent != null ? `${(sales.change_percent >= 0 ? '+' : '')}${sales.change_percent.toFixed(1)}%` : '—')}
+              {sales.change_percent != null ? `${(sales.change_percent >= 0 ? '+' : '')}${sales.change_percent.toFixed(1)}% vs sem.` : '—'}
             </p>
           </div>
           <div className="rounded-xl border-l-4 border-terracotta bg-cream-dark/80 p-4">
             <p className="font-display text-[10px] font-bold uppercase tracking-wider text-gray-warm">
-              Gaspillage évité
+              Valeur stock
             </p>
             <p className="mt-1 font-display text-xl font-extrabold text-green-deep">
-              {useMock ? formatCurrency(MOCK_KPIS.gaspillage_evite) : formatCurrency(stock.total_value)}
+              {formatCurrency(stock.total_value)}
             </p>
-            <p className="mt-0.5 text-xs font-semibold text-green-mid">↑ cette semaine</p>
+            <p className="mt-0.5 text-xs font-semibold text-green-mid">{stock.product_count ?? 0} produits</p>
           </div>
           <div className="rounded-xl border-l-4 border-gold bg-cream-dark/80 p-4">
             <p className="font-display text-[10px] font-bold uppercase tracking-wider text-gray-warm">
-              Ruptures évitées
+              Stocks à surveiller
             </p>
             <p className="mt-1 font-display text-xl font-extrabold text-green-deep">
-              {useMock ? MOCK_KPIS.ruptures_evitees : (stock.low_stock_count ?? 0) + (stock.critical_stock_count ?? 0)}
+              {(stock.low_stock_count ?? 0) + (stock.critical_stock_count ?? 0)}
             </p>
-            <p className="mt-0.5 text-xs font-semibold text-green-mid">↑ vs sem. préc.</p>
+            <p className="mt-0.5 text-xs font-semibold text-green-mid">produits en alerte</p>
           </div>
           <div className="rounded-xl border-l-4 border-blue-500 bg-cream-dark/80 p-4">
             <p className="font-display text-[10px] font-bold uppercase tracking-wider text-gray-warm">
-              Couverts
+              Transactions (hier)
             </p>
             <p className="mt-1 font-display text-xl font-extrabold text-green-deep">
-              {useMock ? MOCK_KPIS.couverts : formatNumber(sales.transaction_count)}
+              {formatNumber(sales.transaction_count)}
             </p>
-            <p className="mt-0.5 text-xs font-semibold text-gray-warm">→ cette semaine</p>
+            <p className="mt-0.5 text-xs font-semibold text-gray-warm">ventes</p>
           </div>
         </div>
 
@@ -351,35 +312,7 @@ export default function DashboardPage() {
           )}
         </section>
 
-        {/* Suggestion IA du jour */}
-        <section className="rounded-2xl border border-gold/30 bg-green-deep/5 p-5">
-          <div className="mb-2 inline-flex items-center gap-1.5 rounded-full border border-gold/40 bg-gold/10 px-3 py-1 font-display text-[10px] font-bold uppercase tracking-wider text-gold">
-            ✦ Suggestion IA
-          </div>
-          <h2 className="font-display text-base font-bold text-green-deep">
-            {MOCK_SUGGESTION_IA.titre}
-          </h2>
-          <p className="mt-2 text-sm text-charcoal/80">
-            {MOCK_SUGGESTION_IA.raison}
-          </p>
-          <p className="mt-1 font-display text-sm font-bold text-green-deep">
-            {MOCK_SUGGESTION_IA.plat} — Économie estimée {MOCK_SUGGESTION_IA.economie}
-          </p>
-          <div className="mt-4 flex gap-2">
-            <button
-              type="button"
-              className="rounded-lg bg-gold px-4 py-2 font-display text-sm font-bold text-charcoal"
-            >
-              Valider ce plat du jour →
-            </button>
-            <button
-              type="button"
-              className="rounded-lg border border-green-deep/30 bg-transparent px-4 py-2 font-display text-sm font-bold text-green-deep"
-            >
-              Proposer une autre option
-            </button>
-          </div>
-        </section>
+        {/* TODO Sprint 3 Tâche 16 : connecter au vrai endpoint /suggestions */}
       </div>
     </div>
   );

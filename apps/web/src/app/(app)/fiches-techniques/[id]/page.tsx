@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter, useParams } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { ArrowLeft, Copy, Pencil, AlertTriangle } from 'lucide-react';
@@ -87,23 +87,16 @@ const MOCK_FICHES: Record<string, FicheDetail> = {
 };
 
 export default function FicheTechniqueDetailPage() {
-  const { token, isLoading } = useAuth();
-  const router = useRouter();
+  useAuth(); // Auth guard in layout
   const params = useParams();
   const id = typeof params?.id === 'string' ? params.id : '';
   const [fiche, setFiche] = useState<FicheDetail | null>(null);
-
-  useEffect(() => {
-    if (!token && !isLoading) router.push('/login?returnUrl=/fiches-techniques');
-  }, [token, isLoading, router]);
 
   useEffect(() => {
     if (id && MOCK_FICHES[id]) setFiche(MOCK_FICHES[id]);
     else setFiche(null);
   }, [id]);
 
-  if (!token && isLoading) return null;
-  if (!token) return null;
   if (!fiche) {
     return (
       <div className="min-h-full bg-cream p-4">

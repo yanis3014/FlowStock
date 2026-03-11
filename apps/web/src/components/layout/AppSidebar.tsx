@@ -1,10 +1,57 @@
 'use client';
 
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ChevronLeft, ChevronRight, X } from 'lucide-react';
-import { NAV_ITEMS } from '@/lib/nav-config';
+import {
+  ChevronLeft,
+  ChevronRight,
+  X,
+  Zap,
+  LayoutDashboard,
+  Package,
+  ShoppingCart,
+  BarChart2,
+  TrendingUp,
+  ArrowLeftRight,
+  Truck,
+  MapPin,
+  FileText,
+  Upload,
+  Lightbulb,
+  MessageSquare,
+  Calculator,
+  Settings,
+  CreditCard,
+  PlayCircle,
+  ShieldCheck,
+  type LucideIcon,
+} from 'lucide-react';
+import { NAV_GROUPS, type NavItem } from '@/lib/nav-config';
+import { useAuth } from '@/contexts/AuthContext';
+
+const ICON_MAP: Record<string, LucideIcon> = {
+  Zap,
+  LayoutDashboard,
+  Package,
+  ShoppingCart,
+  BarChart2,
+  TrendingUp,
+  ArrowLeftRight,
+  Truck,
+  MapPin,
+  FileText,
+  Upload,
+  Lightbulb,
+  MessageSquare,
+  Calculator,
+  Settings,
+  CreditCard,
+  PlayCircle,
+  ShieldCheck,
+};
+
+const ALLOWED_ADMIN_ROLES = ['admin', 'owner'];
 
 interface AppSidebarProps {
   collapsed: boolean;
@@ -12,6 +59,36 @@ interface AppSidebarProps {
   mobileOpen: boolean;
   onMobileClose: () => void;
   isMobile: boolean;
+}
+
+function SidebarItem({
+  item,
+  isActive,
+  collapsed,
+  onClick,
+}: {
+  item: NavItem;
+  isActive: boolean;
+  collapsed: boolean;
+  onClick?: () => void;
+}) {
+  const Icon = item.icon ? ICON_MAP[item.icon] : null;
+
+  const linkClass = `flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+    isActive ? 'bg-green-deep text-cream' : 'text-charcoal hover:bg-cream-dark hover:text-charcoal'
+  }`;
+
+  return (
+    <Link
+      href={item.href}
+      onClick={onClick}
+      className={linkClass}
+      title={collapsed ? item.label : undefined}
+    >
+      {Icon && <Icon className="h-5 w-5 shrink-0" strokeWidth={2} />}
+      {(!collapsed || !Icon) && <span className="truncate">{item.label}</span>}
+    </Link>
+  );
 }
 
 export function AppSidebar({
@@ -22,6 +99,14 @@ export function AppSidebar({
   isMobile,
 }: AppSidebarProps) {
   const pathname = usePathname();
+  const { user } = useAuth();
+  const [onboardingDone, setOnboardingDone] = useState(false);
+
+  useEffect(() => {
+    setOnboardingDone(
+      typeof window !== 'undefined' && localStorage.getItem('flowstock_onboarding_completed') === 'true'
+    );
+  }, [pathname]);
 
   const handleEscape = useCallback(
     (e: KeyboardEvent) => {
@@ -36,26 +121,33 @@ export function AppSidebar({
     return () => document.removeEventListener('keydown', handleEscape);
   }, [isMobile, mobileOpen, handleEscape]);
 
-  const linkClass = (href: string) =>
-    `block px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-      pathname === href
-        ? 'bg-primary text-white'
-        : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
-    }`;
+  const isAdmin = user?.role && ALLOWED_ADMIN_ROLES.includes(user.role.toLowerCase());
+
+  const filteredGroups = NAV_GROUPS.map((group) => ({
+    ...group,
+    items: group.items.filter((item) => {
+      if (item.hidden) return false;
+      if (item.hideWhenOnboarded && onboardingDone) return false;
+      if (item.adminOnly && !isAdmin) return false;
+      return true;
+    }),
+  })).filter((group) => group.items.length > 0);
 
   const showNav = isMobile || !collapsed;
 
   const content = (
     <>
-      <div className="flex h-12 items-center justify-between border-b border-gray-200 px-3">
+      <div className="flex h-12 items-center justify-between border-b border-cream-dark px-3">
         {showNav && (
-          <span className="text-sm font-semibold text-gray-800">FlowStock</span>
+          <span className="text-sm font-display font-bold text-charcoal truncate">
+            {collapsed ? 'FS' : 'FlowStock'}
+          </span>
         )}
         {!isMobile && (
           <button
             type="button"
             onClick={onToggleCollapsed}
-            className="rounded p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+            className="rounded p-1.5 text-charcoal/60 hover:bg-cream-dark hover:text-charcoal"
             aria-label={collapsed ? 'Étendre la sidebar' : 'Rétracter la sidebar'}
           >
             {collapsed ? (
@@ -69,7 +161,7 @@ export function AppSidebar({
           <button
             type="button"
             onClick={onMobileClose}
-            className="rounded p-1.5 text-gray-500 hover:bg-gray-100"
+            className="rounded p-1.5 text-charcoal/60 hover:bg-cream-dark"
             aria-label="Fermer le menu"
           >
             <X className="h-5 w-5" />
@@ -77,16 +169,26 @@ export function AppSidebar({
         )}
       </div>
       {showNav && (
-        <nav className="flex flex-col gap-0.5 p-2">
-          {NAV_ITEMS.map(({ href, label }) => (
-            <Link
-              key={href}
-              href={href}
-              onClick={isMobile ? onMobileClose : undefined}
-              className={linkClass(href)}
-            >
-              {label}
-            </Link>
+        <nav className="flex flex-col gap-1 px-2 py-4 overflow-y-auto">
+          {filteredGroups.map((group, groupIdx) => (
+            <div key={group.label} className={groupIdx > 0 ? 'mt-5' : ''}>
+              {!collapsed && (
+                <p className="px-3 mb-1 text-xs font-semibold uppercase tracking-wider text-charcoal/50">
+                  {group.label}
+                </p>
+              )}
+              <div className="flex flex-col gap-0.5">
+                {group.items.map((item) => (
+                  <SidebarItem
+                    key={item.href}
+                    item={item}
+                    isActive={pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href))}
+                    collapsed={collapsed}
+                    onClick={isMobile ? onMobileClose : undefined}
+                  />
+                ))}
+              </div>
+            </div>
           ))}
         </nav>
       )}
@@ -120,7 +222,7 @@ export function AppSidebar({
 
   return (
     <aside
-      className={`flex shrink-0 flex-col border-r border-gray-200 bg-white transition-[width] duration-200 ${
+      className={`flex shrink-0 flex-col border-r border-cream-dark bg-white transition-[width] duration-200 ${
         collapsed ? 'w-14' : 'w-56'
       }`}
     >

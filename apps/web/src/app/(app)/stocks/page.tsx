@@ -1,14 +1,12 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { useApi } from '@/hooks/useApi';
+import { useCrudModal } from '@/hooks/useCrudModal';
 import { Plus, Search, Package, Pencil, Trash2, Loader2, History } from 'lucide-react';
 import type { Product, ProductUnit, StockStatus, LocationRef, SupplierRef } from '@bmad/shared';
-
-/** Aligné avec l’API /products et @bmad/shared Product */
 
 const UNITS: { value: ProductUnit; label: string }[] = [
   { value: 'piece', label: 'Pièce' },
@@ -40,10 +38,11 @@ const emptyForm = {
   lead_time_days: 7,
 };
 
+type ProductForm = typeof emptyForm;
+
 export default function StocksPage() {
-  const { token, isLoading } = useAuth();
+  const { token } = useAuth();
   const { fetchApi } = useApi();
-  const router = useRouter();
   const [products, setProducts] = useState<Product[]>([]);
   const [pagination, setPagination] = useState({ page: 1, limit: 20, total: 0, total_pages: 0 });
   const [search, setSearch] = useState('');
@@ -51,17 +50,12 @@ export default function StocksPage() {
   const [filterLocationId, setFilterLocationId] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [messageSuccess, setMessageSuccess] = useState('');
-  const [messageError, setMessageError] = useState('');
-  const [modalOpen, setModalOpen] = useState<'create' | 'edit' | null>(null);
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [form, setForm] = useState(emptyForm);
-  const [submitLoading, setSubmitLoading] = useState(false);
   const [locations, setLocations] = useState<LocationRef[]>([]);
   const [suppliers, setSuppliers] = useState<SupplierRef[]>([]);
   const [refsLoadError, setRefsLoadError] = useState('');
-  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
+  const modalFirstInputRef = useRef<HTMLInputElement>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
 
   const loadProducts = useCallback(() => {
     if (!token) return;
@@ -71,7 +65,6 @@ export default function StocksPage() {
     params.set('page', String(pagination.page));
     params.set('limit', String(pagination.limit));
     if (search.trim()) params.set('search', search.trim());
-    // API supports low_stock=true for low/critical. Filter "ok" requires client-side filtering (no API param).
     if (filterStatus === 'low' || filterStatus === 'critical') params.set('low_stock', 'true');
     if (filterLocationId) params.set('location_id', filterLocationId);
     fetchApi(`/products?${params.toString()}`)
@@ -99,10 +92,6 @@ export default function StocksPage() {
   }, [token, fetchApi, pagination.page, pagination.limit, search, filterStatus, filterLocationId]);
 
   useEffect(() => {
-    if (!token && !isLoading) router.push('/login?returnUrl=/stocks');
-  }, [token, isLoading, router]);
-
-  useEffect(() => {
     if (token) loadProducts();
   }, [token, loadProducts]);
 
@@ -123,16 +112,90 @@ export default function StocksPage() {
       .catch(() => setRefsLoadError('Impossible de charger les emplacements ou fournisseurs.'));
   }, [token, fetchApi]);
 
-  const openCreate = () => {
-    setEditingProduct(null);
-    setForm(emptyForm);
-    setModalOpen('create');
-    setMessageError('');
-  };
+  const handleCreate = useCallback(
+    async (formData: ProductForm) => {
+      const body = {
+        sku: formData.sku.trim(),
+        name: formData.name.trim(),
+        description: formData.description.trim() || null,
+        unit: formData.unit,
+        quantity: formData.quantity,
+        min_quantity: formData.min_quantity,
+        location_id: formData.location_id || null,
+        supplier_id: formData.supplier_id || null,
+        purchase_price: formData.purchase_price,
+        selling_price: formData.selling_price,
+        lead_time_days: formData.lead_time_days,
+      };
+      const res = await fetchApi('/products', { method: 'POST', body: JSON.stringify(body) });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json?.error ?? 'Erreur lors de la création.');
+      loadProducts();
+    },
+    [fetchApi, loadProducts]
+  );
 
-  const openEdit = (p: Product) => {
-    setEditingProduct(p);
-    setForm({
+  const handleUpdate = useCallback(
+    async (id: string, formData: ProductForm) => {
+      const body = {
+        sku: formData.sku.trim(),
+        name: formData.name.trim(),
+        description: formData.description.trim() || null,
+        unit: formData.unit,
+        quantity: formData.quantity,
+        min_quantity: formData.min_quantity,
+        location_id: formData.location_id || null,
+        supplier_id: formData.supplier_id || null,
+        purchase_price: formData.purchase_price,
+        selling_price: formData.selling_price,
+        lead_time_days: formData.lead_time_days,
+      };
+      const res = await fetchApi(`/products/${id}`, { method: 'PUT', body: JSON.stringify(body) });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json?.error ?? 'Erreur lors de la modification.');
+      loadProducts();
+    },
+    [fetchApi, loadProducts]
+  );
+
+  const handleDelete = useCallback(
+    async (id: string) => {
+      const res = await fetchApi(`/products/${id}`, { method: 'DELETE' });
+      if (res.status !== 204 && !res.ok) {
+        const j = await res.json().catch(() => ({}));
+        throw new Error(j?.error ?? 'Erreur lors de la suppression.');
+      }
+      setProductToDelete(null);
+      loadProducts();
+    },
+    [fetchApi, loadProducts]
+  );
+
+  const validateForm = useCallback((formData: ProductForm): string | null => {
+    if (!formData.name.trim()) return 'Le nom est obligatoire.';
+    if (!formData.sku.trim()) return 'Le SKU est obligatoire.';
+    if (formData.quantity < 0) return 'La quantité doit être >= 0.';
+    if (formData.min_quantity != null && formData.min_quantity < 0) return 'La quantité minimum doit être >= 0.';
+    if (!UNITS.some((u) => u.value === formData.unit)) return 'Unité invalide.';
+    return null;
+  }, []);
+
+  const {
+    modalOpen,
+    form,
+    setForm,
+    submitLoading,
+    deleteConfirmId,
+    setDeleteConfirmId,
+    deleteLoading,
+    openCreate,
+    openEdit,
+    closeModal,
+    handleSubmit,
+    handleDeleteConfirm,
+    isEditing,
+  } = useCrudModal<Product, ProductForm>({
+    itemToForm: (p) => ({
       sku: p.sku,
       name: p.name,
       description: p.description ?? '',
@@ -144,163 +207,50 @@ export default function StocksPage() {
       purchase_price: p.purchase_price,
       selling_price: p.selling_price,
       lead_time_days: p.lead_time_days,
-    });
-    setModalOpen('edit');
-    setMessageError('');
-  };
+    }),
+    defaultForm: emptyForm,
+    validateForm,
+    onCreate: handleCreate,
+    onUpdate: handleUpdate,
+    onDelete: handleDelete,
+    messages: {
+      created: 'Stock créé avec succès.',
+      updated: 'Stock modifié avec succès.',
+      deleted: 'Stock supprimé.',
+    },
+  });
 
-  const closeModal = () => {
-    setModalOpen(null);
-    setEditingProduct(null);
-    setForm(emptyForm);
-    setMessageError('');
-  };
+  const closeModalWithFocus = useCallback(() => {
+    closeModal();
+    if (previousFocusRef.current?.focus) previousFocusRef.current.focus();
+  }, [closeModal]);
 
-  const validateForm = (): string | null => {
-    if (!form.name.trim()) return 'Le nom est obligatoire.';
-    if (!form.sku.trim()) return 'Le SKU est obligatoire.';
-    if (form.quantity < 0) return 'La quantité doit être >= 0.';
-    if (form.min_quantity != null && form.min_quantity < 0) return 'La quantité minimum doit être >= 0.';
-    if (!UNITS.some((u) => u.value === form.unit)) return 'Unité invalide.';
-    return null;
-  };
+  const openDeleteConfirm = useCallback(
+    (p: Product) => {
+      setProductToDelete(p);
+      setDeleteConfirmId(p.id);
+    },
+    [setDeleteConfirmId]
+  );
 
-  const handleSubmitCreate = async () => {
-    const err = validateForm();
-    if (err) {
-      setMessageError(err);
-      return;
+  const confirmDelete = useCallback(() => {
+    handleDeleteConfirm();
+  }, [handleDeleteConfirm]);
+
+  useEffect(() => {
+    if (modalOpen && modalFirstInputRef.current) {
+      modalFirstInputRef.current.focus();
     }
-    setSubmitLoading(true);
-    setMessageError('');
-    const body = {
-      sku: form.sku.trim(),
-      name: form.name.trim(),
-      description: form.description.trim() || null,
-      unit: form.unit,
-      quantity: form.quantity,
-      min_quantity: form.min_quantity,
-      location_id: form.location_id || null,
-      supplier_id: form.supplier_id || null,
-      purchase_price: form.purchase_price,
-      selling_price: form.selling_price,
-      lead_time_days: form.lead_time_days,
-    };
-    fetchApi('/products', { method: 'POST', body: JSON.stringify(body) })
-      .then(async (res) => {
-        const json = await res.json().catch(() => ({}));
-        if (!res.ok) {
-          setMessageError(json?.error ?? 'Erreur lors de la création.');
-          return;
-        }
-        setMessageSuccess('Stock créé avec succès.');
-        closeModal();
-        loadProducts();
-      })
-      .catch(() => setMessageError('Erreur réseau.'))
-      .finally(() => setSubmitLoading(false));
-  };
-
-  const handleSubmitEdit = async () => {
-    if (!editingProduct) return;
-    const err = validateForm();
-    if (err) {
-      setMessageError(err);
-      return;
-    }
-    setSubmitLoading(true);
-    setMessageError('');
-    const body = {
-      sku: form.sku.trim(),
-      name: form.name.trim(),
-      description: form.description.trim() || null,
-      unit: form.unit,
-      quantity: form.quantity,
-      min_quantity: form.min_quantity,
-      location_id: form.location_id || null,
-      supplier_id: form.supplier_id || null,
-      purchase_price: form.purchase_price,
-      selling_price: form.selling_price,
-      lead_time_days: form.lead_time_days,
-    };
-    fetchApi(`/products/${editingProduct.id}`, { method: 'PUT', body: JSON.stringify(body) })
-      .then(async (res) => {
-        const json = await res.json().catch(() => ({}));
-        if (!res.ok) {
-          setMessageError(json?.error ?? 'Erreur lors de la modification.');
-          return;
-        }
-        setMessageSuccess('Stock modifié avec succès.');
-        closeModal();
-        loadProducts();
-      })
-      .catch(() => setMessageError('Erreur réseau.'))
-      .finally(() => setSubmitLoading(false));
-  };
-
-  const openDeleteConfirm = (p: Product) => setProductToDelete(p);
-
-  const confirmDelete = () => {
-    if (!productToDelete) return;
-    const id = productToDelete.id;
-    setDeleteConfirmId(id);
-    fetchApi(`/products/${id}`, { method: 'DELETE' })
-      .then((res) => {
-        if (res.status === 204 || res.ok) {
-          setMessageSuccess('Stock supprimé.');
-          setProductToDelete(null);
-          loadProducts();
-        } else {
-          return res.json().then((j) => {
-            setMessageError(j?.error ?? 'Erreur lors de la suppression.');
-          });
-        }
-      })
-      .catch(() => setMessageError('Erreur réseau.'))
-      .finally(() => setDeleteConfirmId(null));
-  };
+  }, [modalOpen]);
 
   const filteredList =
     filterStatus === 'all'
       ? products
       : products.filter((p) => p.stock_status === filterStatus);
 
-  if (!token && isLoading) return null;
-  if (!token) return null;
-
   return (
     <div className="min-h-full bg-cream font-body">
       <div className="mx-auto max-w-6xl space-y-6 p-4 pb-24 md:pb-6">
-        {messageSuccess && (
-          <div
-            className="rounded-xl border border-green-600/40 bg-green-50 px-4 py-3 text-sm text-green-800"
-            role="alert"
-          >
-            {messageSuccess}
-            <button
-              type="button"
-              onClick={() => setMessageSuccess('')}
-              className="ml-2 underline"
-            >
-              Fermer
-            </button>
-          </div>
-        )}
-        {messageError && (
-          <div
-            className="rounded-xl border border-red-alert/30 bg-red-alert/10 px-4 py-3 text-sm text-red-alert"
-            role="alert"
-          >
-            {messageError}
-            <button
-              type="button"
-              onClick={() => setMessageError('')}
-              className="ml-2 underline"
-            >
-              Fermer
-            </button>
-          </div>
-        )}
         {error && (
           <div className="rounded-xl border border-red-alert/30 bg-red-alert/10 px-4 py-3 text-sm text-red-alert">
             {error}
@@ -327,7 +277,10 @@ export default function StocksPage() {
             </Link>
             <button
               type="button"
-              onClick={openCreate}
+              onClick={() => {
+                previousFocusRef.current = document.activeElement as HTMLElement | null;
+                openCreate();
+              }}
               className="inline-flex items-center gap-2 rounded-xl border-2 border-green-mid bg-transparent px-4 py-2.5 font-display text-sm font-bold text-green-deep"
             >
               <Plus className="h-4 w-4" />
@@ -454,7 +407,10 @@ export default function StocksPage() {
                         </Link>
                         <button
                           type="button"
-                          onClick={() => openEdit(row)}
+                          onClick={() => {
+                            previousFocusRef.current = document.activeElement as HTMLElement | null;
+                            openEdit(row);
+                          }}
                           className="rounded p-1.5 text-charcoal hover:bg-cream-dark"
                           title="Modifier"
                         >
@@ -515,7 +471,7 @@ export default function StocksPage() {
         {modalOpen && (
           <div
             className="fixed inset-0 z-50 flex items-center justify-center bg-charcoal/50 p-4"
-            onClick={(e) => e.target === e.currentTarget && closeModal()}
+            onClick={(e) => e.target === e.currentTarget && closeModalWithFocus()}
             role="dialog"
             aria-modal="true"
             aria-labelledby="modal-title"
@@ -525,12 +481,16 @@ export default function StocksPage() {
               onClick={(e) => e.stopPropagation()}
             >
               <h2 id="modal-title" className="font-display text-lg font-bold text-green-deep">
-                {modalOpen === 'create' ? 'Nouveau produit' : 'Modifier le produit'}
+                {isEditing ? 'Modifier le produit' : 'Nouveau produit'}
               </h2>
               <div className="mt-4 space-y-3">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-warm">Nom *</label>
+                  <label className="block text-xs font-semibold text-gray-warm" htmlFor="product-name">
+                    Nom *
+                  </label>
                   <input
+                    id="product-name"
+                    ref={modalFirstInputRef}
                     type="text"
                     value={form.name}
                     onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
@@ -544,7 +504,7 @@ export default function StocksPage() {
                     value={form.sku}
                     onChange={(e) => setForm((f) => ({ ...f, sku: e.target.value }))}
                     className="mt-1 w-full rounded-lg border border-green-deep/20 px-3 py-2 text-sm"
-                    disabled={modalOpen === 'edit'}
+                    disabled={isEditing}
                   />
                 </div>
                 <div>
@@ -690,19 +650,19 @@ export default function StocksPage() {
               <div className="mt-6 flex justify-end gap-2">
                 <button
                   type="button"
-                  onClick={closeModal}
+                  onClick={closeModalWithFocus}
                   className="rounded-xl border border-green-deep/30 px-4 py-2 font-display text-sm font-bold text-green-deep"
                 >
                   Annuler
                 </button>
                 <button
                   type="button"
-                  onClick={modalOpen === 'create' ? handleSubmitCreate : handleSubmitEdit}
+                  onClick={handleSubmit}
                   disabled={submitLoading}
                   className="inline-flex items-center gap-2 rounded-xl bg-green-mid px-4 py-2 font-display text-sm font-bold text-white disabled:opacity-70"
                 >
                   {submitLoading && <Loader2 className="h-4 w-4 animate-spin" />}
-                  {modalOpen === 'create' ? 'Créer' : 'Enregistrer'}
+                  {isEditing ? 'Enregistrer' : 'Créer'}
                 </button>
               </div>
             </div>
@@ -713,7 +673,7 @@ export default function StocksPage() {
         {productToDelete && (
           <div
             className="fixed inset-0 z-50 flex items-center justify-center bg-charcoal/50 p-4"
-            onClick={(e) => e.target === e.currentTarget && setProductToDelete(null)}
+            onClick={(e) => e.target === e.currentTarget && (setProductToDelete(null), setDeleteConfirmId(null))}
             role="dialog"
             aria-modal="true"
             aria-labelledby="delete-modal-title"
@@ -731,7 +691,10 @@ export default function StocksPage() {
               <div className="mt-6 flex justify-end gap-2">
                 <button
                   type="button"
-                  onClick={() => setProductToDelete(null)}
+                  onClick={() => {
+                    setProductToDelete(null);
+                    setDeleteConfirmId(null);
+                  }}
                   className="rounded-xl border border-green-deep/30 px-4 py-2 font-display text-sm font-bold text-green-deep"
                 >
                   Annuler
@@ -739,12 +702,10 @@ export default function StocksPage() {
                 <button
                   type="button"
                   onClick={confirmDelete}
-                  disabled={deleteConfirmId === productToDelete.id}
+                  disabled={deleteLoading}
                   className="inline-flex items-center gap-2 rounded-xl bg-red-alert px-4 py-2 font-display text-sm font-bold text-white disabled:opacity-70"
                 >
-                  {deleteConfirmId === productToDelete.id ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : null}
+                  {deleteLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
                   Supprimer
                 </button>
               </div>

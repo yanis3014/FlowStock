@@ -1,10 +1,11 @@
 'use client';
 
 import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import { Search, Trash2, Plus, Pencil, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useApi } from '@/hooks/useApi';
+import { useCrudModal } from '@/hooks/useCrudModal';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { DataTable, type DataTableColumn } from '@/components/ui/DataTable';
 import type { Supplier, SupplierCreateInput, SupplierUpdateInput } from '@bmad/shared';
@@ -20,23 +21,17 @@ const emptyForm = {
   notes: '',
 };
 
+type SupplierForm = typeof emptyForm;
+
 export default function SuppliersPage() {
-  const { token, isLoading } = useAuth();
+  const { token } = useAuth();
   const { fetchApi } = useApi();
-  const router = useRouter();
   const [list, setList] = useState<Supplier[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [messageSuccess, setMessageSuccess] = useState('');
-  const [messageError, setMessageError] = useState('');
   const [search, setSearch] = useState('');
   const [sortKey, setSortKey] = useState<string | null>('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
-  const [modalOpen, setModalOpen] = useState<'create' | 'edit' | null>(null);
-  const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
-  const [form, setForm] = useState(emptyForm);
-  const [submitLoading, setSubmitLoading] = useState(false);
-  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [supplierToDelete, setSupplierToDelete] = useState<Supplier | null>(null);
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState<{ page: number; limit: number; total: number } | null>(null);
@@ -44,13 +39,6 @@ export default function SuppliersPage() {
   const debouncedSearch = useDebouncedValue(search, 300);
   const modalFirstInputRef = useRef<HTMLInputElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
-
-  useEffect(() => {
-    if (!token && !isLoading) {
-      router.push('/login?returnUrl=/suppliers');
-      return;
-    }
-  }, [token, isLoading, router]);
 
   const load = useCallback(
     (pageNum: number = 1) => {
@@ -87,151 +75,144 @@ export default function SuppliersPage() {
     if (token) load(page);
   }, [token, page, load]);
 
-  const openCreate = () => {
-    setEditingSupplier(null);
-    setForm(emptyForm);
-    setModalOpen('create');
-    setMessageError('');
-    setMessageSuccess('');
-  };
+  const handleCreate = useCallback(
+    async (formData: SupplierForm) => {
+      const body: SupplierCreateInput = {
+        name: formData.name.trim(),
+        contact_name: formData.contact_name.trim() || null,
+        email: formData.email.trim() || null,
+        phone: formData.phone.trim() || null,
+        address: formData.address.trim() || null,
+        notes: formData.notes.trim() || null,
+      };
+      const res = await fetchApi('/suppliers', { method: 'POST', body: JSON.stringify(body) });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json?.error ?? 'Erreur lors de la création.');
+      setPage(1);
+      load(1);
+    },
+    [fetchApi, load]
+  );
 
-  const openEdit = async (sup: Supplier) => {
-    setMessageError('');
-    setEditLoadingId(sup.id);
-    previousFocusRef.current = document.activeElement as HTMLElement | null;
-    try {
-      const res = await fetchApi(`/suppliers/${sup.id}`);
-      if (!res.ok) {
+  const handleUpdate = useCallback(
+    async (id: string, formData: SupplierForm) => {
+      const body: SupplierUpdateInput = {
+        name: formData.name.trim(),
+        contact_name: formData.contact_name.trim() || null,
+        email: formData.email.trim() || null,
+        phone: formData.phone.trim() || null,
+        address: formData.address.trim() || null,
+        notes: formData.notes.trim() || null,
+      };
+      const res = await fetchApi(`/suppliers/${id}`, { method: 'PUT', body: JSON.stringify(body) });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json?.error ?? 'Erreur lors de la modification.');
+      load(page);
+    },
+    [fetchApi, load, page]
+  );
+
+  const handleDelete = useCallback(
+    async (id: string) => {
+      const res = await fetchApi(`/suppliers/${id}`, { method: 'DELETE' });
+      if (res.status !== 204 && !res.ok) {
         const j = await res.json().catch(() => ({}));
-        setMessageError(j?.error ?? "Impossible de charger le fournisseur.");
-        return;
+        throw new Error(j?.error ?? 'Erreur lors de la suppression.');
       }
-      const json = await res.json();
-      const fresh = json?.success && json?.data ? json.data : sup;
-      setEditingSupplier(fresh);
-      setForm({
-        name: fresh.name,
-        contact_name: fresh.contact_name ?? '',
-        email: fresh.email ?? '',
-        phone: fresh.phone ?? '',
-        address: fresh.address ?? '',
-        notes: fresh.notes ?? '',
-      });
-      setModalOpen('edit');
-    } catch {
-      setMessageError('Erreur réseau.');
-    } finally {
-      setEditLoadingId(null);
-    }
-  };
+      setSupplierToDelete(null);
+      load(page);
+    },
+    [fetchApi, load, page]
+  );
 
-  const closeModal = () => {
-    setModalOpen(null);
-    setEditingSupplier(null);
-    setForm(emptyForm);
-    setMessageError('');
-    if (previousFocusRef.current?.focus) previousFocusRef.current.focus();
-  };
-
-  const validateForm = (): string | null => {
-    if (!form.name.trim()) return 'Le nom est obligatoire.';
-    if (form.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
-      return 'Format d\'email invalide.';
+  const validateForm = useCallback((formData: SupplierForm): string | null => {
+    if (!formData.name.trim()) return 'Le nom est obligatoire.';
+    if (formData.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
+      return "Format d'email invalide.";
     }
     return null;
-  };
+  }, []);
 
-  const handleSubmitCreate = async () => {
-    const err = validateForm();
-    if (err) {
-      setMessageError(err);
-      return;
-    }
-    setSubmitLoading(true);
-    setMessageError('');
-    const body: SupplierCreateInput = {
-      name: form.name.trim(),
-      contact_name: form.contact_name.trim() || null,
-      email: form.email.trim() || null,
-      phone: form.phone.trim() || null,
-      address: form.address.trim() || null,
-      notes: form.notes.trim() || null,
-    };
-    fetchApi('/suppliers', { method: 'POST', body: JSON.stringify(body) })
-      .then(async (res) => {
-        const json = await res.json().catch(() => ({}));
+  const {
+    modalOpen,
+    form,
+    setForm,
+    submitLoading,
+    deleteConfirmId,
+    setDeleteConfirmId,
+    deleteLoading,
+    openCreate,
+    openEdit: openEditBase,
+    closeModal,
+    handleSubmit,
+    handleDeleteConfirm,
+    isEditing,
+  } = useCrudModal<Supplier, SupplierForm>({
+    itemToForm: (s) => ({
+      name: s.name ?? '',
+      contact_name: s.contact_name ?? '',
+      email: s.email ?? '',
+      phone: s.phone ?? '',
+      address: s.address ?? '',
+      notes: s.notes ?? '',
+    }),
+    defaultForm: emptyForm,
+    validateForm,
+    onCreate: handleCreate,
+    onUpdate: handleUpdate,
+    onDelete: handleDelete,
+    messages: {
+      created: 'Fournisseur créé avec succès.',
+      updated: 'Fournisseur modifié avec succès.',
+      deleted: 'Fournisseur supprimé.',
+    },
+  });
+
+  const openEdit = useCallback(
+    async (sup: Supplier) => {
+      setEditLoadingId(sup.id);
+      previousFocusRef.current = document.activeElement as HTMLElement | null;
+      try {
+        const res = await fetchApi(`/suppliers/${sup.id}`);
         if (!res.ok) {
-          setMessageError(json?.error ?? 'Erreur lors de la création.');
+          const j = await res.json().catch(() => ({}));
+          toast.error(j?.error ?? 'Impossible de charger le fournisseur.');
           return;
         }
-        setMessageSuccess('Fournisseur créé avec succès.');
-        closeModal();
-        setPage(1);
-      })
-      .catch(() => setMessageError('Erreur réseau.'))
-      .finally(() => setSubmitLoading(false));
-  };
+        const json = await res.json();
+        const fresh = json?.success && json?.data ? json.data : sup;
+        openEditBase(fresh);
+      } catch {
+        toast.error('Erreur réseau.');
+      } finally {
+        setEditLoadingId(null);
+      }
+    },
+    [fetchApi, openEditBase]
+  );
+
+  const closeModalWithFocus = useCallback(() => {
+    closeModal();
+    if (previousFocusRef.current?.focus) previousFocusRef.current.focus();
+  }, [closeModal]);
+
+  const openDeleteConfirm = useCallback(
+    (sup: Supplier) => {
+      setSupplierToDelete(sup);
+      setDeleteConfirmId(sup.id);
+    },
+    [setDeleteConfirmId]
+  );
+
+  const confirmDelete = useCallback(() => {
+    handleDeleteConfirm();
+  }, [handleDeleteConfirm]);
 
   useEffect(() => {
     if (modalOpen && modalFirstInputRef.current) {
       modalFirstInputRef.current.focus();
     }
   }, [modalOpen]);
-
-  const handleSubmitEdit = async () => {
-    if (!editingSupplier) return;
-    const err = validateForm();
-    if (err) {
-      setMessageError(err);
-      return;
-    }
-    setSubmitLoading(true);
-    setMessageError('');
-    const body: SupplierUpdateInput = {
-      name: form.name.trim(),
-      contact_name: form.contact_name.trim() || null,
-      email: form.email.trim() || null,
-      phone: form.phone.trim() || null,
-      address: form.address.trim() || null,
-      notes: form.notes.trim() || null,
-    };
-    fetchApi(`/suppliers/${editingSupplier.id}`, { method: 'PUT', body: JSON.stringify(body) })
-      .then(async (res) => {
-        const json = await res.json().catch(() => ({}));
-        if (!res.ok) {
-          setMessageError(json?.error ?? 'Erreur lors de la modification.');
-          return;
-        }
-        setMessageSuccess('Fournisseur modifié avec succès.');
-        closeModal();
-        load(page);
-      })
-      .catch(() => setMessageError('Erreur réseau.'))
-      .finally(() => setSubmitLoading(false));
-  };
-
-  const openDeleteConfirm = (sup: Supplier) => setSupplierToDelete(sup);
-
-  const confirmDelete = () => {
-    if (!supplierToDelete) return;
-    const id = supplierToDelete.id;
-    setDeleteConfirmId(id);
-    fetchApi(`/suppliers/${id}`, { method: 'DELETE' })
-      .then((res) => {
-        if (res.status === 204 || res.ok) {
-          setMessageSuccess('Fournisseur supprimé.');
-          setSupplierToDelete(null);
-          load(page);
-        } else {
-          res
-            .json()
-            .then((j) => setMessageError(j?.error ?? 'Erreur lors de la suppression.'))
-            .catch(() => setMessageError('Erreur lors de la suppression.'));
-        }
-      })
-      .catch(() => setMessageError('Erreur réseau.'))
-      .finally(() => setDeleteConfirmId(null));
-  };
 
   const filtered = useMemo(() => {
     if (!debouncedSearch.trim()) return list;
@@ -279,37 +260,9 @@ export default function SuppliersPage() {
     },
   ];
 
-  if (!token && isLoading) return null;
-  if (!token) return null;
-
   return (
     <div className="min-h-full bg-cream font-body">
       <div className="mx-auto max-w-6xl space-y-6 p-4 pb-24 md:pb-6">
-        {messageSuccess && (
-          <div
-            className="rounded-xl border border-green-600/40 bg-green-50 px-4 py-3 text-sm text-green-800"
-            role="status"
-            aria-live="polite"
-          >
-            {messageSuccess}
-            <button type="button" onClick={() => setMessageSuccess('')} className="ml-2 underline">
-              Fermer
-            </button>
-          </div>
-        )}
-        {messageError && (
-          <div
-            id="supplier-form-error"
-            className="rounded-xl border border-red-alert/30 bg-red-alert/10 px-4 py-3 text-sm text-red-alert"
-            role="alert"
-            aria-live="assertive"
-          >
-            {messageError}
-            <button type="button" onClick={() => setMessageError('')} className="ml-2 underline">
-              Fermer
-            </button>
-          </div>
-        )}
         {error && (
           <div className="rounded-xl border border-red-alert/30 bg-red-alert/10 px-4 py-3 text-sm text-red-alert">
             {error}
@@ -423,7 +376,7 @@ export default function SuppliersPage() {
         {modalOpen && (
           <div
             className="fixed inset-0 z-50 flex items-center justify-center bg-charcoal/50 p-4"
-            onClick={(e) => e.target === e.currentTarget && closeModal()}
+            onClick={(e) => e.target === e.currentTarget && closeModalWithFocus()}
             role="dialog"
             aria-modal="true"
             aria-labelledby="modal-title"
@@ -433,7 +386,7 @@ export default function SuppliersPage() {
               onClick={(e) => e.stopPropagation()}
             >
               <h2 id="modal-title" className="font-display text-lg font-bold text-green-deep">
-                {modalOpen === 'create' ? 'Nouveau fournisseur' : 'Modifier le fournisseur'}
+                {isEditing ? 'Modifier le fournisseur' : 'Nouveau fournisseur'}
               </h2>
               <div className="mt-4 space-y-3">
                 <div>
@@ -447,8 +400,6 @@ export default function SuppliersPage() {
                     value={form.name}
                     onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
                     className="mt-1 w-full rounded-lg border border-green-deep/20 px-3 py-2 text-sm"
-                    aria-invalid={!!messageError}
-                    aria-describedby={messageError ? 'supplier-form-error' : undefined}
                   />
                 </div>
                 <div>
@@ -500,19 +451,19 @@ export default function SuppliersPage() {
               <div className="mt-6 flex justify-end gap-2">
                 <button
                   type="button"
-                  onClick={closeModal}
+                  onClick={closeModalWithFocus}
                   className="rounded-xl border border-green-deep/30 px-4 py-2 font-display text-sm font-bold text-green-deep"
                 >
                   Annuler
                 </button>
                 <button
                   type="button"
-                  onClick={modalOpen === 'create' ? handleSubmitCreate : handleSubmitEdit}
+                  onClick={handleSubmit}
                   disabled={submitLoading}
                   className="inline-flex items-center gap-2 rounded-xl bg-green-mid px-4 py-2 font-display text-sm font-bold text-white disabled:opacity-70"
                 >
                   {submitLoading && <Loader2 className="h-4 w-4 animate-spin" />}
-                  {modalOpen === 'create' ? 'Créer' : 'Enregistrer'}
+                  {isEditing ? 'Enregistrer' : 'Créer'}
                 </button>
               </div>
             </div>
@@ -523,7 +474,7 @@ export default function SuppliersPage() {
         {supplierToDelete && (
           <div
             className="fixed inset-0 z-50 flex items-center justify-center bg-charcoal/50 p-4"
-            onClick={(e) => e.target === e.currentTarget && setSupplierToDelete(null)}
+            onClick={(e) => e.target === e.currentTarget && (setSupplierToDelete(null), setDeleteConfirmId(null))}
             role="dialog"
             aria-modal="true"
             aria-labelledby="delete-modal-title"
@@ -541,7 +492,7 @@ export default function SuppliersPage() {
               <div className="mt-6 flex justify-end gap-2">
                 <button
                   type="button"
-                  onClick={() => setSupplierToDelete(null)}
+                  onClick={() => { setSupplierToDelete(null); setDeleteConfirmId(null); }}
                   className="rounded-xl border border-green-deep/30 px-4 py-2 font-display text-sm font-bold text-green-deep"
                 >
                   Annuler
@@ -549,10 +500,10 @@ export default function SuppliersPage() {
                 <button
                   type="button"
                   onClick={confirmDelete}
-                  disabled={deleteConfirmId === supplierToDelete.id}
+                  disabled={deleteLoading}
                   className="inline-flex items-center gap-2 rounded-xl bg-red-alert px-4 py-2 font-display text-sm font-bold text-white disabled:opacity-70"
                 >
-                  {deleteConfirmId === supplierToDelete.id ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                  {deleteLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
                   Supprimer
                 </button>
               </div>

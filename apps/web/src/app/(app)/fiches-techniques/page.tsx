@@ -1,9 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 import Link from 'next/link';
-import { useAuth } from '@/contexts/AuthContext';
 import { Plus, Camera, Copy, AlertTriangle } from 'lucide-react';
 
 interface FicheResume {
@@ -23,20 +21,11 @@ const MOCK_FICHES: FicheResume[] = [
 ];
 
 export default function FichesTechniquesPage() {
-  const { token, isLoading } = useAuth();
-  const router = useRouter();
   const [search, setSearch] = useState('');
-
-  useEffect(() => {
-    if (!token && !isLoading) router.push('/login?returnUrl=/fiches-techniques');
-  }, [token, isLoading, router]);
 
   const filtered = search.trim()
     ? MOCK_FICHES.filter((f) => f.name.toLowerCase().includes(search.trim().toLowerCase()))
     : MOCK_FICHES;
-
-  if (!token && isLoading) return null;
-  if (!token) return null;
 
   return (
     <div className="min-h-full bg-cream font-body">

@@ -2,7 +2,6 @@
 
 import type { ComponentType } from 'react';
 import { useEffect, useState, useMemo, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
 import {
   LineChart,
   Line,
@@ -46,10 +45,10 @@ interface StockEstimate {
 }
 
 const CONFIDENCE_COLORS: Record<string, string> = {
-  high: '#10b981',
-  medium: '#f59e0b',
-  low: '#ef4444',
-  insufficient: '#ef4444',
+  high: '#2D6A4F',
+  medium: '#D4A843',
+  low: '#C1440E',
+  insufficient: '#C1440E',
 };
 
 export default function ForecastPage() {
@@ -61,13 +60,6 @@ export default function ForecastPage() {
   const [error, setError] = useState('');
   const [periodDays, setPeriodDays] = useState(30);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-
-  useEffect(() => {
-    if (!token && !isLoading) {
-      router.push('/login?returnUrl=/forecast');
-      return;
-    }
-  }, [token, isLoading, router]);
 
   const load = useCallback(() => {
     if (!token) return;
@@ -146,20 +138,17 @@ export default function ForecastPage() {
     });
   }, []);
 
-  if (!token && isLoading) return null;
-  if (!token) return null;
-
   return (
-    <div className="space-y-6" role="region" aria-label="Prévisions de rupture" aria-live="polite">
+    <div className="min-h-full space-y-6 bg-cream font-body" role="region" aria-label="Prévisions de rupture" aria-live="polite">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <h2 className="text-lg font-semibold text-gray-800">Prévisions de rupture</h2>
+        <h1 className="text-2xl font-display font-bold text-charcoal">Prévisions de rupture</h1>
         <div className="flex items-center gap-2">
-          <label htmlFor="period-days" className="text-sm text-gray-600">Période (jours) :</label>
+          <label htmlFor="period-days" className="text-sm text-charcoal/60">Période (jours) :</label>
           <select
             id="period-days"
             value={periodDays}
             onChange={(e) => setPeriodDays(Number(e.target.value))}
-            className="rounded border border-gray-300 px-3 py-1.5 text-sm"
+            className="rounded-xl border border-cream-dark bg-white px-3 py-1.5 text-sm text-charcoal"
           >
             <option value={7}>7</option>
             <option value={30}>30</option>
@@ -170,7 +159,7 @@ export default function ForecastPage() {
       </div>
 
       {error && (
-        <div className="rounded-lg border border-error/20 bg-error/10 p-3 text-sm text-error">
+        <div className="rounded-lg border border-terracotta/20 bg-terracotta/10 p-3 text-sm text-terracotta">
           {error}
         </div>
       )}
@@ -182,18 +171,18 @@ export default function ForecastPage() {
         </div>
       ) : (
         <>
-          <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-            <p className="mb-3 text-sm text-gray-600">Sélectionnez les produits à comparer (courbe de stock jusqu’à la date de rupture estimée) :</p>
+          <div className="rounded-xl border border-cream-dark bg-white p-4 shadow-sm">
+            <p className="mb-3 text-sm text-charcoal/60">Sélectionnez les produits à comparer (courbe de stock jusqu’à la date de rupture estimée) :</p>
             <div className="flex flex-wrap gap-2">
               {estimates.map((e) => (
-                <label key={e.product_id} className="flex cursor-pointer items-center gap-2 rounded border border-gray-200 px-3 py-2 hover:bg-gray-50">
+                <label key={e.product_id} className="flex cursor-pointer items-center gap-2 rounded-xl border border-cream-dark px-3 py-2 hover:bg-cream/50">
                   <input
                     type="checkbox"
                     checked={selectedIds.has(e.product_id)}
                     onChange={() => toggleProduct(e.product_id)}
-                    className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                    className="h-4 w-4 rounded border-cream-dark text-green-deep focus:ring-green-deep"
                   />
-                  <span className="text-sm font-medium text-gray-800">{e.product_name}</span>
+                  <span className="text-sm font-medium text-charcoal">{e.product_name}</span>
                   <span
                     className="rounded px-1.5 py-0.5 text-xs font-medium"
                     style={{
@@ -204,7 +193,7 @@ export default function ForecastPage() {
                     {e.confidence_level}
                   </span>
                   {e.estimated_stockout_date && (
-                    <span className="text-xs text-gray-500">
+                    <span className="text-xs text-charcoal/60">
                       Rupture ~{new Date(e.estimated_stockout_date).toLocaleDateString('fr-FR')}
                     </span>
                   )}
@@ -213,32 +202,32 @@ export default function ForecastPage() {
             </div>
           </div>
 
-          <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-            <h3 className="mb-4 text-sm font-semibold text-gray-800">Évolution du stock (tendance)</h3>
+          <div className="rounded-xl border border-cream-dark bg-white p-4 shadow-sm">
+            <h3 className="mb-4 font-display text-sm font-bold text-charcoal">Évolution du stock (tendance)</h3>
             <div className="h-80 w-full" role="img" aria-label="Courbes de prévision de stock par produit">
               {chartData.length === 0 ? (
-                <div className="flex h-full items-center justify-center text-gray-500">
+                <div className="flex h-full items-center justify-center text-charcoal/60">
                   Sélectionnez au moins un produit avec date de rupture estimée.
                 </div>
               ) : (
               <Rc.ResponsiveContainer width="100%" height="100%">
                 <Rc.LineChart data={chartData} margin={{ top: 8, right: 24, left: 0, bottom: 0 }}>
-                  <Rc.CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <Rc.CartesianGrid strokeDasharray="3 3" stroke="#F0EBE1" />
                   <Rc.XAxis
                     dataKey="date"
                     tick={{ fontSize: 11 }}
-                    stroke="#6b7280"
+                    stroke="#6B7B76"
                     tickFormatter={(v: string) => new Date(v).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })}
                   />
-                  <Rc.YAxis tick={{ fontSize: 12 }} stroke="#6b7280" label={{ value: 'Stock', angle: -90, position: 'insideLeft', style: { fontSize: 12 } }} />
+                  <Rc.YAxis tick={{ fontSize: 12 }} stroke="#6B7B76" label={{ value: 'Stock', angle: -90, position: 'insideLeft', style: { fontSize: 12 } }} />
                   <Rc.Tooltip
                     formatter={(value: number) => [value, 'Stock']}
                     labelFormatter={(label: string) => `Date: ${new Date(label).toLocaleDateString('fr-FR')}`}
-                    contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb' }}
+                    contentStyle={{ borderRadius: '8px', border: '1px solid #F0EBE1' }}
                   />
                   <Rc.Legend />
                   {chartData.length > 0 && (
-                    <Rc.ReferenceLine x={new Date().toISOString().split('T')[0]} stroke="#94a3b8" strokeDasharray="4 4" />
+                    <Rc.ReferenceLine x={new Date().toISOString().split('T')[0]} stroke="#6B7B76" strokeDasharray="4 4" />
                   )}
                   {estimates
                     .filter((e) => selectedIds.has(e.product_id))
@@ -248,7 +237,7 @@ export default function ForecastPage() {
                         type="monotone"
                         dataKey={e.product_id}
                         name={e.product_name}
-                        stroke={CONFIDENCE_COLORS[e.confidence_level] ?? '#3b82f6'}
+                        stroke={CONFIDENCE_COLORS[e.confidence_level] ?? '#1A3C34'}
                         strokeWidth={2}
                         dot={{ r: 3 }}
                         connectNulls
@@ -260,12 +249,12 @@ export default function ForecastPage() {
             </div>
           </div>
 
-          <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-            <h3 className="mb-3 text-sm font-semibold text-gray-800">Détail par produit</h3>
+          <div className="rounded-xl border border-cream-dark bg-white p-4 shadow-sm">
+            <h3 className="mb-3 font-display text-sm font-bold text-charcoal">Détail par produit</h3>
             <div className="overflow-x-auto">
               <table className="min-w-full text-sm">
                 <thead>
-                  <tr className="border-b border-gray-200 text-left text-gray-600">
+                  <tr className="border-b border-cream-dark text-left text-charcoal/60">
                     <th className="pb-2 pr-4 font-medium">Produit</th>
                     <th className="pb-2 pr-4 font-medium">Stock actuel</th>
                     <th className="pb-2 pr-4 font-medium">Jours restants</th>
@@ -275,8 +264,8 @@ export default function ForecastPage() {
                 </thead>
                 <tbody>
                   {estimates.map((e) => (
-                    <tr key={e.product_id} className="border-b border-gray-100">
-                      <td className="py-2 pr-4 font-medium text-gray-800">{e.product_name}</td>
+                    <tr key={e.product_id} className="border-b border-cream-dark/50">
+                      <td className="py-2 pr-4 font-medium text-charcoal">{e.product_name}</td>
                       <td className="py-2 pr-4">{e.current_stock} {e.unit}</td>
                       <td className="py-2 pr-4">{e.days_remaining != null ? e.days_remaining : '—'}</td>
                       <td className="py-2 pr-4">{e.estimated_stockout_date ? new Date(e.estimated_stockout_date).toLocaleDateString('fr-FR') : '—'}</td>
@@ -284,8 +273,8 @@ export default function ForecastPage() {
                         <span
                           className="rounded px-2 py-0.5 text-xs font-medium"
                           style={{
-                            backgroundColor: `${CONFIDENCE_COLORS[e.confidence_level] ?? '#6b7280'}20`,
-                            color: CONFIDENCE_COLORS[e.confidence_level] ?? '#6b7280',
+                            backgroundColor: `${CONFIDENCE_COLORS[e.confidence_level] ?? '#6B7B76'}20`,
+                            color: CONFIDENCE_COLORS[e.confidence_level] ?? '#6B7B76',
                           }}
                         >
                           {e.confidence_level}

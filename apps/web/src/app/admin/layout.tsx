@@ -1,9 +1,11 @@
 import Link from 'next/link';
+import { AdminGuard } from '@/components/auth/AdminGuard';
 
 export default function AdminLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
+    <AdminGuard>
     <div className="min-h-screen bg-gray-100 font-body">
       <header className="border-b border-gray-200 bg-white px-6 py-4">
         <div className="mx-auto flex max-w-7xl items-center justify-between">
@@ -32,5 +34,6 @@ export default function AdminLayout({
       </header>
       <main className="mx-auto max-w-7xl p-6">{children}</main>
     </div>
+    </AdminGuard>
   );
 }

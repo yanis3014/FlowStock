@@ -2,7 +2,6 @@
 
 import type { ComponentType } from 'react';
 import { useEffect, useState, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
 import {
   BarChart,
   Bar,
@@ -63,13 +62,6 @@ export default function StatsPage() {
   const [error, setError] = useState('');
   const [period, setPeriod] = useState<'7' | '30'>('30');
 
-  useEffect(() => {
-    if (!token && !isLoading) {
-      router.push('/login?returnUrl=/stats');
-      return;
-    }
-  }, [token, isLoading, router]);
-
   const load = useCallback(() => {
     if (!token) return;
     setLoading(true);
@@ -104,9 +96,6 @@ export default function StatsPage() {
     if (token) load();
   }, [token, load]);
 
-  if (!token && isLoading) return null;
-  if (!token) return null;
-
   const chartData = dailyData.map((g) => ({
     date: formatDateKey(g.key),
     fullKey: g.key,
@@ -115,21 +104,21 @@ export default function StatsPage() {
   })).reverse();
 
   return (
-    <div className="space-y-6" role="region" aria-label="Statistiques" aria-live="polite">
+    <div className="min-h-full space-y-6 bg-cream font-body" role="region" aria-label="Statistiques" aria-live="polite">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <h2 className="text-lg font-semibold text-gray-800">Statistiques</h2>
+        <h1 className="text-2xl font-display font-bold text-charcoal">Statistiques</h1>
         <div className="flex gap-2">
           <button
             type="button"
             onClick={() => setPeriod('7')}
-            className={`rounded px-3 py-1.5 text-sm font-medium ${period === '7' ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+            className={`rounded-xl px-3 py-1.5 text-sm font-medium transition-colors ${period === '7' ? 'bg-green-deep text-cream hover:bg-forest-green' : 'bg-cream-dark text-charcoal hover:bg-cream-dark/80'}`}
           >
             7 jours
           </button>
           <button
             type="button"
             onClick={() => setPeriod('30')}
-            className={`rounded px-3 py-1.5 text-sm font-medium ${period === '30' ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+            className={`rounded-xl px-3 py-1.5 text-sm font-medium transition-colors ${period === '30' ? 'bg-green-deep text-cream hover:bg-forest-green' : 'bg-cream-dark text-charcoal hover:bg-cream-dark/80'}`}
           >
             30 jours
           </button>
@@ -137,7 +126,7 @@ export default function StatsPage() {
       </div>
 
       {error && (
-        <div className="rounded-lg border border-error/20 bg-error/10 p-3 text-sm text-error">
+        <div className="rounded-lg border border-terracotta/20 bg-terracotta/10 p-3 text-sm text-terracotta">
           {error}
         </div>
       )}
@@ -156,78 +145,78 @@ export default function StatsPage() {
         <>
           {stats && (
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-              <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+              <div className="rounded-xl border border-cream-dark bg-white p-4 shadow-sm">
                 <div className="flex items-center gap-2">
-                  <TrendingUp className="h-5 w-5 text-primary" />
-                  <span className="text-sm font-medium text-gray-600">Ventes hier</span>
+                  <TrendingUp className="h-5 w-5 text-green-deep" />
+                  <span className="text-sm font-medium text-charcoal/60">Ventes hier</span>
                 </div>
-                <p className="mt-1 text-xl font-semibold text-gray-800">
+                <p className="mt-1 text-xl font-display font-bold text-charcoal">
                   {stats.yesterday.total_amount != null
                     ? new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(stats.yesterday.total_amount)
                     : '—'}
                 </p>
-                <p className="text-xs text-gray-500">{stats.yesterday.count} vente(s)</p>
+                <p className="text-xs text-charcoal/60">{stats.yesterday.count} vente(s)</p>
               </div>
-              <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+              <div className="rounded-xl border border-cream-dark bg-white p-4 shadow-sm">
                 <div className="flex items-center gap-2">
-                  <TrendingUp className="h-5 w-5 text-success" />
-                  <span className="text-sm font-medium text-gray-600">Cette semaine</span>
+                  <TrendingUp className="h-5 w-5 text-green-deep" />
+                  <span className="text-sm font-medium text-charcoal/60">Cette semaine</span>
                 </div>
-                <p className="mt-1 text-xl font-semibold text-gray-800">
+                <p className="mt-1 text-xl font-display font-bold text-charcoal">
                   {stats.this_week.total_amount != null
                     ? new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(stats.this_week.total_amount)
                     : '—'}
                 </p>
-                <p className="text-xs text-gray-500">{stats.this_week.count} vente(s)</p>
+                <p className="text-xs text-charcoal/60">{stats.this_week.count} vente(s)</p>
               </div>
-              <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+              <div className="rounded-xl border border-cream-dark bg-white p-4 shadow-sm">
                 <div className="flex items-center gap-2">
-                  <Package className="h-5 w-5 text-primary" />
-                  <span className="text-sm font-medium text-gray-600">Ce mois</span>
+                  <Package className="h-5 w-5 text-green-deep" />
+                  <span className="text-sm font-medium text-charcoal/60">Ce mois</span>
                 </div>
-                <p className="mt-1 text-xl font-semibold text-gray-800">
+                <p className="mt-1 text-xl font-display font-bold text-charcoal">
                   {stats.this_month.total_amount != null
                     ? new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(stats.this_month.total_amount)
                     : '—'}
                 </p>
-                <p className="text-xs text-gray-500">{stats.this_month.count} vente(s)</p>
+                <p className="text-xs text-charcoal/60">{stats.this_month.count} vente(s)</p>
               </div>
-              <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+              <div className="rounded-xl border border-cream-dark bg-white p-4 shadow-sm">
                 <div className="flex items-center gap-2">
-                  <TrendingUp className="h-5 w-5 text-warning" />
-                  <span className="text-sm font-medium text-gray-600">Aujourd&apos;hui</span>
+                  <TrendingUp className="h-5 w-5 text-gold" />
+                  <span className="text-sm font-medium text-charcoal/60">Aujourd&apos;hui</span>
                 </div>
-                <p className="mt-1 text-xl font-semibold text-gray-800">
+                <p className="mt-1 text-xl font-display font-bold text-charcoal">
                   {stats.today.total_amount != null
                     ? new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(stats.today.total_amount)
                     : '—'}
                 </p>
-                <p className="text-xs text-gray-500">{stats.today.count} vente(s)</p>
+                <p className="text-xs text-charcoal/60">{stats.today.count} vente(s)</p>
               </div>
             </div>
           )}
 
-          <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-            <h3 className="mb-4 text-sm font-semibold text-gray-800">Ventes par jour</h3>
+          <div className="rounded-xl border border-cream-dark bg-white p-4 shadow-sm">
+            <h3 className="mb-4 font-display text-sm font-bold text-charcoal">Ventes par jour</h3>
             <div className="h-64 w-full" role="img" aria-label="Graphique des ventes par jour">
               <Rc.ResponsiveContainer width="100%" height="100%">
                 <Rc.BarChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-                  <Rc.CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                  <Rc.XAxis dataKey="date" tick={{ fontSize: 12 }} stroke="#6b7280" />
-                  <Rc.YAxis tick={{ fontSize: 12 }} stroke="#6b7280" tickFormatter={(v: number) => (v >= 1000 ? `${v / 1000}k` : String(v))} />
+                  <Rc.CartesianGrid strokeDasharray="3 3" stroke="#F0EBE1" />
+                  <Rc.XAxis dataKey="date" tick={{ fontSize: 12 }} stroke="#6B7B76" />
+                  <Rc.YAxis tick={{ fontSize: 12 }} stroke="#6B7B76" tickFormatter={(v: number) => (v >= 1000 ? `${v / 1000}k` : String(v))} />
                   <Rc.Tooltip
                     formatter={(value: number) => [value, 'Quantité']}
                     labelFormatter={(label: string) => `Date: ${label}`}
-                    contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb' }}
+                    contentStyle={{ borderRadius: '8px', border: '1px solid #F0EBE1' }}
                   />
-                  <Rc.Bar dataKey="quantité" fill="#3b82f6" name="Quantité vendue" radius={[4, 4, 0, 0]} />
+                  <Rc.Bar dataKey="quantité" fill="#1A3C34" name="Quantité vendue" radius={[4, 4, 0, 0]} />
                 </Rc.BarChart>
               </Rc.ResponsiveContainer>
             </div>
           </div>
 
-          <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-            <h3 className="mb-4 text-sm font-semibold text-gray-800">Top 10 produits (quantité vendue)</h3>
+          <div className="rounded-xl border border-cream-dark bg-white p-4 shadow-sm">
+            <h3 className="mb-4 font-display text-sm font-bold text-charcoal">Top 10 produits (quantité vendue)</h3>
             <div className="h-64 w-full" role="img" aria-label="Top produits par quantité vendue">
               <Rc.ResponsiveContainer width="100%" height="100%">
                 <Rc.BarChart
@@ -238,11 +227,11 @@ export default function StatsPage() {
                   layout="vertical"
                   margin={{ top: 8, right: 24, left: 0, bottom: 0 }}
                 >
-                  <Rc.CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                  <Rc.XAxis type="number" tick={{ fontSize: 12 }} stroke="#6b7280" />
-                  <Rc.YAxis type="category" dataKey="name" width={80} tick={{ fontSize: 11 }} stroke="#6b7280" />
-                  <Rc.Tooltip formatter={(value: number) => [value, 'Quantité']} contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb' }} />
-                  <Rc.Bar dataKey="quantité" fill="#10b981" name="Quantité" radius={[0, 4, 4, 0]} />
+                  <Rc.CartesianGrid strokeDasharray="3 3" stroke="#F0EBE1" />
+                  <Rc.XAxis type="number" tick={{ fontSize: 12 }} stroke="#6B7B76" />
+                  <Rc.YAxis type="category" dataKey="name" width={80} tick={{ fontSize: 11 }} stroke="#6B7B76" />
+                  <Rc.Tooltip formatter={(value: number) => [value, 'Quantité']} contentStyle={{ borderRadius: '8px', border: '1px solid #F0EBE1' }} />
+                  <Rc.Bar dataKey="quantité" fill="#2D6A4F" name="Quantité" radius={[0, 4, 4, 0]} />
                 </Rc.BarChart>
               </Rc.ResponsiveContainer>
             </div>

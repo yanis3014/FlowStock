@@ -5,9 +5,10 @@ import { useRouter } from 'next/navigation';
 import { Send, MessageSquarePlus, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
-const ML_SERVICE_URL = typeof process.env.NEXT_PUBLIC_ML_SERVICE_URL === 'string' && process.env.NEXT_PUBLIC_ML_SERVICE_URL
-  ? process.env.NEXT_PUBLIC_ML_SERVICE_URL.replace(/\/$/, '')
-  : 'http://localhost:8000';
+const ML_SERVICE_URL =
+  typeof process.env.NEXT_PUBLIC_ML_SERVICE_URL === 'string' && process.env.NEXT_PUBLIC_ML_SERVICE_URL.trim()
+    ? process.env.NEXT_PUBLIC_ML_SERVICE_URL.replace(/\/$/, '')
+    : undefined;
 
 interface ChatMessage {
   id: string;
@@ -32,7 +33,7 @@ function formatTime(iso?: string): string {
 }
 
 export default function ChatPage() {
-  const { token, isLoading } = useAuth();
+  const { token } = useAuth();
   const router = useRouter();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [conversationId, setConversationId] = useState<string | null>(null);
@@ -44,16 +45,13 @@ export default function ChatPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    if (!token && !isLoading) {
-      router.push('/login?returnUrl=/chat');
-      return;
-    }
-  }, [token, isLoading, router]);
-
   const fetchChat = useCallback(
     async (path: string, options: RequestInit = {}): Promise<Response> => {
       if (!token) throw new Error('Non connecté');
+      if (!ML_SERVICE_URL) {
+        setError("Le service IA n'est pas configuré. Contactez l'administrateur.");
+        throw new Error('ML_SERVICE_URL not configured');
+      }
       const url = `${ML_SERVICE_URL}${path.startsWith('/') ? path : `/${path}`}`;
       const res = await fetch(url, {
         ...options,
@@ -188,9 +186,9 @@ export default function ChatPage() {
   if (!token) return null;
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] flex-col rounded-lg border border-gray-200 bg-white shadow-sm" role="region" aria-label="Chat IA">
-      <header className="flex shrink-0 items-center justify-between border-b border-gray-200 bg-primary px-4 py-3 text-white">
-        <h1 className="text-lg font-semibold">Chat IA</h1>
+    <div className="flex h-[calc(100vh-4rem)] flex-col rounded-xl border border-cream-dark bg-white shadow-sm" role="region" aria-label="Chat IA">
+      <header className="flex shrink-0 items-center justify-between border-b border-cream-dark bg-green-deep px-4 py-3 text-cream">
+        <h1 className="text-lg font-display font-bold">Chat IA</h1>
         <button
           type="button"
           onClick={handleNewConversation}
@@ -204,15 +202,15 @@ export default function ChatPage() {
 
       <div className="flex min-h-0 flex-1">
         {conversations.length > 0 && (
-          <aside className="hidden w-52 shrink-0 border-r border-gray-200 bg-gray-50 p-2 sm:block" aria-label="Conversations">
-            <p className="mb-2 px-2 text-xs font-medium text-gray-500">Conversations</p>
+          <aside className="hidden w-52 shrink-0 border-r border-cream-dark bg-cream p-2 sm:block" aria-label="Conversations">
+            <p className="mb-2 px-2 text-xs font-medium text-charcoal/60">Conversations</p>
             <ul className="space-y-1">
               {conversations.slice(0, 20).map((c) => (
                 <li key={c.id}>
                   <button
                     type="button"
                     onClick={() => handleSelectConversation(c.id)}
-                    className={`w-full rounded px-2 py-1.5 text-left text-sm ${conversationId === c.id ? 'bg-primary/10 font-medium text-primary' : 'text-gray-700 hover:bg-gray-200'}`}
+                    className={`w-full rounded-lg px-2 py-1.5 text-left text-sm ${conversationId === c.id ? 'bg-green-deep/10 font-medium text-green-deep' : 'text-charcoal hover:bg-cream-dark'}`}
                   >
                     {new Date(c.updated_at).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
                   </button>
@@ -224,7 +222,7 @@ export default function ChatPage() {
 
         <div className="flex min-w-0 flex-1 flex-col">
           {error && (
-            <div className="shrink-0 bg-error/10 px-4 py-2 text-sm text-error" role="alert">
+            <div className="shrink-0 bg-terracotta/10 px-4 py-2 text-sm text-terracotta" role="alert">
               {error}
             </div>
           )}
@@ -238,11 +236,11 @@ export default function ChatPage() {
           >
             {loadingHistory ? (
               <div className="flex flex-1 items-center justify-center">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" aria-hidden />
+                <Loader2 className="h-8 w-8 animate-spin text-green-deep" aria-hidden />
                 <span className="sr-only">Chargement de l’historique</span>
               </div>
             ) : messages.length === 0 && !sending ? (
-              <div className="flex flex-1 items-center justify-center text-center text-gray-500" aria-live="polite">
+              <div className="flex flex-1 items-center justify-center text-center text-charcoal/60" aria-live="polite">
                 Posez votre question sur vos stocks…
               </div>
             ) : (
@@ -252,21 +250,21 @@ export default function ChatPage() {
                     key={m.id}
                     className={`max-w-[90%] sm:max-w-[80%] rounded-xl px-4 py-3 break-words ${
                       m.role === 'user'
-                        ? 'ml-auto bg-primary text-white'
-                        : 'mr-auto border border-gray-200 bg-white text-gray-800'
+                        ? 'ml-auto bg-green-deep text-cream'
+                        : 'mr-auto border border-cream-dark bg-white text-charcoal'
                     }`}
                     role={m.role === 'user' ? 'user' : 'assistant'}
                   >
                     <div className="whitespace-pre-wrap">{m.content}</div>
                     {m.created_at && (
-                      <div className={`mt-1 text-xs ${m.role === 'user' ? 'text-white/80' : 'text-gray-500'}`}>
+                      <div className={`mt-1 text-xs ${m.role === 'user' ? 'text-cream/80' : 'text-charcoal/60'}`}>
                         {formatTime(m.created_at)}
                       </div>
                     )}
                   </div>
                 ))}
                 {sending && (
-                  <div className="mr-auto max-w-[80%] rounded-xl border border-gray-200 bg-white px-4 py-3 italic text-gray-500" aria-live="polite">
+                  <div className="mr-auto max-w-[80%] rounded-xl border border-cream-dark bg-white px-4 py-3 italic text-charcoal/60" aria-live="polite">
                     IA écrit…
                   </div>
                 )}
@@ -275,7 +273,7 @@ export default function ChatPage() {
             )}
           </div>
 
-          <div className="flex shrink-0 gap-2 border-t border-gray-200 bg-white p-4">
+          <div className="flex shrink-0 gap-2 border-t border-cream-dark bg-white p-4">
             <input
               ref={inputRef}
               type="text"
@@ -288,7 +286,7 @@ export default function ChatPage() {
                 }
               }}
               placeholder="Posez votre question..."
-              className="min-w-0 flex-1 rounded-lg border border-gray-300 px-4 py-3 text-base focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+              className="min-w-0 flex-1 rounded-xl border border-cream-dark px-4 py-3 text-base text-charcoal focus:border-green-deep focus:outline-none focus:ring-1 focus:ring-green-deep"
               aria-label="Votre message"
               disabled={sending}
               maxLength={2000}
@@ -297,7 +295,7 @@ export default function ChatPage() {
               type="button"
               onClick={sendMessage}
               disabled={sending || !inputValue.trim()}
-              className="flex items-center gap-2 rounded-lg bg-primary px-4 py-3 font-medium text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex items-center gap-2 rounded-xl bg-green-deep px-4 py-3 font-display font-medium text-cream hover:bg-forest-green transition-colors disabled:cursor-not-allowed disabled:opacity-50"
               aria-label="Envoyer le message"
             >
               {sending ? (

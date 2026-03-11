@@ -1,7 +1,29 @@
 'use client';
 
+import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
+import { useApi } from '@/hooks/useApi';
+import { Skeleton } from '@/components/ui/Skeleton';
+import type { Product, StockStatus } from '@bmad/shared';
+
+type Level = 'red' | 'orange' | 'green';
+
+function stockStatusToLevel(status: StockStatus): Level {
+  return status === 'critical' ? 'red' : status === 'low' ? 'orange' : 'green';
+}
+
+function unitLabel(unit: string): string {
+  const map: Record<string, string> = {
+    piece: 'pcs',
+    kg: 'kg',
+    liter: 'L',
+    box: 'caisse',
+    pack: 'pack',
+  };
+  return map[unit] ?? unit;
+}
 
 /**
  * Mode Rush — Priorité absolue (A.2)
@@ -11,42 +33,63 @@ import { useState } from 'react';
 export default function RushPage() {
   const now = new Date();
   const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-  const [cacheMinutes] = useState(2);
+  const { token, isLoading } = useAuth();
+  const { fetchApi } = useApi();
+  const router = useRouter();
 
-  const alerts = [
-    {
-      id: '1',
-      level: 'red' as const,
-      icon: '🐟',
-      name: 'Saumon atlantique',
-      detail: '2 portions restantes',
-      badge: 'CRITIQUE',
-    },
-    {
-      id: '2',
-      level: 'orange' as const,
-      icon: '🥩',
-      name: 'Filet de bœuf',
-      detail: '5 portions · 6 tables en cours',
-      badge: 'FAIBLE',
-    },
-    {
-      id: '3',
-      level: 'orange' as const,
-      icon: '🍮',
-      name: 'Crème brûlée',
-      detail: '4 portions restantes',
-      badge: 'FAIBLE',
-    },
-    {
-      id: '4',
-      level: 'green' as const,
-      icon: '🥗',
-      name: 'Salade niçoise',
-      detail: 'Stock suffisant · 18 portions',
-      badge: 'OK',
-    },
-  ];
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [lastFetchTime, setLastFetchTime] = useState<Date | null>(null);
+
+  const loadProducts = useCallback(() => {
+    if (!token) return;
+    setLoading(true);
+    setError('');
+    fetchApi('/products?limit=100')
+      .then((res) => {
+        if (!res.ok) throw new Error('Erreur chargement');
+        return res.json();
+      })
+      .then((json) => {
+        if (json?.success && Array.isArray(json?.data)) {
+          setProducts(json.data);
+          setLastFetchTime(new Date());
+        } else {
+          setProducts([]);
+        }
+      })
+      .catch(() => {
+        setError('Impossible de charger les alertes.');
+        setProducts([]);
+      })
+      .finally(() => setLoading(false));
+  }, [token, fetchApi]);
+
+  useEffect(() => {
+    if (!token && !isLoading) router.push('/login?returnUrl=/rush');
+  }, [token, isLoading, router]);
+
+  useEffect(() => {
+    if (token) loadProducts();
+  }, [token, loadProducts]);
+
+  if (!token && isLoading) return null;
+  if (!token) return null;
+
+  const alerts = products
+    .filter((p) => p.stock_status === 'critical' || p.stock_status === 'low' || p.stock_status === 'ok')
+    .sort((a, b) => {
+      const order = { critical: 0, low: 1, ok: 2 };
+      return order[a.stock_status] - order[b.stock_status];
+    })
+    .map((p) => ({
+      id: p.id,
+      level: stockStatusToLevel(p.stock_status) as Level,
+      name: p.name,
+      detail: `${p.quantity} ${unitLabel(p.unit)} restantes`,
+      badge: p.stock_status === 'critical' ? 'CRITIQUE' : p.stock_status === 'low' ? 'FAIBLE' : 'OK',
+    }));
 
   return (
     <main
@@ -85,48 +128,80 @@ export default function RushPage() {
       <h1 className="font-display text-xl font-bold text-cream">Alertes Stock</h1>
       <p className="mb-2 text-xs text-gray-warm">14 tables · Service midi</p>
       <p className="mb-4 rounded-lg bg-white/5 px-3 py-2 text-[11px] text-gray-warm border border-white/10">
-        Données en cache — dernière synchro il y a {cacheMinutes} min
+        {lastFetchTime
+          ? `Mis à jour à ${lastFetchTime.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`
+          : loading
+            ? 'Chargement...'
+            : 'Données en cache'}
       </p>
 
-      {/* Alertes triées par criticité Rouge → Orange → Vert */}
-      <section className="flex flex-1 flex-col gap-2.5 overflow-y-auto" aria-label="Alertes triées par criticité">
-        {alerts.map((a) => (
-          <article
-            key={a.id}
-            role={a.level === 'red' ? 'alert' : undefined}
-            className={`flex items-center gap-3 rounded-xl px-4 py-3.5 ${
-              a.level === 'red'
-                ? 'border border-red-alert/40 bg-red-alert/10'
-                : a.level === 'orange'
-                  ? 'border border-orange-warn/40 bg-orange-warn/10'
-                  : 'border border-green-bright/30 bg-green-bright/10'
-            }`}
+      {loading && (
+        <section className="flex flex-1 flex-col gap-2.5" aria-label="Chargement">
+          {[1, 2, 3, 4].map((i) => (
+            <Skeleton key={i} className="h-16 w-full rounded-xl bg-white/10" />
+          ))}
+        </section>
+      )}
+
+      {error && (
+        <section className="flex flex-1 flex-col items-center justify-center gap-4 py-8">
+          <p className="text-sm text-red-alert">{error}</p>
+          <button
+            type="button"
+            onClick={loadProducts}
+            className="rounded-xl border border-white/20 px-4 py-2 text-sm font-medium text-cream hover:bg-white/10"
           >
-            <span className="text-lg leading-none" aria-hidden>
-              {a.icon}
-            </span>
-            <div className="min-w-0 flex-1">
-              <span className="block font-display text-sm font-bold text-cream">
-                {a.name}
-              </span>
-              <span className="mt-0.5 block text-[11px] text-gray-warm">
-                {a.detail}
-              </span>
-            </div>
-            <span
-              className={`shrink-0 rounded-md px-2 py-1 font-display text-[11px] font-bold ${
+            Réessayer
+          </button>
+        </section>
+      )}
+
+      {!loading && !error && alerts.length === 0 && (
+        <section className="flex flex-1 flex-col items-center justify-center py-8">
+          <p className="text-sm text-gray-warm">Aucun produit trouvé</p>
+        </section>
+      )}
+
+      {!loading && !error && alerts.length > 0 && (
+        <section className="flex flex-1 flex-col gap-2.5 overflow-y-auto" aria-label="Alertes triées par criticité">
+          {alerts.map((a) => (
+            <article
+              key={a.id}
+              role={a.level === 'red' ? 'alert' : undefined}
+              className={`flex items-center gap-3 rounded-xl px-4 py-3.5 ${
                 a.level === 'red'
-                  ? 'bg-red-alert/30 text-red-200'
+                  ? 'border border-red-alert/40 bg-red-alert/10'
                   : a.level === 'orange'
-                    ? 'bg-orange-warn/30 text-amber-200'
-                    : 'bg-green-bright/30 text-green-light'
+                    ? 'border border-orange-warn/40 bg-orange-warn/10'
+                    : 'border border-green-bright/30 bg-green-bright/10'
               }`}
             >
-              {a.badge}
-            </span>
-          </article>
-        ))}
-      </section>
+              <span className="text-lg leading-none" aria-hidden>
+                📦
+              </span>
+              <div className="min-w-0 flex-1">
+                <span className="block font-display text-sm font-bold text-cream">
+                  {a.name}
+                </span>
+                <span className="mt-0.5 block text-[11px] text-gray-warm">
+                  {a.detail}
+                </span>
+              </div>
+              <span
+                className={`shrink-0 rounded-md px-2 py-1 font-display text-[11px] font-bold ${
+                  a.level === 'red'
+                    ? 'bg-red-alert/30 text-red-200'
+                    : a.level === 'orange'
+                      ? 'bg-orange-warn/30 text-amber-200'
+                      : 'bg-green-bright/30 text-green-light'
+                }`}
+              >
+                {a.badge}
+              </span>
+            </article>
+          ))}
+        </section>
+      )}
 
       <div className="mt-5 flex flex-col gap-2">
         <button

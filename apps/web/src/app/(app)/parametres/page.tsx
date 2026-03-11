@@ -1,47 +1,177 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { Download, Link2 } from 'lucide-react';
+import { useApi } from '@/hooks/useApi';
+import { Download, Link2, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 
-const MOCK_RESTAURANT = {
-  nom: 'Le Comptoir',
-  adresse: '12 rue de la Paix, 75002 Paris',
+const STORAGE_KEY = 'flowstock_parametres';
+
+interface LocalPrefs {
+  nom?: string;
+  adresse?: string;
+  typeEtablissement?: string;
+  horaires?: string;
+  seuilCritique?: number;
+  seuilAttention?: number;
+  push?: boolean;
+  sms?: boolean;
+  email?: boolean;
+  langue?: string;
+  fuseau?: string;
+}
+
+const defaultPrefs: LocalPrefs = {
+  nom: '',
+  adresse: '',
   typeEtablissement: 'Restaurant',
-  horaires: '11h30-14h30, 19h-22h',
+  horaires: '',
+  seuilCritique: 10,
+  seuilAttention: 120,
+  push: true,
+  sms: false,
+  email: true,
+  langue: 'fr',
+  fuseau: 'Europe/Paris',
 };
 
-const MOCK_POS = { connecte: true, type: 'Lightspeed', lastSync: 'Il y a 5 min' };
+function loadLocalPrefs(): LocalPrefs {
+  if (typeof window === 'undefined') return defaultPrefs;
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return defaultPrefs;
+    const parsed = JSON.parse(raw) as Partial<LocalPrefs>;
+    return { ...defaultPrefs, ...parsed };
+  } catch {
+    return defaultPrefs;
+  }
+}
 
-const MOCK_SEUILS = { critique: 10, attention: 25 };
-const MOCK_NOTIF = { push: true, sms: false, email: true };
-const MOCK_USERS = [
-  { id: '1', name: 'Marie Dupont', role: 'Admin', email: 'marie@lecomptoir.fr' },
-  { id: '2', name: 'Jean Martin', role: 'Utilisateur', email: 'jean@lecomptoir.fr' },
-];
+function saveLocalPrefs(prefs: LocalPrefs): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));
+  } catch {}
+}
 
 export default function ParametresPage() {
-  const { token, isLoading } = useAuth();
-  const router = useRouter();
-  const [nom, setNom] = useState(MOCK_RESTAURANT.nom);
-  const [adresse, setAdresse] = useState(MOCK_RESTAURANT.adresse);
-  const [typeEtablissement, setTypeEtablissement] = useState(MOCK_RESTAURANT.typeEtablissement);
-  const [horaires, setHoraires] = useState(MOCK_RESTAURANT.horaires);
-  const [seuilCritique, setSeuilCritique] = useState(String(MOCK_SEUILS.critique));
-  const [seuilAttention, setSeuilAttention] = useState(String(MOCK_SEUILS.attention));
-  const [push, setPush] = useState(MOCK_NOTIF.push);
-  const [sms, setSms] = useState(MOCK_NOTIF.sms);
-  const [email, setEmail] = useState(MOCK_NOTIF.email);
-  const [langue, setLangue] = useState('fr');
-  const [fuseau, setFuseau] = useState('Europe/Paris');
+  const { token } = useAuth();
+  const { fetchApi } = useApi();
+  const [loading, setLoading] = useState(true);
+  const [saveLoading, setSaveLoading] = useState(false);
+  const [thresholdLoading, setThresholdLoading] = useState(false);
+  const [posStatus, setPosStatus] = useState<{ connecte: boolean; type: string; lastSync: string } | null>(null);
+  const [thresholdPercent, setThresholdPercent] = useState<number | null>(null);
+  const [form, setForm] = useState<LocalPrefs>(defaultPrefs);
+
+  const loadData = useCallback(async () => {
+    if (!token) return;
+    setLoading(true);
+    const prefs = loadLocalPrefs();
+    setForm(prefs);
+
+    try {
+      const [thresholdRes, posRes] = await Promise.all([
+        fetchApi('/dashboard/alert-threshold'),
+        fetchApi('/dashboard/pos-sync-status'),
+      ]);
+
+      if (thresholdRes.ok) {
+        const j = await thresholdRes.json();
+        if (j?.success && typeof j?.data?.thresholdPercent === 'number') {
+          setThresholdPercent(j.data.thresholdPercent);
+          setForm((f) => ({ ...f, seuilAttention: j.data.thresholdPercent }));
+        }
+      }
+
+      if (posRes.ok) {
+        const j = await posRes.json();
+        if (j?.success && j?.data) {
+          const d = j.data;
+          setPosStatus({
+            connecte: !d.is_degraded,
+            type: 'Lightspeed',
+            lastSync: d.last_event_at ? 'Il y a quelques min' : 'Jamais',
+          });
+        }
+      }
+    } catch {
+      toast.error('Erreur lors du chargement.');
+    } finally {
+      setLoading(false);
+    }
+  }, [token, fetchApi]);
 
   useEffect(() => {
-    if (!token && !isLoading) router.push('/login?returnUrl=/parametres');
-  }, [token, isLoading, router]);
+    loadData();
+  }, [loadData]);
 
-  if (!token && isLoading) return null;
-  if (!token) return null;
+  const handleSaveInfos = async () => {
+    setSaveLoading(true);
+    try {
+      const prefs: LocalPrefs = {
+        ...form,
+        nom: form.nom ?? defaultPrefs.nom,
+        adresse: form.adresse ?? defaultPrefs.adresse,
+        typeEtablissement: form.typeEtablissement ?? defaultPrefs.typeEtablissement,
+        horaires: form.horaires ?? defaultPrefs.horaires,
+      };
+      saveLocalPrefs(prefs);
+      setForm(prefs);
+      toast.success('Informations sauvegardées.');
+    } catch {
+      toast.error('Erreur lors de la sauvegarde.');
+    } finally {
+      setSaveLoading(false);
+    }
+  };
+
+  const handleSaveSeuils = async () => {
+    const pct = form.seuilAttention ?? 120;
+    if (pct < 50 || pct > 500) {
+      toast.error('Le seuil doit être entre 50 et 500 %.');
+      return;
+    }
+    setThresholdLoading(true);
+    try {
+      const res = await fetchApi('/dashboard/alert-threshold', {
+        method: 'PUT',
+        body: JSON.stringify({ thresholdPercent: pct }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(j?.error ?? 'Erreur');
+      setThresholdPercent(pct);
+      saveLocalPrefs({ ...form, seuilAttention: pct, seuilCritique: form.seuilCritique ?? 10 });
+      toast.success('Seuils sauvegardés.');
+    } catch {
+      toast.error('Erreur lors de la sauvegarde des seuils.');
+    } finally {
+      setThresholdLoading(false);
+    }
+  };
+
+  const handleSaveNotif = () => {
+    const prefs = { ...form, push: form.push ?? true, sms: form.sms ?? false, email: form.email ?? true };
+    saveLocalPrefs(prefs);
+    setForm(prefs);
+    toast.success('Préférences notifications sauvegardées.');
+  };
+
+  const handleSaveLangue = () => {
+    const prefs = { ...form, langue: form.langue ?? 'fr', fuseau: form.fuseau ?? 'Europe/Paris' };
+    saveLocalPrefs(prefs);
+    setForm(prefs);
+    toast.success('Langue et fuseau sauvegardés.');
+  };
+
+  if (loading) {
+    return (
+      <div className="flex min-h-full items-center justify-center bg-cream">
+        <Loader2 className="h-8 w-8 animate-spin text-green-mid" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-full bg-cream font-body">
@@ -54,6 +184,7 @@ export default function ParametresPage() {
         {/* Infos générales */}
         <section className="rounded-xl border border-green-deep/10 bg-white p-6 shadow-sm">
           <h2 className="font-display text-lg font-bold text-green-deep">Informations générales</h2>
+          <p className="mt-1 text-xs text-gray-warm">Sauvegardées localement (TODO API tenant)</p>
           <div className="mt-4 space-y-4">
             <div>
               <label htmlFor="param-nom" className="block text-sm font-medium text-charcoal">
@@ -62,8 +193,8 @@ export default function ParametresPage() {
               <input
                 id="param-nom"
                 type="text"
-                value={nom}
-                onChange={(e) => setNom(e.target.value)}
+                value={form.nom ?? ''}
+                onChange={(e) => setForm((f) => ({ ...f, nom: e.target.value }))}
                 className="mt-1 w-full rounded-lg border border-green-deep/20 bg-white px-4 py-2 text-sm focus:border-green-mid focus:outline-none"
               />
             </div>
@@ -74,8 +205,8 @@ export default function ParametresPage() {
               <input
                 id="param-adresse"
                 type="text"
-                value={adresse}
-                onChange={(e) => setAdresse(e.target.value)}
+                value={form.adresse ?? ''}
+                onChange={(e) => setForm((f) => ({ ...f, adresse: e.target.value }))}
                 className="mt-1 w-full rounded-lg border border-green-deep/20 bg-white px-4 py-2 text-sm focus:border-green-mid focus:outline-none"
               />
             </div>
@@ -85,8 +216,8 @@ export default function ParametresPage() {
               </label>
               <select
                 id="param-type"
-                value={typeEtablissement}
-                onChange={(e) => setTypeEtablissement(e.target.value)}
+                value={form.typeEtablissement ?? 'Restaurant'}
+                onChange={(e) => setForm((f) => ({ ...f, typeEtablissement: e.target.value }))}
                 className="mt-1 w-full rounded-lg border border-green-deep/20 bg-white px-4 py-2 text-sm focus:border-green-mid focus:outline-none"
               >
                 <option value="Restaurant">Restaurant</option>
@@ -103,8 +234,8 @@ export default function ParametresPage() {
               <input
                 id="param-horaires"
                 type="text"
-                value={horaires}
-                onChange={(e) => setHoraires(e.target.value)}
+                value={form.horaires ?? ''}
+                onChange={(e) => setForm((f) => ({ ...f, horaires: e.target.value }))}
                 placeholder="ex. 11h30-14h30, 19h-22h"
                 className="mt-1 w-full rounded-lg border border-green-deep/20 bg-white px-4 py-2 text-sm focus:border-green-mid focus:outline-none"
               />
@@ -112,8 +243,11 @@ export default function ParametresPage() {
           </div>
           <button
             type="button"
-            className="mt-4 rounded-xl bg-green-mid px-4 py-2.5 font-display text-sm font-bold text-white"
+            onClick={handleSaveInfos}
+            disabled={saveLoading}
+            className="mt-4 inline-flex items-center gap-2 rounded-xl bg-green-mid px-4 py-2.5 font-display text-sm font-bold text-white disabled:opacity-70"
           >
+            {saveLoading && <Loader2 className="h-4 w-4 animate-spin" />}
             Enregistrer
           </button>
         </section>
@@ -127,16 +261,16 @@ export default function ParametresPage() {
               <div>
                 <p className="font-medium text-charcoal">Lightspeed</p>
                 <p className="text-sm text-gray-warm">
-                  {MOCK_POS.connecte ? `Connecté · ${MOCK_POS.lastSync}` : 'Non connecté'}
+                  {posStatus?.connecte ? `Connecté · ${posStatus.lastSync}` : "Non connecté"}
                 </p>
               </div>
             </div>
             <span
               className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-                MOCK_POS.connecte ? 'bg-green-mid/20 text-green-deep' : 'bg-gray-warm/20 text-gray-warm'
+                posStatus?.connecte ? 'bg-green-mid/20 text-green-deep' : 'bg-gray-warm/20 text-gray-warm'
               }`}
             >
-              {MOCK_POS.connecte ? 'Actif' : 'Inactif'}
+              {posStatus?.connecte ? 'Actif' : 'Inactif'}
             </span>
           </div>
           <p className="mt-2 text-xs text-gray-warm">Saisie manuelle toujours disponible en secours.</p>
@@ -144,23 +278,11 @@ export default function ParametresPage() {
 
         {/* Seuils alertes */}
         <section className="rounded-xl border border-green-deep/10 bg-white p-6 shadow-sm">
-          <h2 className="font-display text-lg font-bold text-green-deep">Seuils d&apos;alerte stock</h2>
-          <p className="mt-1 text-sm text-gray-warm">En % du stock de référence — déclenchement des alertes Rush</p>
+          <h2 className="font-display text-lg font-bold text-green-deep">Seuil d&apos;alerte stock</h2>
+          <p className="mt-1 text-sm text-gray-warm">
+            En % du stock de référence (50–500 %) — déclenchement des alertes Rush
+          </p>
           <div className="mt-4 flex gap-6">
-            <div>
-              <label htmlFor="param-seuil-critique" className="block text-sm font-medium text-charcoal">
-                Seuil critique (%)
-              </label>
-              <input
-                id="param-seuil-critique"
-                type="number"
-                min="0"
-                max="100"
-                value={seuilCritique}
-                onChange={(e) => setSeuilCritique(e.target.value)}
-                className="mt-1 w-24 rounded-lg border border-green-deep/20 bg-white px-3 py-2 text-sm focus:border-green-mid focus:outline-none"
-              />
-            </div>
             <div>
               <label htmlFor="param-seuil-attention" className="block text-sm font-medium text-charcoal">
                 Seuil attention (%)
@@ -168,26 +290,36 @@ export default function ParametresPage() {
               <input
                 id="param-seuil-attention"
                 type="number"
-                min="0"
-                max="100"
-                value={seuilAttention}
-                onChange={(e) => setSeuilAttention(e.target.value)}
+                min="50"
+                max="500"
+                value={form.seuilAttention ?? 120}
+                onChange={(e) => setForm((f) => ({ ...f, seuilAttention: parseInt(e.target.value, 10) || 120 }))}
                 className="mt-1 w-24 rounded-lg border border-green-deep/20 bg-white px-3 py-2 text-sm focus:border-green-mid focus:outline-none"
               />
             </div>
           </div>
+          <button
+            type="button"
+            onClick={handleSaveSeuils}
+            disabled={thresholdLoading}
+            className="mt-4 inline-flex items-center gap-2 rounded-xl bg-green-mid px-4 py-2.5 font-display text-sm font-bold text-white disabled:opacity-70"
+          >
+            {thresholdLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+            Enregistrer
+          </button>
         </section>
 
         {/* Notifications */}
         <section className="rounded-xl border border-green-deep/10 bg-white p-6 shadow-sm">
           <h2 className="font-display text-lg font-bold text-green-deep">Notifications</h2>
+          <p className="mt-1 text-xs text-gray-warm">Sauvegardées localement</p>
           <div className="mt-4 space-y-4">
             <label className="flex cursor-pointer items-center justify-between">
               <span className="text-sm font-medium text-charcoal">Push (navigateur)</span>
               <input
                 type="checkbox"
-                checked={push}
-                onChange={(e) => setPush(e.target.checked)}
+                checked={form.push ?? true}
+                onChange={(e) => setForm((f) => ({ ...f, push: e.target.checked }))}
                 className="h-4 w-4 rounded border-gray-300 text-green-mid focus:ring-green-mid"
               />
             </label>
@@ -195,8 +327,8 @@ export default function ParametresPage() {
               <span className="text-sm font-medium text-charcoal">SMS</span>
               <input
                 type="checkbox"
-                checked={sms}
-                onChange={(e) => setSms(e.target.checked)}
+                checked={form.sms ?? false}
+                onChange={(e) => setForm((f) => ({ ...f, sms: e.target.checked }))}
                 className="h-4 w-4 rounded border-gray-300 text-green-mid focus:ring-green-mid"
               />
             </label>
@@ -204,44 +336,43 @@ export default function ParametresPage() {
               <span className="text-sm font-medium text-charcoal">Email</span>
               <input
                 type="checkbox"
-                checked={email}
-                onChange={(e) => setEmail(e.target.checked)}
+                checked={form.email ?? true}
+                onChange={(e) => setForm((f) => ({ ...f, email: e.target.checked }))}
                 className="h-4 w-4 rounded border-gray-300 text-green-mid focus:ring-green-mid"
               />
             </label>
           </div>
+          <button
+            type="button"
+            onClick={handleSaveNotif}
+            className="mt-4 rounded-xl bg-green-mid px-4 py-2.5 font-display text-sm font-bold text-white"
+          >
+            Enregistrer
+          </button>
         </section>
 
         {/* Gestion utilisateurs */}
         <section className="rounded-xl border border-green-deep/10 bg-white p-6 shadow-sm">
           <h2 className="font-display text-lg font-bold text-green-deep">Utilisateurs</h2>
+          <p className="mt-1 text-sm text-gray-warm">TODO : connecter à l&apos;API utilisateurs du tenant</p>
           <ul className="mt-4 space-y-3">
-            {MOCK_USERS.map((u) => (
-              <li
-                key={u.id}
-                className="flex items-center justify-between rounded-lg border border-green-deep/10 px-4 py-3"
-              >
-                <div>
-                  <p className="font-medium text-charcoal">{u.name}</p>
-                  <p className="text-xs text-gray-warm">{u.email}</p>
-                </div>
-                <span className="rounded-full bg-green-deep/10 px-2 py-0.5 text-xs font-medium text-green-deep">
-                  {u.role}
-                </span>
-              </li>
-            ))}
+            <li className="rounded-lg border border-green-deep/10 px-4 py-3 text-sm text-gray-warm">
+              Aucun utilisateur invité pour le moment.
+            </li>
           </ul>
           <button
             type="button"
-            className="mt-4 rounded-lg border border-green-deep/20 px-4 py-2 text-sm font-medium text-green-deep"
+            disabled
+            className="mt-4 rounded-lg border border-green-deep/20 px-4 py-2 text-sm font-medium text-gray-warm"
           >
-            Inviter un utilisateur
+            Inviter un utilisateur (bientôt)
           </button>
         </section>
 
         {/* Langue / Fuseau */}
         <section className="rounded-xl border border-green-deep/10 bg-white p-6 shadow-sm">
           <h2 className="font-display text-lg font-bold text-green-deep">Langue et fuseau</h2>
+          <p className="mt-1 text-xs text-gray-warm">Sauvegardés localement</p>
           <div className="mt-4 space-y-4">
             <div>
               <label htmlFor="param-langue" className="block text-sm font-medium text-charcoal">
@@ -249,8 +380,8 @@ export default function ParametresPage() {
               </label>
               <select
                 id="param-langue"
-                value={langue}
-                onChange={(e) => setLangue(e.target.value)}
+                value={form.langue ?? 'fr'}
+                onChange={(e) => setForm((f) => ({ ...f, langue: e.target.value }))}
                 className="mt-1 w-full rounded-lg border border-green-deep/20 bg-white px-4 py-2 text-sm focus:border-green-mid focus:outline-none"
               >
                 <option value="fr">Français</option>
@@ -264,8 +395,8 @@ export default function ParametresPage() {
               </label>
               <select
                 id="param-fuseau"
-                value={fuseau}
-                onChange={(e) => setFuseau(e.target.value)}
+                value={form.fuseau ?? 'Europe/Paris'}
+                onChange={(e) => setForm((f) => ({ ...f, fuseau: e.target.value }))}
                 className="mt-1 w-full rounded-lg border border-green-deep/20 bg-white px-4 py-2 text-sm focus:border-green-mid focus:outline-none"
               >
                 <option value="Europe/Paris">Europe/Paris</option>
@@ -274,6 +405,13 @@ export default function ParametresPage() {
               </select>
             </div>
           </div>
+          <button
+            type="button"
+            onClick={handleSaveLangue}
+            className="mt-4 rounded-xl bg-green-mid px-4 py-2.5 font-display text-sm font-bold text-white"
+          >
+            Enregistrer
+          </button>
         </section>
 
         {/* Export RGPD */}
@@ -284,10 +422,11 @@ export default function ParametresPage() {
           </p>
           <button
             type="button"
-            className="mt-4 inline-flex items-center gap-2 rounded-xl border border-green-deep/20 px-4 py-2.5 text-sm font-medium text-green-deep"
+            disabled
+            className="mt-4 inline-flex items-center gap-2 rounded-xl border border-green-deep/20 px-4 py-2.5 text-sm font-medium text-gray-warm"
           >
             <Download className="h-4 w-4" />
-            Exporter mes données
+            Exporter mes données (bientôt)
           </button>
         </section>
       </div>
