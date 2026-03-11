@@ -8,6 +8,8 @@ import { useApi } from '@/hooks/useApi';
 import { useCrudModal } from '@/hooks/useCrudModal';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { DataTable, type DataTableColumn } from '@/components/ui/DataTable';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { TableSkeleton } from '@/components/ui/LoadingSkeleton';
 import type { Supplier, SupplierCreateInput, SupplierUpdateInput } from '@bmad/shared';
 
 const PAGE_SIZE = 25;
@@ -262,46 +264,44 @@ export default function SuppliersPage() {
 
   return (
     <div className="min-h-full bg-cream font-body">
-      <div className="mx-auto max-w-6xl space-y-6 p-4 pb-24 md:pb-6">
+      <div className="mx-auto max-w-6xl space-y-6 p-6 pb-24 md:pb-6">
         {error && (
-          <div className="rounded-xl border border-red-alert/30 bg-red-alert/10 px-4 py-3 text-sm text-red-alert">
+          <div className="rounded-xl border border-terracotta/30 bg-terracotta/10 px-4 py-3 text-sm text-terracotta">
             {error}
           </div>
         )}
 
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="font-display text-2xl font-bold text-green-deep">Fournisseurs</h1>
-            <p className="text-sm text-gray-warm">CRUD fournisseurs · Associés aux produits</p>
-          </div>
-          <button
-            type="button"
-            onClick={openCreate}
-            className="inline-flex items-center gap-2 rounded-xl border-2 border-green-mid bg-transparent px-4 py-2.5 font-display text-sm font-bold text-green-deep"
-          >
-            <Plus className="h-4 w-4" />
-            Nouveau fournisseur
-          </button>
-        </div>
+        <PageHeader
+          title="Fournisseurs"
+          subtitle="Gérez vos fournisseurs et associez-les à vos produits"
+          actions={
+            <button
+              type="button"
+              onClick={openCreate}
+              className="inline-flex items-center gap-2 bg-green-deep text-cream px-4 py-2 rounded-lg text-sm font-medium hover:bg-forest-green transition-colors"
+            >
+              <Plus className="h-4 w-4" />
+              Nouveau fournisseur
+            </button>
+          }
+        />
 
         <div className="flex flex-wrap gap-3">
           <div className="relative min-w-[200px] flex-1">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-warm" />
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-charcoal/35" />
             <input
               type="search"
               placeholder="Rechercher par nom, contact, email…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full rounded-xl border border-green-deep/20 bg-white py-2.5 pl-10 pr-4 text-sm text-charcoal placeholder-gray-warm focus:border-green-mid focus:outline-none"
+              className="w-full rounded-lg border border-charcoal/15 bg-white py-2.5 pl-10 pr-4 text-sm text-charcoal placeholder:text-charcoal/35 focus:outline-none focus:border-green-deep focus:ring-1 focus:ring-green-deep/20 transition-colors"
             />
           </div>
         </div>
 
-        <div className="overflow-x-auto rounded-2xl border border-green-deep/10 bg-white shadow-sm">
+        <div className="overflow-x-auto rounded-xl border border-charcoal/8 bg-white shadow-sm">
           {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-green-mid" />
-            </div>
+            <TableSkeleton rows={8} cols={5} />
           ) : (
             <DataTable<Supplier>
               columns={columns}
@@ -317,7 +317,7 @@ export default function SuppliersPage() {
                     type="button"
                     onClick={() => openEdit(s)}
                     disabled={editLoadingId === s.id}
-                    className="rounded p-1.5 text-charcoal hover:bg-cream-dark disabled:opacity-50"
+                    className="p-2 rounded-lg text-charcoal/50 hover:text-charcoal hover:bg-charcoal/5 disabled:opacity-50 transition-colors"
                     title="Modifier"
                   >
                     {editLoadingId === s.id ? (
@@ -330,7 +330,7 @@ export default function SuppliersPage() {
                     type="button"
                     onClick={() => openDeleteConfirm(s)}
                     disabled={deleteConfirmId === s.id}
-                    className="rounded p-1.5 text-red-alert hover:bg-red-alert/10 disabled:opacity-50"
+                    className="p-2 rounded-lg text-terracotta hover:bg-terracotta/5 disabled:opacity-50 transition-colors"
                     title="Supprimer"
                   >
                     {deleteConfirmId === s.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
@@ -342,8 +342,8 @@ export default function SuppliersPage() {
         </div>
 
         {pagination && pagination.total > PAGE_SIZE && (
-          <div className="flex items-center justify-between rounded-xl border border-green-deep/10 bg-white px-4 py-2">
-            <span className="text-sm text-charcoal">
+          <div className="flex items-center justify-between px-1">
+            <span className="text-sm text-charcoal/50">
               Page {pagination.page} sur {Math.max(1, Math.ceil(pagination.total / pagination.limit))} ({pagination.total}{' '}
               fournisseur{pagination.total > 1 ? 's' : ''})
             </span>
@@ -352,7 +352,7 @@ export default function SuppliersPage() {
                 type="button"
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={pagination.page <= 1 || loading}
-                className="inline-flex items-center gap-1 rounded-lg border border-green-deep/20 px-3 py-1.5 text-sm font-medium text-green-deep disabled:opacity-50"
+                className="inline-flex items-center gap-1 rounded-lg border border-charcoal/15 px-3 py-1.5 text-sm text-charcoal disabled:opacity-50 hover:bg-cream/50 transition-colors"
               >
                 <ChevronLeft className="h-4 w-4" />
                 Précédent
@@ -363,7 +363,7 @@ export default function SuppliersPage() {
                 disabled={
                   pagination.page >= Math.ceil(pagination.total / pagination.limit) || loading
                 }
-                className="inline-flex items-center gap-1 rounded-lg border border-green-deep/20 px-3 py-1.5 text-sm font-medium text-green-deep disabled:opacity-50"
+                className="inline-flex items-center gap-1 rounded-lg border border-charcoal/15 px-3 py-1.5 text-sm text-charcoal disabled:opacity-50 hover:bg-cream/50 transition-colors"
               >
                 Suivant
                 <ChevronRight className="h-4 w-4" />
@@ -375,22 +375,22 @@ export default function SuppliersPage() {
         {/* Modal Création / Édition */}
         {modalOpen && (
           <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-charcoal/50 p-4"
+            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4"
             onClick={(e) => e.target === e.currentTarget && closeModalWithFocus()}
             role="dialog"
             aria-modal="true"
             aria-labelledby="modal-title"
           >
             <div
-              className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl border border-green-deep/20 bg-white p-6 shadow-xl"
+              className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             >
-              <h2 id="modal-title" className="font-display text-lg font-bold text-green-deep">
+              <h2 id="modal-title" className="text-lg font-display font-bold text-charcoal">
                 {isEditing ? 'Modifier le fournisseur' : 'Nouveau fournisseur'}
               </h2>
               <div className="mt-4 space-y-3">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-warm" htmlFor="supplier-name">
+                  <label className="block text-xs font-medium text-charcoal/60 mb-1.5" htmlFor="supplier-name">
                     Nom *
                   </label>
                   <input
@@ -399,52 +399,52 @@ export default function SuppliersPage() {
                     type="text"
                     value={form.name}
                     onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                    className="mt-1 w-full rounded-lg border border-green-deep/20 px-3 py-2 text-sm"
+                    className="w-full rounded-lg border border-charcoal/15 bg-white px-3 py-2.5 text-sm text-charcoal placeholder:text-charcoal/35 focus:outline-none focus:border-green-deep focus:ring-1 focus:ring-green-deep/20 transition-colors"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-warm">Contact</label>
+                  <label className="block text-xs font-medium text-charcoal/60 mb-1.5">Contact</label>
                   <input
                     type="text"
                     value={form.contact_name}
                     onChange={(e) => setForm((f) => ({ ...f, contact_name: e.target.value }))}
-                    className="mt-1 w-full rounded-lg border border-green-deep/20 px-3 py-2 text-sm"
+                    className="w-full rounded-lg border border-charcoal/15 bg-white px-3 py-2.5 text-sm text-charcoal placeholder:text-charcoal/35 focus:outline-none focus:border-green-deep focus:ring-1 focus:ring-green-deep/20 transition-colors"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-warm">Email</label>
+                  <label className="block text-xs font-medium text-charcoal/60 mb-1.5">Email</label>
                   <input
                     type="email"
                     value={form.email}
                     onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-                    className="mt-1 w-full rounded-lg border border-green-deep/20 px-3 py-2 text-sm"
+                    className="w-full rounded-lg border border-charcoal/15 bg-white px-3 py-2.5 text-sm text-charcoal placeholder:text-charcoal/35 focus:outline-none focus:border-green-deep focus:ring-1 focus:ring-green-deep/20 transition-colors"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-warm">Téléphone</label>
+                  <label className="block text-xs font-medium text-charcoal/60 mb-1.5">Téléphone</label>
                   <input
                     type="tel"
                     value={form.phone}
                     onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
-                    className="mt-1 w-full rounded-lg border border-green-deep/20 px-3 py-2 text-sm"
+                    className="w-full rounded-lg border border-charcoal/15 bg-white px-3 py-2.5 text-sm text-charcoal placeholder:text-charcoal/35 focus:outline-none focus:border-green-deep focus:ring-1 focus:ring-green-deep/20 transition-colors"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-warm">Adresse</label>
+                  <label className="block text-xs font-medium text-charcoal/60 mb-1.5">Adresse</label>
                   <input
                     type="text"
                     value={form.address}
                     onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))}
-                    className="mt-1 w-full rounded-lg border border-green-deep/20 px-3 py-2 text-sm"
+                    className="w-full rounded-lg border border-charcoal/15 bg-white px-3 py-2.5 text-sm text-charcoal placeholder:text-charcoal/35 focus:outline-none focus:border-green-deep focus:ring-1 focus:ring-green-deep/20 transition-colors"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-warm">Notes</label>
+                  <label className="block text-xs font-medium text-charcoal/60 mb-1.5">Notes</label>
                   <textarea
                     value={form.notes}
                     onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
                     rows={2}
-                    className="mt-1 w-full rounded-lg border border-green-deep/20 px-3 py-2 text-sm"
+                    className="w-full rounded-lg border border-charcoal/15 bg-white px-3 py-2.5 text-sm text-charcoal placeholder:text-charcoal/35 focus:outline-none focus:border-green-deep focus:ring-1 focus:ring-green-deep/20 transition-colors"
                   />
                 </div>
               </div>
@@ -452,7 +452,7 @@ export default function SuppliersPage() {
                 <button
                   type="button"
                   onClick={closeModalWithFocus}
-                  className="rounded-xl border border-green-deep/30 px-4 py-2 font-display text-sm font-bold text-green-deep"
+                  className="border border-charcoal/20 text-charcoal px-4 py-2 rounded-lg text-sm font-medium hover:bg-charcoal/5 transition-colors"
                 >
                   Annuler
                 </button>
@@ -460,7 +460,7 @@ export default function SuppliersPage() {
                   type="button"
                   onClick={handleSubmit}
                   disabled={submitLoading}
-                  className="inline-flex items-center gap-2 rounded-xl bg-green-mid px-4 py-2 font-display text-sm font-bold text-white disabled:opacity-70"
+                  className="inline-flex items-center gap-2 bg-green-deep text-cream px-4 py-2 rounded-lg text-sm font-medium hover:bg-forest-green disabled:opacity-50 transition-colors"
                 >
                   {submitLoading && <Loader2 className="h-4 w-4 animate-spin" />}
                   {isEditing ? 'Enregistrer' : 'Créer'}
@@ -473,17 +473,17 @@ export default function SuppliersPage() {
         {/* Modal confirmation suppression */}
         {supplierToDelete && (
           <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-charcoal/50 p-4"
+            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4"
             onClick={(e) => e.target === e.currentTarget && (setSupplierToDelete(null), setDeleteConfirmId(null))}
             role="dialog"
             aria-modal="true"
             aria-labelledby="delete-modal-title"
           >
             <div
-              className="w-full max-w-md rounded-2xl border border-green-deep/20 bg-white p-6 shadow-xl"
+              className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             >
-              <h2 id="delete-modal-title" className="font-display text-lg font-bold text-green-deep">
+              <h2 id="delete-modal-title" className="text-lg font-display font-bold text-charcoal">
                 Supprimer ce fournisseur ?
               </h2>
               <p className="mt-2 text-sm text-charcoal">
@@ -493,7 +493,7 @@ export default function SuppliersPage() {
                 <button
                   type="button"
                   onClick={() => { setSupplierToDelete(null); setDeleteConfirmId(null); }}
-                  className="rounded-xl border border-green-deep/30 px-4 py-2 font-display text-sm font-bold text-green-deep"
+                  className="border border-charcoal/20 text-charcoal px-4 py-2 rounded-lg text-sm font-medium hover:bg-charcoal/5 transition-colors"
                 >
                   Annuler
                 </button>
@@ -501,7 +501,7 @@ export default function SuppliersPage() {
                   type="button"
                   onClick={confirmDelete}
                   disabled={deleteLoading}
-                  className="inline-flex items-center gap-2 rounded-xl bg-red-alert px-4 py-2 font-display text-sm font-bold text-white disabled:opacity-70"
+                  className="inline-flex items-center gap-2 border border-terracotta text-terracotta px-4 py-2 rounded-lg text-sm font-medium hover:bg-terracotta/5 disabled:opacity-50 transition-colors"
                 >
                   {deleteLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
                   Supprimer

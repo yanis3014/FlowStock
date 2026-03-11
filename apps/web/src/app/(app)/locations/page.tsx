@@ -8,6 +8,8 @@ import { useApi } from '@/hooks/useApi';
 import { useCrudModal } from '@/hooks/useCrudModal';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { DataTable, type DataTableColumn } from '@/components/ui/DataTable';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { TableSkeleton } from '@/components/ui/LoadingSkeleton';
 import type { Location, LocationCreateInput, LocationUpdateInput } from '@bmad/shared';
 
 const emptyForm = {
@@ -226,49 +228,47 @@ export default function LocationsPage() {
 
   return (
     <div className="min-h-full bg-cream font-body">
-      <div className="mx-auto max-w-6xl space-y-6 p-4 pb-24 md:pb-6">
+      <div className="mx-auto max-w-6xl space-y-6 p-6 pb-24 md:pb-6">
         {error && (
-          <div className="rounded-xl border border-red-alert/30 bg-red-alert/10 px-4 py-3 text-sm text-red-alert">
+          <div className="rounded-xl border border-terracotta/30 bg-terracotta/10 px-4 py-3 text-sm text-terracotta">
             {error}
           </div>
         )}
 
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="font-display text-2xl font-bold text-green-deep">Emplacements</h1>
-            <p className="text-sm text-gray-warm">CRUD emplacements · Entrepôts, magasins</p>
-          </div>
-          <button
-            type="button"
-            onClick={() => {
-              previousFocusRef.current = document.activeElement as HTMLElement | null;
-              openCreate();
-            }}
-            className="inline-flex items-center gap-2 rounded-xl border-2 border-green-mid bg-transparent px-4 py-2.5 font-display text-sm font-bold text-green-deep"
-          >
-            <Plus className="h-4 w-4" />
-            Nouvel emplacement
-          </button>
-        </div>
+        <PageHeader
+          title="Emplacements"
+          subtitle="Gérez vos entrepôts et points de vente"
+          actions={
+            <button
+              type="button"
+              onClick={() => {
+                previousFocusRef.current = document.activeElement as HTMLElement | null;
+                openCreate();
+              }}
+              className="inline-flex items-center gap-2 bg-green-deep text-cream px-4 py-2 rounded-lg text-sm font-medium hover:bg-forest-green transition-colors"
+            >
+              <Plus className="h-4 w-4" />
+              Nouvel emplacement
+            </button>
+          }
+        />
 
         <div className="flex flex-wrap gap-3">
           <div className="relative min-w-[200px] flex-1">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-warm" />
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-charcoal/35" />
             <input
               type="search"
               placeholder="Rechercher par nom ou adresse…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full rounded-xl border border-green-deep/20 bg-white py-2.5 pl-10 pr-4 text-sm text-charcoal placeholder-gray-warm focus:border-green-mid focus:outline-none"
+              className="w-full rounded-lg border border-charcoal/15 bg-white py-2.5 pl-10 pr-4 text-sm text-charcoal placeholder:text-charcoal/35 focus:outline-none focus:border-green-deep focus:ring-1 focus:ring-green-deep/20 transition-colors"
             />
           </div>
         </div>
 
-        <div className="overflow-x-auto rounded-2xl border border-green-deep/10 bg-white shadow-sm">
+        <div className="overflow-x-auto rounded-xl border border-charcoal/8 bg-white shadow-sm">
           {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-green-mid" />
-            </div>
+            <TableSkeleton rows={8} cols={4} />
           ) : (
             <DataTable<Location>
               columns={columns}
@@ -283,7 +283,7 @@ export default function LocationsPage() {
                   <button
                     type="button"
                     onClick={() => openEdit(l)}
-                    className="rounded p-1.5 text-charcoal hover:bg-cream-dark"
+                    className="p-2 rounded-lg text-charcoal/50 hover:text-charcoal hover:bg-charcoal/5 transition-colors"
                     title="Modifier"
                   >
                     <Pencil className="h-4 w-4" />
@@ -292,7 +292,7 @@ export default function LocationsPage() {
                     type="button"
                     onClick={() => openDeleteConfirm(l)}
                     disabled={deleteConfirmId === l.id}
-                    className="rounded p-1.5 text-red-alert hover:bg-red-alert/10 disabled:opacity-50"
+                    className="p-2 rounded-lg text-terracotta hover:bg-terracotta/5 disabled:opacity-50 transition-colors"
                     title="Supprimer"
                   >
                     {deleteConfirmId === l.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
@@ -306,22 +306,22 @@ export default function LocationsPage() {
         {/* Modal Création / Édition */}
         {modalOpen && (
           <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-charcoal/50 p-4"
+            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4"
             onClick={(e) => e.target === e.currentTarget && closeModalWithFocus()}
             role="dialog"
             aria-modal="true"
             aria-labelledby="modal-title"
           >
             <div
-              className="w-full max-w-md rounded-2xl border border-green-deep/20 bg-white p-6 shadow-xl"
+              className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             >
-              <h2 id="modal-title" className="font-display text-lg font-bold text-green-deep">
+              <h2 id="modal-title" className="text-lg font-display font-bold text-charcoal">
                 {isEditing ? "Modifier l'emplacement" : 'Nouvel emplacement'}
               </h2>
               <div className="mt-4 space-y-3">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-warm" htmlFor="location-name">
+                  <label className="block text-xs font-medium text-charcoal/60 mb-1.5" htmlFor="location-name">
                     Nom *
                   </label>
                   <input
@@ -330,26 +330,26 @@ export default function LocationsPage() {
                     type="text"
                     value={form.name}
                     onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                    className="mt-1 w-full rounded-lg border border-green-deep/20 px-3 py-2 text-sm"
+                    className="w-full rounded-lg border border-charcoal/15 bg-white px-3 py-2.5 text-sm text-charcoal placeholder:text-charcoal/35 focus:outline-none focus:border-green-deep focus:ring-1 focus:ring-green-deep/20 transition-colors"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-warm">Adresse</label>
+                  <label className="block text-xs font-medium text-charcoal/60 mb-1.5">Adresse</label>
                   <input
                     type="text"
                     value={form.address}
                     onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))}
-                    className="mt-1 w-full rounded-lg border border-green-deep/20 px-3 py-2 text-sm"
+                    className="w-full rounded-lg border border-charcoal/15 bg-white px-3 py-2.5 text-sm text-charcoal placeholder:text-charcoal/35 focus:outline-none focus:border-green-deep focus:ring-1 focus:ring-green-deep/20 transition-colors"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-warm">Type</label>
+                  <label className="block text-xs font-medium text-charcoal/60 mb-1.5">Type</label>
                   <input
                     type="text"
                     value={form.location_type}
                     onChange={(e) => setForm((f) => ({ ...f, location_type: e.target.value }))}
                     placeholder="ex. Entrepôt, Magasin"
-                    className="mt-1 w-full rounded-lg border border-green-deep/20 px-3 py-2 text-sm"
+                    className="w-full rounded-lg border border-charcoal/15 bg-white px-3 py-2.5 text-sm text-charcoal placeholder:text-charcoal/35 focus:outline-none focus:border-green-deep focus:ring-1 focus:ring-green-deep/20 transition-colors"
                   />
                 </div>
               </div>
@@ -357,7 +357,7 @@ export default function LocationsPage() {
                 <button
                   type="button"
                   onClick={closeModalWithFocus}
-                  className="rounded-xl border border-green-deep/30 px-4 py-2 font-display text-sm font-bold text-green-deep"
+                  className="border border-charcoal/20 text-charcoal px-4 py-2 rounded-lg text-sm font-medium hover:bg-charcoal/5 transition-colors"
                 >
                   Annuler
                 </button>
@@ -365,7 +365,7 @@ export default function LocationsPage() {
                   type="button"
                   onClick={handleSubmit}
                   disabled={submitLoading}
-                  className="inline-flex items-center gap-2 rounded-xl bg-green-mid px-4 py-2 font-display text-sm font-bold text-white disabled:opacity-70"
+                  className="inline-flex items-center gap-2 bg-green-deep text-cream px-4 py-2 rounded-lg text-sm font-medium hover:bg-forest-green disabled:opacity-50 transition-colors"
                 >
                   {submitLoading && <Loader2 className="h-4 w-4 animate-spin" />}
                   {isEditing ? 'Enregistrer' : 'Créer'}
@@ -378,17 +378,17 @@ export default function LocationsPage() {
         {/* Modal confirmation suppression */}
         {locationToDelete && (
           <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-charcoal/50 p-4"
+            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4"
             onClick={(e) => e.target === e.currentTarget && (setLocationToDelete(null), setDeleteConfirmId(null))}
             role="dialog"
             aria-modal="true"
             aria-labelledby="delete-modal-title"
           >
             <div
-              className="w-full max-w-md rounded-2xl border border-green-deep/20 bg-white p-6 shadow-xl"
+              className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             >
-              <h2 id="delete-modal-title" className="font-display text-lg font-bold text-green-deep">
+              <h2 id="delete-modal-title" className="text-lg font-display font-bold text-charcoal">
                 Supprimer cet emplacement ?
               </h2>
               <p className="mt-2 text-sm text-charcoal">
@@ -401,7 +401,7 @@ export default function LocationsPage() {
                     setLocationToDelete(null);
                     setDeleteConfirmId(null);
                   }}
-                  className="rounded-xl border border-green-deep/30 px-4 py-2 font-display text-sm font-bold text-green-deep"
+                  className="border border-charcoal/20 text-charcoal px-4 py-2 rounded-lg text-sm font-medium hover:bg-charcoal/5 transition-colors"
                 >
                   Annuler
                 </button>
@@ -409,7 +409,7 @@ export default function LocationsPage() {
                   type="button"
                   onClick={confirmDelete}
                   disabled={deleteLoading}
-                  className="inline-flex items-center gap-2 rounded-xl bg-red-alert px-4 py-2 font-display text-sm font-bold text-white disabled:opacity-70"
+                  className="inline-flex items-center gap-2 border border-terracotta text-terracotta px-4 py-2 rounded-lg text-sm font-medium hover:bg-terracotta/5 disabled:opacity-50 transition-colors"
                 >
                   {deleteLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
                   Supprimer
