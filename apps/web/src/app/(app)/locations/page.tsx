@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, useState, useMemo, useCallback } from 'react';
+import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
+import { toast } from 'sonner';
 import { Search, Trash2, Plus, Pencil, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useApi } from '@/hooks/useApi';
+import { useCrudModal } from '@/hooks/useCrudModal';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { DataTable, type DataTableColumn } from '@/components/ui/DataTable';
-import { TableSkeleton } from '@/components/ui/TableSkeleton';
 import type { Location, LocationCreateInput, LocationUpdateInput } from '@bmad/shared';
 
 const emptyForm = {
@@ -15,24 +16,21 @@ const emptyForm = {
   location_type: '',
 };
 
+type LocationForm = typeof emptyForm;
+
 export default function LocationsPage() {
   const { token } = useAuth();
   const { fetchApi } = useApi();
   const [list, setList] = useState<Location[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [messageSuccess, setMessageSuccess] = useState('');
-  const [messageError, setMessageError] = useState('');
   const [search, setSearch] = useState('');
   const [sortKey, setSortKey] = useState<string | null>('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
-  const [modalOpen, setModalOpen] = useState<'create' | 'edit' | null>(null);
-  const [editingLocation, setEditingLocation] = useState<Location | null>(null);
-  const [form, setForm] = useState(emptyForm);
-  const [submitLoading, setSubmitLoading] = useState(false);
-  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [locationToDelete, setLocationToDelete] = useState<Location | null>(null);
   const debouncedSearch = useDebouncedValue(search, 300);
+  const modalFirstInputRef = useRef<HTMLInputElement>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
 
   const load = useCallback(() => {
     if (!token) return;
@@ -58,127 +56,128 @@ export default function LocationsPage() {
     if (token) load();
   }, [token, load]);
 
-  const openCreate = () => {
-    setEditingLocation(null);
-    setForm(emptyForm);
-    setModalOpen('create');
-    setMessageError('');
-  };
+  const handleCreate = useCallback(
+    async (formData: LocationForm) => {
+      const body: LocationCreateInput = {
+        name: formData.name.trim(),
+        address: formData.address.trim() || null,
+        location_type: formData.location_type.trim() || null,
+      };
+      const res = await fetchApi('/locations', { method: 'POST', body: JSON.stringify(body) });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json?.error ?? 'Erreur lors de la création.');
+      load();
+    },
+    [fetchApi, load]
+  );
 
-  const openEdit = async (loc: Location) => {
-    setMessageError('');
-    try {
-      const res = await fetchApi(`/locations/${loc.id}`);
-      if (!res.ok) {
+  const handleUpdate = useCallback(
+    async (id: string, formData: LocationForm) => {
+      const body: LocationUpdateInput = {
+        name: formData.name.trim(),
+        address: formData.address.trim() || null,
+        location_type: formData.location_type.trim() || null,
+      };
+      const res = await fetchApi(`/locations/${id}`, { method: 'PUT', body: JSON.stringify(body) });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json?.error ?? 'Erreur lors de la modification.');
+      load();
+    },
+    [fetchApi, load]
+  );
+
+  const handleDelete = useCallback(
+    async (id: string) => {
+      const res = await fetchApi(`/locations/${id}`, { method: 'DELETE' });
+      if (res.status !== 204 && !res.ok) {
         const j = await res.json().catch(() => ({}));
-        setMessageError(j?.error ?? 'Impossible de charger l\'emplacement.');
-        return;
+        throw new Error(j?.error ?? 'Erreur lors de la suppression.');
       }
-      const json = await res.json();
-      const fresh = json?.success && json?.data ? json.data : loc;
-      setEditingLocation(fresh);
-      setForm({
-        name: fresh.name,
-        address: fresh.address ?? '',
-        location_type: fresh.location_type ?? '',
-      });
-      setModalOpen('edit');
-    } catch {
-      setMessageError('Erreur réseau.');
-    }
-  };
+      setLocationToDelete(null);
+      load();
+    },
+    [fetchApi, load]
+  );
 
-  const closeModal = () => {
-    setModalOpen(null);
-    setEditingLocation(null);
-    setForm(emptyForm);
-    setMessageError('');
-  };
-
-  const validateForm = (): string | null => {
-    if (!form.name.trim()) return 'Le nom est obligatoire.';
+  const validateForm = useCallback((formData: LocationForm): string | null => {
+    if (!formData.name.trim()) return 'Le nom est obligatoire.';
     return null;
-  };
+  }, []);
 
-  const handleSubmitCreate = async () => {
-    const err = validateForm();
-    if (err) {
-      setMessageError(err);
-      return;
-    }
-    setSubmitLoading(true);
-    setMessageError('');
-    const body: LocationCreateInput = {
-      name: form.name.trim(),
-      address: form.address.trim() || null,
-      location_type: form.location_type.trim() || null,
-    };
-    fetchApi('/locations', { method: 'POST', body: JSON.stringify(body) })
-      .then(async (res) => {
-        const json = await res.json().catch(() => ({}));
+  const {
+    modalOpen,
+    form,
+    setForm,
+    submitLoading,
+    deleteConfirmId,
+    setDeleteConfirmId,
+    deleteLoading,
+    openCreate,
+    openEdit: openEditBase,
+    closeModal,
+    handleSubmit,
+    handleDeleteConfirm,
+    isEditing,
+  } = useCrudModal<Location, LocationForm>({
+    itemToForm: (l) => ({
+      name: l.name ?? '',
+      address: l.address ?? '',
+      location_type: l.location_type ?? '',
+    }),
+    defaultForm: emptyForm,
+    validateForm,
+    onCreate: handleCreate,
+    onUpdate: handleUpdate,
+    onDelete: handleDelete,
+    messages: {
+      created: 'Emplacement créé avec succès.',
+      updated: 'Emplacement modifié avec succès.',
+      deleted: 'Emplacement supprimé.',
+    },
+  });
+
+  const openEdit = useCallback(
+    async (loc: Location) => {
+      previousFocusRef.current = document.activeElement as HTMLElement | null;
+      try {
+        const res = await fetchApi(`/locations/${loc.id}`);
         if (!res.ok) {
-          setMessageError(json?.error ?? 'Erreur lors de la création.');
+          const j = await res.json().catch(() => ({}));
+          toast.error(j?.error ?? "Impossible de charger l'emplacement.");
           return;
         }
-        setMessageSuccess('Emplacement créé avec succès.');
-        closeModal();
-        load();
-      })
-      .catch(() => setMessageError('Erreur réseau.'))
-      .finally(() => setSubmitLoading(false));
-  };
+        const json = await res.json();
+        const fresh = json?.success && json?.data ? json.data : loc;
+        openEditBase(fresh);
+      } catch {
+        toast.error('Erreur réseau.');
+      }
+    },
+    [fetchApi, openEditBase]
+  );
 
-  const handleSubmitEdit = async () => {
-    if (!editingLocation) return;
-    const err = validateForm();
-    if (err) {
-      setMessageError(err);
-      return;
+  const closeModalWithFocus = useCallback(() => {
+    closeModal();
+    if (previousFocusRef.current?.focus) previousFocusRef.current.focus();
+  }, [closeModal]);
+
+  const openDeleteConfirm = useCallback(
+    (loc: Location) => {
+      setLocationToDelete(loc);
+      setDeleteConfirmId(loc.id);
+    },
+    [setDeleteConfirmId]
+  );
+
+  const confirmDelete = useCallback(() => {
+    handleDeleteConfirm();
+  }, [handleDeleteConfirm]);
+
+  useEffect(() => {
+    if (modalOpen && modalFirstInputRef.current) {
+      modalFirstInputRef.current.focus();
     }
-    setSubmitLoading(true);
-    setMessageError('');
-    const body: LocationUpdateInput = {
-      name: form.name.trim(),
-      address: form.address.trim() || null,
-      location_type: form.location_type.trim() || null,
-    };
-    fetchApi(`/locations/${editingLocation.id}`, { method: 'PUT', body: JSON.stringify(body) })
-      .then(async (res) => {
-        const json = await res.json().catch(() => ({}));
-        if (!res.ok) {
-          setMessageError(json?.error ?? 'Erreur lors de la modification.');
-          return;
-        }
-        setMessageSuccess('Emplacement modifié avec succès.');
-        closeModal();
-        load();
-      })
-      .catch(() => setMessageError('Erreur réseau.'))
-      .finally(() => setSubmitLoading(false));
-  };
-
-  const openDeleteConfirm = (loc: Location) => setLocationToDelete(loc);
-
-  const confirmDelete = () => {
-    if (!locationToDelete) return;
-    const id = locationToDelete.id;
-    setDeleteConfirmId(id);
-    fetchApi(`/locations/${id}`, { method: 'DELETE' })
-      .then((res) => {
-        if (res.status === 204 || res.ok) {
-          setMessageSuccess('Emplacement supprimé.');
-          setLocationToDelete(null);
-          load();
-        } else {
-          res
-            .json()
-            .then((j) => setMessageError(j?.error ?? 'Erreur lors de la suppression.'))
-            .catch(() => setMessageError('Erreur lors de la suppression.'));
-        }
-      })
-      .catch(() => setMessageError('Erreur réseau.'))
-      .finally(() => setDeleteConfirmId(null));
-  };
+  }, [modalOpen]);
 
   const filtered = useMemo(() => {
     if (!debouncedSearch.trim()) return list;
@@ -225,34 +224,9 @@ export default function LocationsPage() {
     },
   ];
 
-  if (!token && isLoading) return null;
-  if (!token) return null;
-
   return (
     <div className="min-h-full bg-cream font-body">
       <div className="mx-auto max-w-6xl space-y-6 p-4 pb-24 md:pb-6">
-        {messageSuccess && (
-          <div
-            className="rounded-xl border border-green-600/40 bg-green-50 px-4 py-3 text-sm text-green-800"
-            role="alert"
-          >
-            {messageSuccess}
-            <button type="button" onClick={() => setMessageSuccess('')} className="ml-2 underline">
-              Fermer
-            </button>
-          </div>
-        )}
-        {messageError && (
-          <div
-            className="rounded-xl border border-red-alert/30 bg-red-alert/10 px-4 py-3 text-sm text-red-alert"
-            role="alert"
-          >
-            {messageError}
-            <button type="button" onClick={() => setMessageError('')} className="ml-2 underline">
-              Fermer
-            </button>
-          </div>
-        )}
         {error && (
           <div className="rounded-xl border border-red-alert/30 bg-red-alert/10 px-4 py-3 text-sm text-red-alert">
             {error}
@@ -266,7 +240,10 @@ export default function LocationsPage() {
           </div>
           <button
             type="button"
-            onClick={openCreate}
+            onClick={() => {
+              previousFocusRef.current = document.activeElement as HTMLElement | null;
+              openCreate();
+            }}
             className="inline-flex items-center gap-2 rounded-xl border-2 border-green-mid bg-transparent px-4 py-2.5 font-display text-sm font-bold text-green-deep"
           >
             <Plus className="h-4 w-4" />
@@ -330,7 +307,7 @@ export default function LocationsPage() {
         {modalOpen && (
           <div
             className="fixed inset-0 z-50 flex items-center justify-center bg-charcoal/50 p-4"
-            onClick={(e) => e.target === e.currentTarget && closeModal()}
+            onClick={(e) => e.target === e.currentTarget && closeModalWithFocus()}
             role="dialog"
             aria-modal="true"
             aria-labelledby="modal-title"
@@ -340,12 +317,16 @@ export default function LocationsPage() {
               onClick={(e) => e.stopPropagation()}
             >
               <h2 id="modal-title" className="font-display text-lg font-bold text-green-deep">
-                {modalOpen === 'create' ? 'Nouvel emplacement' : 'Modifier l\'emplacement'}
+                {isEditing ? "Modifier l'emplacement" : 'Nouvel emplacement'}
               </h2>
               <div className="mt-4 space-y-3">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-warm">Nom *</label>
+                  <label className="block text-xs font-semibold text-gray-warm" htmlFor="location-name">
+                    Nom *
+                  </label>
                   <input
+                    id="location-name"
+                    ref={modalFirstInputRef}
                     type="text"
                     value={form.name}
                     onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
@@ -375,19 +356,19 @@ export default function LocationsPage() {
               <div className="mt-6 flex justify-end gap-2">
                 <button
                   type="button"
-                  onClick={closeModal}
+                  onClick={closeModalWithFocus}
                   className="rounded-xl border border-green-deep/30 px-4 py-2 font-display text-sm font-bold text-green-deep"
                 >
                   Annuler
                 </button>
                 <button
                   type="button"
-                  onClick={modalOpen === 'create' ? handleSubmitCreate : handleSubmitEdit}
+                  onClick={handleSubmit}
                   disabled={submitLoading}
                   className="inline-flex items-center gap-2 rounded-xl bg-green-mid px-4 py-2 font-display text-sm font-bold text-white disabled:opacity-70"
                 >
                   {submitLoading && <Loader2 className="h-4 w-4 animate-spin" />}
-                  {modalOpen === 'create' ? 'Créer' : 'Enregistrer'}
+                  {isEditing ? 'Enregistrer' : 'Créer'}
                 </button>
               </div>
             </div>
@@ -398,7 +379,7 @@ export default function LocationsPage() {
         {locationToDelete && (
           <div
             className="fixed inset-0 z-50 flex items-center justify-center bg-charcoal/50 p-4"
-            onClick={(e) => e.target === e.currentTarget && setLocationToDelete(null)}
+            onClick={(e) => e.target === e.currentTarget && (setLocationToDelete(null), setDeleteConfirmId(null))}
             role="dialog"
             aria-modal="true"
             aria-labelledby="delete-modal-title"
@@ -416,7 +397,10 @@ export default function LocationsPage() {
               <div className="mt-6 flex justify-end gap-2">
                 <button
                   type="button"
-                  onClick={() => setLocationToDelete(null)}
+                  onClick={() => {
+                    setLocationToDelete(null);
+                    setDeleteConfirmId(null);
+                  }}
                   className="rounded-xl border border-green-deep/30 px-4 py-2 font-display text-sm font-bold text-green-deep"
                 >
                   Annuler
@@ -424,10 +408,10 @@ export default function LocationsPage() {
                 <button
                   type="button"
                   onClick={confirmDelete}
-                  disabled={deleteConfirmId === locationToDelete.id}
+                  disabled={deleteLoading}
                   className="inline-flex items-center gap-2 rounded-xl bg-red-alert px-4 py-2 font-display text-sm font-bold text-white disabled:opacity-70"
                 >
-                  {deleteConfirmId === locationToDelete.id ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                  {deleteLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
                   Supprimer
                 </button>
               </div>

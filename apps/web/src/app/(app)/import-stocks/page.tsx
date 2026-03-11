@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { useApi } from '@/hooks/useApi';
+import { toast } from 'sonner';
 import { Upload, Download, FileSpreadsheet, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 
 const ACCEPTED_EXTENSIONS = ['.csv', '.xlsx', '.xls'];
@@ -52,7 +53,58 @@ export default function ImportStocksPage() {
   const { fetchApi } = useApi();
   const searchParams = useSearchParams();
   const fromOnboarding = searchParams.get('from') === 'onboarding';
+  const prefillParam = searchParams.get('prefill');
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [prefillIngredients, setPrefillIngredients] = useState<Array<{ name: string; qty?: string }>>([]);
+  const [prefillCreating, setPrefillCreating] = useState(false);
+  const [prefillCreated, setPrefillCreated] = useState(0);
+
+  useEffect(() => {
+    if (prefillParam && fromOnboarding) {
+      try {
+        const parsed = JSON.parse(decodeURIComponent(prefillParam)) as Array<{ name: string; qty?: string }>;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setPrefillIngredients(parsed);
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+  }, [prefillParam, fromOnboarding]);
+
+  const createFromPrefill = useCallback(async () => {
+    if (!token || prefillIngredients.length === 0) return;
+    setPrefillCreating(true);
+    setPrefillCreated(0);
+    let created = 0;
+    for (let idx = 0; idx < prefillIngredients.length; idx++) {
+      const ing = prefillIngredients[idx];
+      try {
+        const baseSku = ing.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') || 'ing';
+        const sku = `${baseSku}-${idx}-${Date.now().toString(36)}`;
+        const qtyMatch = ing.qty?.match(/^(\d+(?:[.,]\d+)?)\s*(g|kg|L|ml|piece|pièce|pièces)?$/i);
+        const quantity = qtyMatch ? parseFloat(qtyMatch[1].replace(',', '.')) || 0 : 0;
+        const unitStr = qtyMatch?.[2]?.toLowerCase();
+        const unit = unitStr === 'g' || unitStr === 'kg' ? 'kg' : unitStr === 'ml' || unitStr === 'l' ? 'liter' : 'piece';
+        const body = {
+          sku,
+          name: ing.name.trim(),
+          quantity,
+          unit,
+        };
+        const res = await fetchApi('/products', { method: 'POST', body: JSON.stringify(body) });
+        if (res.ok) {
+          created++;
+          setPrefillCreated(created);
+        }
+      } catch {
+        /* skip */
+      }
+    }
+    setPrefillCreating(false);
+    if (created > 0) toast.success(`${created} produit(s) créé(s) à partir des ingrédients détectés.`);
+  }, [token, fetchApi, prefillIngredients]);
 
   const [step, setStep] = useState<'upload' | 'preview' | 'report'>('upload');
   const [file, setFile] = useState<File | null>(null);
@@ -61,7 +113,6 @@ export default function ImportStocksPage() {
   const [result, setResult] = useState<ImportResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [messageSuccess, setMessageSuccess] = useState('');
 
   const downloadTemplate = useCallback(async () => {
     if (!token) return;
@@ -76,8 +127,7 @@ export default function ImportStocksPage() {
       a.download = 'products-import-template.csv';
       a.click();
       URL.revokeObjectURL(url);
-      setMessageSuccess('Template téléchargé.');
-      setTimeout(() => setMessageSuccess(''), 3000);
+      toast.success('Template téléchargé.');
     } catch {
       setError('Impossible de télécharger le template.');
     }
@@ -180,12 +230,8 @@ export default function ImportStocksPage() {
     setResult(null);
     setStep('upload');
     setError('');
-    setMessageSuccess('');
     if (fileInputRef.current) fileInputRef.current.value = '';
   }, []);
-
-  if (!token && isLoading) return null;
-  if (!token) return null;
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
@@ -213,16 +259,42 @@ export default function ImportStocksPage() {
         Importez un fichier CSV ou Excel pour créer vos produits en lot. Le fichier doit contenir au minimum les colonnes <strong>SKU</strong> et <strong>Nom</strong>.
       </p>
 
-      {messageSuccess && (
-        <div className="mb-4 flex items-center gap-2 rounded-lg border border-green-bright/30 bg-green-light/30 px-4 py-2 text-sm text-green-deep">
-          <CheckCircle className="h-4 w-4 shrink-0" />
-          {messageSuccess}
-        </div>
-      )}
       {error && (
         <div className="mb-4 flex items-center gap-2 rounded-lg border border-red-alert/30 bg-red-alert/10 px-4 py-2 text-sm text-red-alert">
           <AlertCircle className="h-4 w-4 shrink-0" />
           {error}
+        </div>
+      )}
+
+      {step === 'upload' && fromOnboarding && prefillIngredients.length > 0 && (
+        <div className="mb-6 rounded-2xl border border-green-deep/20 bg-green-deep/5 p-6">
+          <h2 className="font-display text-lg font-semibold text-green-deep">Ingrédients détectés depuis l&apos;onboarding</h2>
+          <p className="mt-1 text-sm text-gray-warm">
+            Créez des produits à partir des ingrédients détectés à l&apos;étape 1.
+          </p>
+          <ul className="mt-3 space-y-2">
+            {prefillIngredients.map((ing, idx) => (
+              <li key={idx} className="flex items-center justify-between rounded-lg border border-green-deep/10 bg-white px-4 py-2 text-sm">
+                <span className="font-medium text-charcoal">{ing.name}</span>
+                <span className="text-gray-warm">{ing.qty ?? '—'}</span>
+              </li>
+            ))}
+          </ul>
+          <button
+            type="button"
+            onClick={createFromPrefill}
+            disabled={prefillCreating}
+            className="mt-4 inline-flex items-center gap-2 rounded-lg bg-green-mid px-4 py-2 font-display text-sm font-bold text-white disabled:opacity-70"
+          >
+            {prefillCreating ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Création… ({prefillCreated}/{prefillIngredients.length})
+              </>
+            ) : (
+              'Créer ces produits'
+            )}
+          </button>
         </div>
       )}
 

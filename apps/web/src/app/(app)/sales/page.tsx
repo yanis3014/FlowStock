@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback, useRef } from 'react';
+import { toast } from 'sonner';
 import { Plus, Trash2, Pencil, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useApi } from '@/hooks/useApi';
@@ -34,8 +35,6 @@ export default function SalesPage() {
   const [pagination, setPagination] = useState<PaginationState | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [messageSuccess, setMessageSuccess] = useState('');
-  const [messageError, setMessageError] = useState('');
   const [page, setPage] = useState(1);
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
@@ -121,19 +120,16 @@ export default function SalesPage() {
       location_id: '',
     });
     setModalOpen('create');
-    setMessageError('');
-    setMessageSuccess('');
   };
 
   const openEdit = async (sale: Sale) => {
-    setMessageError('');
     setEditLoadingId(sale.id);
     previousFocusRef.current = document.activeElement as HTMLElement | null;
     try {
       const res = await fetchApi(`/sales/${sale.id}`);
       if (!res.ok) {
         const j = await res.json().catch(() => ({}));
-        setMessageError(j?.error ?? 'Impossible de charger la vente.');
+        toast.error(j?.error ?? 'Impossible de charger la vente.');
         return;
       }
       const json = await res.json();
@@ -149,7 +145,7 @@ export default function SalesPage() {
       });
       setModalOpen('edit');
     } catch {
-      setMessageError('Erreur réseau.');
+      toast.error('Erreur réseau.');
     } finally {
       setEditLoadingId(null);
     }
@@ -159,7 +155,6 @@ export default function SalesPage() {
     setModalOpen(null);
     setEditingSale(null);
     setForm(emptyForm);
-    setMessageError('');
     if (previousFocusRef.current?.focus) previousFocusRef.current.focus();
   };
 
@@ -181,11 +176,10 @@ export default function SalesPage() {
   const handleSubmitCreate = async () => {
     const err = validateForm();
     if (err) {
-      setMessageError(err);
+      toast.error(err);
       return;
     }
     setSubmitLoading(true);
-    setMessageError('');
     const body: SaleCreateInput = {
       product_id: form.product_id.trim(),
       sale_date: form.sale_date.trim() ? `${form.sale_date}T12:00:00.000Z` : undefined,
@@ -197,15 +191,15 @@ export default function SalesPage() {
       .then(async (res) => {
         const json = await res.json().catch(() => ({}));
         if (!res.ok) {
-          setMessageError(json?.error ?? 'Erreur lors de la création.');
+          toast.error(json?.error ?? 'Erreur lors de la création.');
           return;
         }
-        setMessageSuccess('Vente enregistrée avec succès.');
+        toast.success('Vente enregistrée avec succès.');
         closeModal();
         setPage(1);
         loadSales(1);
       })
-      .catch(() => setMessageError('Erreur réseau.'))
+      .catch(() => toast.error('Erreur réseau.'))
       .finally(() => setSubmitLoading(false));
   };
 
@@ -213,11 +207,10 @@ export default function SalesPage() {
     if (!editingSale) return;
     const err = validateForm();
     if (err) {
-      setMessageError(err);
+      toast.error(err);
       return;
     }
     setSubmitLoading(true);
-    setMessageError('');
     const body: SaleUpdateInput = {
       product_id: form.product_id.trim(),
       sale_date: form.sale_date.trim() ? `${form.sale_date}T12:00:00.000Z` : undefined,
@@ -229,14 +222,14 @@ export default function SalesPage() {
       .then(async (res) => {
         const json = await res.json().catch(() => ({}));
         if (!res.ok) {
-          setMessageError(json?.error ?? 'Erreur lors de la modification.');
+          toast.error(json?.error ?? 'Erreur lors de la modification.');
           return;
         }
-        setMessageSuccess('Vente modifiée avec succès.');
+        toast.success('Vente modifiée avec succès.');
         closeModal();
         loadSales();
       })
-      .catch(() => setMessageError('Erreur réseau.'))
+      .catch(() => toast.error('Erreur réseau.'))
       .finally(() => setSubmitLoading(false));
   };
 
@@ -294,18 +287,18 @@ export default function SalesPage() {
     fetchApi(`/sales/${id}`, { method: 'DELETE' })
       .then((res) => {
         if (res.status === 204 || res.ok) {
-          setMessageSuccess('Vente supprimée.');
+          toast.success('Vente supprimée.');
           setSaleToDelete(null);
           if (wasLastOnPage) setPage(1);
           loadSales(wasLastOnPage ? 1 : undefined);
         } else {
           res
             .json()
-            .then((j) => setMessageError(j?.error ?? 'Erreur lors de la suppression.'))
-            .catch(() => setMessageError('Erreur lors de la suppression.'));
+            .then((j) => toast.error(j?.error ?? 'Erreur lors de la suppression.'))
+            .catch(() => toast.error('Erreur lors de la suppression.'));
         }
       })
-      .catch(() => setMessageError('Erreur réseau.'))
+      .catch(() => toast.error('Erreur réseau.'))
       .finally(() => setDeleteConfirmId(null));
   };
 
@@ -345,37 +338,9 @@ export default function SalesPage() {
     { key: 'location_name', label: 'Emplacement', render: (s) => s.location_name ?? '—' },
   ];
 
-  if (!token && isLoading) return null;
-  if (!token) return null;
-
   return (
     <div className="min-h-full bg-cream font-body">
       <div className="mx-auto max-w-6xl space-y-6 p-4 pb-24 md:pb-6">
-        {messageSuccess && (
-          <div
-            className="rounded-xl border border-green-deep/30 bg-green-deep/10 px-4 py-3 text-sm text-green-deep"
-            role="status"
-            aria-live="polite"
-          >
-            {messageSuccess}
-            <button type="button" onClick={() => setMessageSuccess('')} className="ml-2 underline">
-              Fermer
-            </button>
-          </div>
-        )}
-        {messageError && (
-          <div
-            id="sale-form-error"
-            className="rounded-xl border border-red-alert/30 bg-red-alert/10 px-4 py-3 text-sm text-red-alert"
-            role="alert"
-            aria-live="assertive"
-          >
-            {messageError}
-            <button type="button" onClick={() => setMessageError('')} className="ml-2 underline">
-              Fermer
-            </button>
-          </div>
-        )}
         {error && (
           <div className="rounded-xl border border-red-alert/30 bg-red-alert/10 px-4 py-3 text-sm text-red-alert">{error}</div>
         )}
@@ -530,8 +495,6 @@ export default function SalesPage() {
                     value={form.sale_date}
                     onChange={(e) => setForm((f) => ({ ...f, sale_date: e.target.value }))}
                     className="mt-1 w-full rounded-lg border border-green-deep/20 px-3 py-2 text-sm"
-                    aria-invalid={!!messageError}
-                    aria-describedby={messageError ? 'sale-form-error' : undefined}
                   />
                 </div>
                 <div>
