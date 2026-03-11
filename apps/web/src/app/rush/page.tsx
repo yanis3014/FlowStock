@@ -93,7 +93,7 @@ export default function RushPage() {
 
   return (
     <main
-      className="flex min-h-screen min-h-dvh flex-col bg-[#0F1B19] px-4 pt-3 pb-6 safe-area-padding font-body"
+      className="flex min-h-screen min-h-dvh flex-col bg-charcoal px-4 pt-3 pb-6 safe-area-padding font-body"
       style={{
         paddingTop: 'max(12px, env(safe-area-inset-top))',
         paddingLeft: 'max(16px, env(safe-area-inset-left))',
@@ -104,30 +104,30 @@ export default function RushPage() {
     >
       {/* Notch */}
       <div
-        className="mx-auto mb-4 h-1.5 w-20 rounded-full bg-white/15"
+        className="mx-auto mb-4 h-1.5 w-20 rounded-full bg-cream/15"
         aria-hidden
       />
 
       {/* Bandeau RUSH EN COURS + heure */}
       <header className="mb-3 flex items-center justify-between">
         <div
-          className="inline-flex items-center gap-1.5 rounded-full border border-green-bright bg-green-bright/20 px-3 py-1.5 font-display text-[11px] font-semibold tracking-wide text-green-bright"
+          className="inline-flex items-center gap-1.5 rounded-full border border-green-deep/60 bg-green-deep/20 px-3 py-1.5 font-display text-[11px] font-semibold tracking-wide text-green-deep"
           aria-live="polite"
         >
           <span
-            className="h-1.5 w-1.5 shrink-0 rounded-full bg-green-bright animate-rush-pulse"
+            className="h-1.5 w-1.5 shrink-0 rounded-full bg-green-deep animate-rush-pulse"
             aria-hidden
           />
           RUSH EN COURS
         </div>
-        <time className="font-display text-xs text-gray-warm" dateTime={timeStr}>
+        <time className="font-display text-xs text-cream/50" dateTime={timeStr}>
           {timeStr}
         </time>
       </header>
 
       <h1 className="font-display text-xl font-bold text-cream">Alertes Stock</h1>
-      <p className="mb-2 text-xs text-gray-warm">14 tables · Service midi</p>
-      <p className="mb-4 rounded-lg bg-white/5 px-3 py-2 text-[11px] text-gray-warm border border-white/10">
+      <p className="mb-2 text-xs text-cream/50">14 tables · Service midi</p>
+      <p className="mb-4 rounded-lg bg-cream/5 px-3 py-2 text-[11px] text-cream/50 border border-cream/10">
         {lastFetchTime
           ? `Mis à jour à ${lastFetchTime.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`
           : loading
@@ -138,18 +138,18 @@ export default function RushPage() {
       {loading && (
         <section className="flex flex-1 flex-col gap-2.5" aria-label="Chargement">
           {[1, 2, 3, 4].map((i) => (
-            <Skeleton key={i} className="h-16 w-full rounded-xl bg-white/10" />
+            <Skeleton key={i} className="h-16 w-full rounded-xl bg-cream/10" />
           ))}
         </section>
       )}
 
       {error && (
         <section className="flex flex-1 flex-col items-center justify-center gap-4 py-8">
-          <p className="text-sm text-red-alert">{error}</p>
+          <p className="text-sm text-terracotta">{error}</p>
           <button
             type="button"
             onClick={loadProducts}
-            className="rounded-xl border border-white/20 px-4 py-2 text-sm font-medium text-cream hover:bg-white/10"
+            className="rounded-xl border border-cream/20 px-4 py-2 text-sm font-medium text-cream hover:bg-cream/10 transition-colors"
           >
             Réessayer
           </button>
@@ -158,7 +158,7 @@ export default function RushPage() {
 
       {!loading && !error && alerts.length === 0 && (
         <section className="flex flex-1 flex-col items-center justify-center py-8">
-          <p className="text-sm text-gray-warm">Aucun produit trouvé</p>
+          <p className="text-sm text-cream/50">Aucun produit trouvé</p>
         </section>
       )}
 
@@ -168,12 +168,12 @@ export default function RushPage() {
             <article
               key={a.id}
               role={a.level === 'red' ? 'alert' : undefined}
-              className={`flex items-center gap-3 rounded-xl px-4 py-3.5 ${
+              className={`flex items-center gap-3 rounded-xl px-4 py-3.5 bg-charcoal/50 ${
                 a.level === 'red'
-                  ? 'border border-red-alert/40 bg-red-alert/10'
+                  ? 'border border-terracotta/30'
                   : a.level === 'orange'
-                    ? 'border border-orange-warn/40 bg-orange-warn/10'
-                    : 'border border-green-bright/30 bg-green-bright/10'
+                    ? 'border border-gold/30'
+                    : 'border border-green-deep/30'
               }`}
             >
               <span className="text-lg leading-none" aria-hidden>
@@ -183,17 +183,19 @@ export default function RushPage() {
                 <span className="block font-display text-sm font-bold text-cream">
                   {a.name}
                 </span>
-                <span className="mt-0.5 block text-[11px] text-gray-warm">
+                <span className={`mt-0.5 block text-[11px] ${
+                  a.level === 'red' ? 'text-terracotta' : a.level === 'orange' ? 'text-gold' : 'text-green-deep'
+                }`}>
                   {a.detail}
                 </span>
               </div>
               <span
                 className={`shrink-0 rounded-md px-2 py-1 font-display text-[11px] font-bold ${
                   a.level === 'red'
-                    ? 'bg-red-alert/30 text-red-200'
+                    ? 'bg-terracotta/20 text-terracotta'
                     : a.level === 'orange'
-                      ? 'bg-orange-warn/30 text-amber-200'
-                      : 'bg-green-bright/30 text-green-light'
+                      ? 'bg-gold/20 text-gold'
+                      : 'bg-green-deep/20 text-green-deep'
                 }`}
               >
                 {a.badge}
@@ -206,13 +208,13 @@ export default function RushPage() {
       <div className="mt-5 flex flex-col gap-2">
         <button
           type="button"
-          className="w-full rounded-xl bg-green-mid py-3.5 font-display text-sm font-bold tracking-wide text-white transition-opacity hover:opacity-95"
+          className="w-full rounded-xl bg-green-deep py-3.5 font-display text-sm font-bold tracking-wide text-cream transition-colors hover:bg-forest-green"
         >
           ✓ Tout acquitter
         </button>
         <Link
           href="/rush/stocks"
-          className="w-full rounded-xl border border-white/10 bg-transparent py-3 font-body text-[13px] font-medium text-gray-warm transition-colors hover:text-cream text-center"
+          className="w-full rounded-xl border border-cream/10 bg-transparent py-3 font-body text-[13px] font-medium text-cream/50 transition-colors hover:text-cream text-center"
         >
           Voir tous les stocks →
         </Link>

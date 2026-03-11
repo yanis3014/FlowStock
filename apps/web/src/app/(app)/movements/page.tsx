@@ -6,6 +6,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useApi } from '@/hooks/useApi';
 import { History, Download, Loader2 } from 'lucide-react';
 import type { Product, StockMovement, MovementType } from '@bmad/shared';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { TableSkeleton } from '@/components/ui/LoadingSkeleton';
 
 const MOVEMENT_TYPE_LABELS: Record<MovementType, string> = {
   creation: 'Création',
@@ -218,25 +220,25 @@ export default function MovementsPage() {
 
   return (
     <div className="min-h-full bg-cream font-body">
-      <div className="mx-auto max-w-6xl space-y-6 p-4 pb-24 md:pb-6">
+      <div className="mx-auto max-w-6xl space-y-6 p-6 pb-24 md:pb-6">
         {error && (
-          <div className="rounded-xl border border-red-alert/30 bg-red-alert/10 px-4 py-3 text-sm text-red-alert">
+          <div className="rounded-xl border border-terracotta/30 bg-terracotta/10 px-4 py-3 text-sm text-terracotta">
             {error}
           </div>
         )}
 
-        <div>
-          <h1 className="font-display text-2xl font-bold text-green-deep">Historique des mouvements</h1>
-          <p className="text-sm text-gray-warm">Consultez les mouvements de stock par produit</p>
-        </div>
+        <PageHeader
+          title="Historique des mouvements"
+          subtitle="Consultez les mouvements de stock par produit"
+        />
 
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
           <div className="flex-1">
-            <label className="block text-xs font-semibold text-gray-warm">Produit</label>
+            <label className="block text-xs font-medium text-charcoal/60 mb-1.5">Produit</label>
             <select
               value={selectedProductId}
               onChange={(e) => setSelectedProductId(e.target.value)}
-              className="mt-1 w-full rounded-xl border border-green-deep/20 bg-white px-4 py-2.5 text-sm text-charcoal"
+              className="w-full rounded-lg border border-charcoal/15 bg-white px-3 py-2.5 text-sm text-charcoal focus:outline-none focus:border-green-deep focus:ring-1 focus:ring-green-deep/20 transition-colors"
             >
               <option value="">Sélectionner un produit…</option>
               {products.map((p) => (
@@ -251,21 +253,21 @@ export default function MovementsPage() {
         {selectedProductId && (
           <>
             {retentionDays != null && (
-              <p className="text-sm text-gray-warm">
+              <p className="text-sm text-charcoal/50">
                 Historique affiché : {retentionDays} derniers jours (selon votre abonnement)
               </p>
             )}
 
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-wrap gap-3 bg-white border border-charcoal/8 rounded-xl p-4 shadow-sm">
               <div>
-                <label className="block text-xs font-semibold text-gray-warm">Type</label>
+                <label className="block text-xs font-medium text-charcoal/60 mb-1.5">Type</label>
                 <select
                   value={filterType}
                   onChange={(e) => {
                     setFilterType(e.target.value as MovementType | '');
                     setPagination((p) => ({ ...p, page: 1 }));
                   }}
-                  className="mt-1 rounded-xl border border-green-deep/20 bg-white px-4 py-2.5 text-sm text-charcoal"
+                  className="rounded-lg border border-charcoal/15 bg-white px-3 py-2.5 text-sm text-charcoal focus:outline-none focus:border-green-deep focus:ring-1 focus:ring-green-deep/20 transition-colors"
                 >
                   <option value="">Tous</option>
                   {(Object.keys(MOVEMENT_TYPE_LABELS) as MovementType[]).map((t) => (
@@ -276,7 +278,7 @@ export default function MovementsPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-warm">Utilisateur (UUID)</label>
+                <label className="block text-xs font-medium text-charcoal/60 mb-1.5">Utilisateur (UUID)</label>
                 <input
                   type="text"
                   placeholder="Filtrer par user_id…"
@@ -285,11 +287,11 @@ export default function MovementsPage() {
                     setFilterUserId(e.target.value);
                     setPagination((p) => ({ ...p, page: 1 }));
                   }}
-                  className="mt-1 rounded-xl border border-green-deep/20 bg-white px-4 py-2.5 text-sm text-charcoal placeholder-gray-warm"
+                  className="rounded-lg border border-charcoal/15 bg-white px-3 py-2.5 text-sm text-charcoal placeholder:text-charcoal/35 focus:outline-none focus:border-green-deep focus:ring-1 focus:ring-green-deep/20 transition-colors"
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-warm">Date début</label>
+                <label className="block text-xs font-medium text-charcoal/60 mb-1.5">Date début</label>
                 <input
                   type="date"
                   value={filterDateFrom}
@@ -297,11 +299,11 @@ export default function MovementsPage() {
                     setFilterDateFrom(e.target.value);
                     setPagination((p) => ({ ...p, page: 1 }));
                   }}
-                  className="mt-1 rounded-xl border border-green-deep/20 bg-white px-4 py-2.5 text-sm text-charcoal"
+                  className="rounded-lg border border-charcoal/15 bg-white px-3 py-2.5 text-sm text-charcoal focus:outline-none focus:border-green-deep focus:ring-1 focus:ring-green-deep/20 transition-colors"
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-warm">Date fin</label>
+                <label className="block text-xs font-medium text-charcoal/60 mb-1.5">Date fin</label>
                 <input
                   type="date"
                   value={filterDateTo}
@@ -309,24 +311,22 @@ export default function MovementsPage() {
                     setFilterDateTo(e.target.value);
                     setPagination((p) => ({ ...p, page: 1 }));
                   }}
-                  className="mt-1 rounded-xl border border-green-deep/20 bg-white px-4 py-2.5 text-sm text-charcoal"
+                  className="rounded-lg border border-charcoal/15 bg-white px-3 py-2.5 text-sm text-charcoal focus:outline-none focus:border-green-deep focus:ring-1 focus:ring-green-deep/20 transition-colors"
                 />
               </div>
-              <div className="flex items-end">
+              <div className="flex items-end gap-2">
                 <button
                   type="button"
                   onClick={() => loadMovements()}
-                  className="rounded-xl bg-green-deep/10 px-4 py-2.5 font-display text-sm font-bold text-green-deep"
+                  className="px-4 py-2 bg-green-deep text-cream rounded-lg text-sm font-medium hover:bg-forest-green transition-colors"
                 >
                   Filtrer
                 </button>
-              </div>
-              <div className="flex items-end">
                 <button
                   type="button"
                   onClick={handleExportCsv}
                   disabled={exportLoading || !selectedProductId}
-                  className="inline-flex items-center gap-2 rounded-xl border-2 border-green-mid bg-transparent px-4 py-2.5 font-display text-sm font-bold text-green-deep disabled:opacity-50"
+                  className="inline-flex items-center gap-2 border border-charcoal/20 text-charcoal px-4 py-2 rounded-lg text-sm font-medium hover:bg-charcoal/5 disabled:opacity-50 transition-colors"
                 >
                   {exportLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
                   Exporter CSV
@@ -335,63 +335,46 @@ export default function MovementsPage() {
             </div>
 
             {exportTruncated && (
-              <p className="text-sm text-orange-warn">L&apos;export a été limité à 10 000 lignes.</p>
+              <p className="text-sm text-gold">L&apos;export a été limité à 10 000 lignes.</p>
             )}
 
-            <div className="overflow-x-auto rounded-2xl border border-green-deep/10 bg-white shadow-sm">
+            <div className="overflow-x-auto rounded-xl border border-charcoal/8 bg-white shadow-sm">
               {loadingMovements ? (
-                <div className="flex items-center justify-center py-12">
-                  <Loader2 className="h-8 w-8 animate-spin text-green-mid" />
-                </div>
+                <TableSkeleton rows={8} cols={6} />
               ) : (
                 <table className="w-full border-collapse">
                   <thead>
-                    <tr className="border-b border-cream-dark bg-green-deep/5">
-                      <th className="px-4 py-3 text-left font-display text-xs font-bold uppercase tracking-wider text-gray-warm">
-                        Date
-                      </th>
-                      <th className="px-4 py-3 text-left font-display text-xs font-bold uppercase tracking-wider text-gray-warm">
-                        Type
-                      </th>
-                      <th className="px-4 py-3 text-left font-display text-xs font-bold uppercase tracking-wider text-gray-warm">
-                        Utilisateur
-                      </th>
-                      <th className="px-4 py-3 text-right font-display text-xs font-bold uppercase tracking-wider text-gray-warm">
-                        Ancienne qté
-                      </th>
-                      <th className="px-4 py-3 text-right font-display text-xs font-bold uppercase tracking-wider text-gray-warm">
-                        Nouvelle qté
-                      </th>
-                      <th className="px-4 py-3 text-left font-display text-xs font-bold uppercase tracking-wider text-gray-warm">
-                        Raison
-                      </th>
+                    <tr className="border-b border-charcoal/8 bg-cream/50">
+                      <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-charcoal/50">Date</th>
+                      <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-charcoal/50">Type</th>
+                      <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-charcoal/50">Utilisateur</th>
+                      <th className="px-5 py-3 text-right text-xs font-medium uppercase tracking-wide text-charcoal/50">Ancienne qté</th>
+                      <th className="px-5 py-3 text-right text-xs font-medium uppercase tracking-wide text-charcoal/50">Nouvelle qté</th>
+                      <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-charcoal/50">Raison</th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody className="divide-y divide-charcoal/5">
                     {movements.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="px-4 py-8 text-center text-sm text-gray-warm">
+                        <td colSpan={6} className="px-5 py-8 text-center text-sm text-charcoal/40">
                           Aucun mouvement pour ce produit.
                         </td>
                       </tr>
                     ) : (
                       movements.map((m) => (
-                        <tr
-                          key={m.id}
-                          className="border-b border-cream-dark last:border-0 hover:bg-cream/50"
-                        >
-                          <td className="px-4 py-3 text-sm text-charcoal">{formatDate(m.created_at)}</td>
-                          <td className="px-4 py-3 text-sm text-charcoal">
+                        <tr key={m.id} className="hover:bg-cream/30 transition-colors">
+                          <td className="px-5 py-4 text-sm text-charcoal">{formatDate(m.created_at)}</td>
+                          <td className="px-5 py-4 text-sm text-charcoal">
                             {MOVEMENT_TYPE_LABELS[m.movement_type] ?? m.movement_type}
                           </td>
-                          <td className="px-4 py-3 text-sm text-gray-warm">{m.user_email ?? m.user_id ?? '—'}</td>
-                          <td className="px-4 py-3 text-right text-sm text-charcoal">
+                          <td className="px-5 py-4 text-sm text-charcoal/50">{m.user_email ?? m.user_id ?? '—'}</td>
+                          <td className="px-5 py-4 text-right text-sm text-charcoal">
                             {m.quantity_before != null ? m.quantity_before : '—'}
                           </td>
-                          <td className="px-4 py-3 text-right text-sm text-charcoal">
+                          <td className="px-5 py-4 text-right text-sm text-charcoal">
                             {m.quantity_after != null ? m.quantity_after : '—'}
                           </td>
-                          <td className="px-4 py-3 text-sm text-gray-warm">{m.reason ?? '—'}</td>
+                          <td className="px-5 py-4 text-sm text-charcoal/50">{m.reason ?? '—'}</td>
                         </tr>
                       ))
                     )}
@@ -406,11 +389,11 @@ export default function MovementsPage() {
                   type="button"
                   onClick={() => setPagination((p) => ({ ...p, page: Math.max(1, p.page - 1) }))}
                   disabled={pagination.page <= 1}
-                  className="rounded border border-green-deep/20 px-3 py-1 disabled:opacity-50"
+                  className="rounded-lg border border-charcoal/15 px-3 py-1.5 text-charcoal disabled:opacity-50 hover:bg-cream/50 transition-colors"
                 >
                   Préc.
                 </button>
-                <span className="text-gray-warm">
+                <span className="text-charcoal/50">
                   Page {pagination.page} / {pagination.total_pages}
                 </span>
                 <button
@@ -422,7 +405,7 @@ export default function MovementsPage() {
                     }))
                   }
                   disabled={pagination.page >= pagination.total_pages}
-                  className="rounded border border-green-deep/20 px-3 py-1 disabled:opacity-50"
+                  className="rounded-lg border border-charcoal/15 px-3 py-1.5 text-charcoal disabled:opacity-50 hover:bg-cream/50 transition-colors"
                 >
                   Suiv.
                 </button>
@@ -432,10 +415,11 @@ export default function MovementsPage() {
         )}
 
         {!selectedProductId && (
-          <div className="flex items-center justify-center rounded-2xl border border-green-deep/10 bg-white py-16">
+          <div className="flex items-center justify-center rounded-xl border border-charcoal/8 bg-white py-16 shadow-sm">
             <div className="text-center">
-              <History className="mx-auto h-12 w-12 text-green-deep/40" />
-              <p className="mt-2 text-sm text-gray-warm">Sélectionnez un produit pour afficher son historique.</p>
+              <History className="mx-auto h-10 w-10 text-charcoal/25" />
+              <p className="mt-3 font-display font-bold text-charcoal">Sélectionnez un produit</p>
+              <p className="mt-1 text-sm text-charcoal/50">Choisissez un produit pour afficher son historique.</p>
             </div>
           </div>
         )}

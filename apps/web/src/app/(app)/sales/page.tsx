@@ -6,6 +6,8 @@ import { Plus, Trash2, Pencil, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useApi } from '@/hooks/useApi';
 import { DataTable, type DataTableColumn, type PaginationState } from '@/components/ui/DataTable';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { TableSkeleton } from '@/components/ui/LoadingSkeleton';
 import type { Sale, SaleCreateInput, SaleUpdateInput } from '@bmad/shared';
 
 const PAGE_SIZE = 25;
@@ -340,29 +342,29 @@ export default function SalesPage() {
 
   return (
     <div className="min-h-full bg-cream font-body">
-      <div className="mx-auto max-w-6xl space-y-6 p-4 pb-24 md:pb-6">
+      <div className="mx-auto max-w-6xl space-y-6 p-6 pb-24 md:pb-6">
         {error && (
-          <div className="rounded-xl border border-red-alert/30 bg-red-alert/10 px-4 py-3 text-sm text-red-alert">{error}</div>
+          <div className="rounded-xl border border-terracotta/30 bg-terracotta/10 px-4 py-3 text-sm text-terracotta">{error}</div>
         )}
 
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="font-display text-2xl font-bold text-green-deep">Ventes</h1>
-            <p className="text-sm text-gray-warm">Saisie manuelle · Liste et historique des ventes</p>
-          </div>
-          <button
-            type="button"
-            onClick={openCreate}
-            className="inline-flex items-center gap-2 rounded-xl border-2 border-green-mid bg-transparent px-4 py-2.5 font-display text-sm font-bold text-green-deep"
-          >
-            <Plus className="h-4 w-4" />
-            Nouvelle vente
-          </button>
-        </div>
+        <PageHeader
+          title="Ventes"
+          subtitle="Saisie manuelle · Liste et historique des ventes"
+          actions={
+            <button
+              type="button"
+              onClick={openCreate}
+              className="inline-flex items-center gap-2 bg-green-deep text-cream px-4 py-2 rounded-lg text-sm font-medium hover:bg-forest-green transition-colors"
+            >
+              <Plus className="h-4 w-4" />
+              Nouvelle vente
+            </button>
+          }
+        />
 
-        <div className="flex flex-wrap items-end gap-3 rounded-xl border border-green-deep/10 bg-white p-4">
+        <div className="flex flex-wrap items-end gap-3 bg-white border border-charcoal/8 rounded-xl p-4 shadow-sm">
           <div>
-            <label className="mb-1 block text-xs font-semibold text-gray-warm">Du</label>
+            <label className="mb-1.5 block text-xs font-medium text-charcoal/60">Du</label>
             <input
               type="date"
               value={dateFrom}
@@ -370,11 +372,11 @@ export default function SalesPage() {
                 setDateFrom(e.target.value);
                 setPage(1);
               }}
-              className="rounded-lg border border-green-deep/20 px-3 py-2 text-sm"
+              className="rounded-lg border border-charcoal/15 bg-white px-3 py-2.5 text-sm text-charcoal focus:outline-none focus:border-green-deep focus:ring-1 focus:ring-green-deep/20 transition-colors"
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-semibold text-gray-warm">Au</label>
+            <label className="mb-1.5 block text-xs font-medium text-charcoal/60">Au</label>
             <input
               type="date"
               value={dateTo}
@@ -382,18 +384,18 @@ export default function SalesPage() {
                 setDateTo(e.target.value);
                 setPage(1);
               }}
-              className="rounded-lg border border-green-deep/20 px-3 py-2 text-sm"
+              className="rounded-lg border border-charcoal/15 bg-white px-3 py-2.5 text-sm text-charcoal focus:outline-none focus:border-green-deep focus:ring-1 focus:ring-green-deep/20 transition-colors"
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-semibold text-gray-warm">Produit</label>
+            <label className="mb-1.5 block text-xs font-medium text-charcoal/60">Produit</label>
             <select
               value={productId}
               onChange={(e) => {
                 setProductId(e.target.value);
                 setPage(1);
               }}
-              className="min-w-[180px] rounded-lg border border-green-deep/20 px-3 py-2 text-sm"
+              className="min-w-[180px] rounded-lg border border-charcoal/15 bg-white px-3 py-2.5 text-sm text-charcoal focus:outline-none focus:border-green-deep focus:ring-1 focus:ring-green-deep/20 transition-colors"
             >
               <option value="">Tous</option>
               {products.map((p) => (
@@ -404,14 +406,14 @@ export default function SalesPage() {
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-xs font-semibold text-gray-warm">Emplacement</label>
+            <label className="mb-1.5 block text-xs font-medium text-charcoal/60">Emplacement</label>
             <select
               value={locationId}
               onChange={(e) => {
                 setLocationId(e.target.value);
                 setPage(1);
               }}
-              className="min-w-[160px] rounded-lg border border-green-deep/20 px-3 py-2 text-sm"
+              className="min-w-[160px] rounded-lg border border-charcoal/15 bg-white px-3 py-2.5 text-sm text-charcoal focus:outline-none focus:border-green-deep focus:ring-1 focus:ring-green-deep/20 transition-colors"
             >
               <option value="">Tous</option>
               {locations.map((l) => (
@@ -423,11 +425,9 @@ export default function SalesPage() {
           </div>
         </div>
 
-        <div className="overflow-x-auto rounded-2xl border border-green-deep/10 bg-white shadow-sm">
+        <div className="overflow-x-auto rounded-xl border border-charcoal/8 bg-white shadow-sm">
           {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-green-mid" />
-            </div>
+            <TableSkeleton rows={8} cols={7} />
           ) : (
             <DataTable<Sale>
               columns={columns}
@@ -445,7 +445,7 @@ export default function SalesPage() {
                     type="button"
                     onClick={() => openEdit(s)}
                     disabled={editLoadingId === s.id}
-                    className="rounded p-1.5 text-charcoal hover:bg-cream-dark disabled:opacity-50"
+                    className="p-2 rounded-lg text-charcoal/50 hover:text-charcoal hover:bg-charcoal/5 disabled:opacity-50 transition-colors"
                     title="Modifier"
                   >
                     {editLoadingId === s.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Pencil className="h-4 w-4" />}
@@ -454,7 +454,7 @@ export default function SalesPage() {
                     type="button"
                     onClick={() => openDeleteConfirm(s)}
                     disabled={deleteConfirmId === s.id}
-                    className="rounded p-1.5 text-red-alert hover:bg-red-alert/10 disabled:opacity-50"
+                    className="p-2 rounded-lg text-terracotta hover:bg-terracotta/5 disabled:opacity-50 transition-colors"
                     title="Supprimer"
                   >
                     {deleteConfirmId === s.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
@@ -468,7 +468,7 @@ export default function SalesPage() {
         {/* Modal Création / Édition */}
         {modalOpen && (
           <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-charcoal/50 p-4"
+            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4"
             onClick={(e) => e.target === e.currentTarget && closeModal()}
             onKeyDown={(e) => e.key === 'Escape' && closeModal()}
             role="dialog"
@@ -477,15 +477,15 @@ export default function SalesPage() {
           >
             <div
               ref={modalContentRef}
-              className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl border border-green-deep/20 bg-white p-6 shadow-xl"
+              className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             >
-              <h2 id="modal-title" className="font-display text-lg font-bold text-green-deep">
+              <h2 id="modal-title" className="text-lg font-display font-bold text-charcoal">
                 {modalOpen === 'create' ? 'Nouvelle vente' : 'Modifier la vente'}
               </h2>
               <div className="mt-4 space-y-3">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-warm" htmlFor="sale-date">
+                  <label className="block text-xs font-medium text-charcoal/60 mb-1.5" htmlFor="sale-date">
                     Date *
                   </label>
                   <input
@@ -494,18 +494,18 @@ export default function SalesPage() {
                     type="date"
                     value={form.sale_date}
                     onChange={(e) => setForm((f) => ({ ...f, sale_date: e.target.value }))}
-                    className="mt-1 w-full rounded-lg border border-green-deep/20 px-3 py-2 text-sm"
+                    className="w-full rounded-lg border border-charcoal/15 bg-white px-3 py-2.5 text-sm text-charcoal placeholder:text-charcoal/35 focus:outline-none focus:border-green-deep focus:ring-1 focus:ring-green-deep/20 transition-colors"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-warm" htmlFor="sale-product">
+                  <label className="block text-xs font-medium text-charcoal/60 mb-1.5" htmlFor="sale-product">
                     Produit *
                   </label>
                   <select
                     id="sale-product"
                     value={form.product_id}
                     onChange={(e) => setForm((f) => ({ ...f, product_id: e.target.value }))}
-                    className="mt-1 w-full rounded-lg border border-green-deep/20 px-3 py-2 text-sm"
+                    className="w-full rounded-lg border border-charcoal/15 bg-white px-3 py-2.5 text-sm text-charcoal placeholder:text-charcoal/35 focus:outline-none focus:border-green-deep focus:ring-1 focus:ring-green-deep/20 transition-colors"
                   >
                     <option value="">Sélectionner un produit</option>
                     {products.map((p) => (
@@ -516,7 +516,7 @@ export default function SalesPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-warm" htmlFor="sale-quantity">
+                  <label className="block text-xs font-medium text-charcoal/60 mb-1.5" htmlFor="sale-quantity">
                     Quantité *
                   </label>
                   <input
@@ -526,11 +526,11 @@ export default function SalesPage() {
                     step="0.01"
                     value={form.quantity_sold}
                     onChange={(e) => setForm((f) => ({ ...f, quantity_sold: e.target.value }))}
-                    className="mt-1 w-full rounded-lg border border-green-deep/20 px-3 py-2 text-sm"
+                    className="w-full rounded-lg border border-charcoal/15 bg-white px-3 py-2.5 text-sm text-charcoal placeholder:text-charcoal/35 focus:outline-none focus:border-green-deep focus:ring-1 focus:ring-green-deep/20 transition-colors"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-warm" htmlFor="sale-unit-price">
+                  <label className="block text-xs font-medium text-charcoal/60 mb-1.5" htmlFor="sale-unit-price">
                     Prix unitaire (optionnel)
                   </label>
                   <input
@@ -540,18 +540,18 @@ export default function SalesPage() {
                     step="0.01"
                     value={form.unit_price}
                     onChange={(e) => setForm((f) => ({ ...f, unit_price: e.target.value }))}
-                    className="mt-1 w-full rounded-lg border border-green-deep/20 px-3 py-2 text-sm"
+                    className="w-full rounded-lg border border-charcoal/15 bg-white px-3 py-2.5 text-sm text-charcoal placeholder:text-charcoal/35 focus:outline-none focus:border-green-deep focus:ring-1 focus:ring-green-deep/20 transition-colors"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-warm" htmlFor="sale-location">
+                  <label className="block text-xs font-medium text-charcoal/60 mb-1.5" htmlFor="sale-location">
                     Emplacement (optionnel)
                   </label>
                   <select
                     id="sale-location"
                     value={form.location_id}
                     onChange={(e) => setForm((f) => ({ ...f, location_id: e.target.value }))}
-                    className="mt-1 w-full rounded-lg border border-green-deep/20 px-3 py-2 text-sm"
+                    className="w-full rounded-lg border border-charcoal/15 bg-white px-3 py-2.5 text-sm text-charcoal placeholder:text-charcoal/35 focus:outline-none focus:border-green-deep focus:ring-1 focus:ring-green-deep/20 transition-colors"
                   >
                     <option value="">Aucun</option>
                     {locations.map((l) => (
@@ -566,7 +566,7 @@ export default function SalesPage() {
                 <button
                   type="button"
                   onClick={closeModal}
-                  className="rounded-xl border border-green-deep/30 px-4 py-2 font-display text-sm font-bold text-green-deep"
+                  className="border border-charcoal/20 text-charcoal px-4 py-2 rounded-lg text-sm font-medium hover:bg-charcoal/5 transition-colors"
                 >
                   Annuler
                 </button>
@@ -574,7 +574,7 @@ export default function SalesPage() {
                   type="button"
                   onClick={modalOpen === 'create' ? handleSubmitCreate : handleSubmitEdit}
                   disabled={submitLoading}
-                  className="inline-flex items-center gap-2 rounded-xl bg-green-mid px-4 py-2 font-display text-sm font-bold text-white disabled:opacity-70"
+                  className="inline-flex items-center gap-2 bg-green-deep text-cream px-4 py-2 rounded-lg text-sm font-medium hover:bg-forest-green disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   {submitLoading && <Loader2 className="h-4 w-4 animate-spin" />}
                   {modalOpen === 'create' ? 'Enregistrer' : 'Modifier'}
@@ -587,7 +587,7 @@ export default function SalesPage() {
         {/* Modal confirmation suppression */}
         {saleToDelete && (
           <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-charcoal/50 p-4"
+            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4"
             onClick={(e) => e.target === e.currentTarget && setSaleToDelete(null)}
             onKeyDown={(e) => e.key === 'Escape' && setSaleToDelete(null)}
             role="dialog"
@@ -596,10 +596,10 @@ export default function SalesPage() {
           >
             <div
               ref={modalDeleteRef}
-              className="w-full max-w-md rounded-2xl border border-green-deep/20 bg-white p-6 shadow-xl"
+              className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             >
-              <h2 id="delete-modal-title" className="font-display text-lg font-bold text-green-deep">
+              <h2 id="delete-modal-title" className="text-lg font-display font-bold text-charcoal">
                 Supprimer cette vente ?
               </h2>
               <p className="mt-2 text-sm text-charcoal">
@@ -610,7 +610,7 @@ export default function SalesPage() {
                 <button
                   type="button"
                   onClick={() => setSaleToDelete(null)}
-                  className="rounded-xl border border-green-deep/30 px-4 py-2 font-display text-sm font-bold text-green-deep"
+                  className="border border-charcoal/20 text-charcoal px-4 py-2 rounded-lg text-sm font-medium hover:bg-charcoal/5 transition-colors"
                 >
                   Annuler
                 </button>
@@ -618,7 +618,7 @@ export default function SalesPage() {
                   type="button"
                   onClick={confirmDelete}
                   disabled={deleteConfirmId === saleToDelete.id}
-                  className="inline-flex items-center gap-2 rounded-xl bg-red-alert px-4 py-2 font-display text-sm font-bold text-white disabled:opacity-70"
+                  className="inline-flex items-center gap-2 border border-terracotta text-terracotta px-4 py-2 rounded-lg text-sm font-medium hover:bg-terracotta/5 disabled:opacity-50 transition-colors"
                 >
                   {deleteConfirmId === saleToDelete.id ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
                   Supprimer

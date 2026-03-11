@@ -186,8 +186,8 @@ export default function ChatPage() {
   if (!token) return null;
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] flex-col rounded-xl border border-cream-dark bg-white shadow-sm" role="region" aria-label="Chat IA">
-      <header className="flex shrink-0 items-center justify-between border-b border-cream-dark bg-green-deep px-4 py-3 text-cream">
+    <div className="flex h-[calc(100vh-4rem)] flex-col rounded-xl border border-charcoal/8 bg-white shadow-sm" role="region" aria-label="Chat IA">
+      <header className="flex shrink-0 items-center justify-between border-b border-charcoal/8 bg-green-deep px-4 py-3 text-cream">
         <h1 className="text-lg font-display font-bold">Chat IA</h1>
         <button
           type="button"
@@ -202,7 +202,7 @@ export default function ChatPage() {
 
       <div className="flex min-h-0 flex-1">
         {conversations.length > 0 && (
-          <aside className="hidden w-52 shrink-0 border-r border-cream-dark bg-cream p-2 sm:block" aria-label="Conversations">
+          <aside className="hidden w-52 shrink-0 border-r border-charcoal/8 bg-cream p-2 sm:block" aria-label="Conversations">
             <p className="mb-2 px-2 text-xs font-medium text-charcoal/60">Conversations</p>
             <ul className="space-y-1">
               {conversations.slice(0, 20).map((c) => (
@@ -210,7 +210,7 @@ export default function ChatPage() {
                   <button
                     type="button"
                     onClick={() => handleSelectConversation(c.id)}
-                    className={`w-full rounded-lg px-2 py-1.5 text-left text-sm ${conversationId === c.id ? 'bg-green-deep/10 font-medium text-green-deep' : 'text-charcoal hover:bg-cream-dark'}`}
+                    className={`w-full rounded-lg px-2 py-1.5 text-left text-sm ${conversationId === c.id ? 'bg-green-deep/10 font-medium text-green-deep' : 'text-charcoal hover:bg-charcoal/5'}`}
                   >
                     {new Date(c.updated_at).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
                   </button>
@@ -251,7 +251,7 @@ export default function ChatPage() {
                     className={`max-w-[90%] sm:max-w-[80%] rounded-xl px-4 py-3 break-words ${
                       m.role === 'user'
                         ? 'ml-auto bg-green-deep text-cream'
-                        : 'mr-auto border border-cream-dark bg-white text-charcoal'
+                        : 'mr-auto border border-charcoal/8 bg-white text-charcoal'
                     }`}
                     role={m.role === 'user' ? 'user' : 'assistant'}
                   >
@@ -264,7 +264,7 @@ export default function ChatPage() {
                   </div>
                 ))}
                 {sending && (
-                  <div className="mr-auto max-w-[80%] rounded-xl border border-cream-dark bg-white px-4 py-3 italic text-charcoal/60" aria-live="polite">
+                  <div className="mr-auto max-w-[80%] rounded-xl border border-charcoal/8 bg-white px-4 py-3 italic text-charcoal/60" aria-live="polite">
                     IA écrit…
                   </div>
                 )}
@@ -273,7 +273,7 @@ export default function ChatPage() {
             )}
           </div>
 
-          <div className="flex shrink-0 gap-2 border-t border-cream-dark bg-white p-4">
+          <div className="flex shrink-0 gap-2 border-t border-charcoal/8 bg-white p-4">
             <input
               ref={inputRef}
               type="text"
@@ -286,7 +286,7 @@ export default function ChatPage() {
                 }
               }}
               placeholder="Posez votre question..."
-              className="min-w-0 flex-1 rounded-xl border border-cream-dark px-4 py-3 text-base text-charcoal focus:border-green-deep focus:outline-none focus:ring-1 focus:ring-green-deep"
+              className="min-w-0 flex-1 rounded-xl border border-charcoal/15 px-4 py-3 text-base text-charcoal focus:border-green-deep focus:outline-none focus:ring-1 focus:ring-green-deep/20 transition-colors"
               aria-label="Votre message"
               disabled={sending}
               maxLength={2000}

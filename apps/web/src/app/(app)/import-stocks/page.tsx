@@ -7,6 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useApi } from '@/hooks/useApi';
 import { toast } from 'sonner';
 import { Upload, Download, FileSpreadsheet, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import { PageHeader } from '@/components/ui/PageHeader';
 
 const ACCEPTED_EXTENSIONS = ['.csv', '.xlsx', '.xls'];
 const MAX_FILE_SIZE_MB = 5;
@@ -234,49 +235,51 @@ export default function ImportStocksPage() {
   }, []);
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8">
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="font-display text-xl font-bold text-green-deep">Import des stocks</h1>
-        <div className="flex gap-3">
-          {fromOnboarding && (
+    <div className="mx-auto max-w-4xl px-6 py-8">
+      <PageHeader
+        title="Import des stocks"
+        actions={
+          <div className="flex gap-3">
+            {fromOnboarding && (
+              <Link
+                href="/onboarding"
+                className="text-sm font-medium text-green-deep hover:underline"
+              >
+                ← Retour à l&apos;onboarding
+              </Link>
+            )}
             <Link
-              href="/onboarding"
+              href="/stocks"
               className="text-sm font-medium text-green-deep hover:underline"
             >
-              ← Retour à l&apos;onboarding
+              ← Retour aux stocks
             </Link>
-          )}
-          <Link
-            href="/stocks"
-            className="text-sm font-medium text-green-deep hover:underline"
-          >
-            ← Retour aux stocks
-          </Link>
-        </div>
-      </div>
+          </div>
+        }
+      />
 
-      <p className="mb-6 text-sm text-gray-warm">
+      <p className="mb-6 text-sm text-charcoal/50">
         Importez un fichier CSV ou Excel pour créer vos produits en lot. Le fichier doit contenir au minimum les colonnes <strong>SKU</strong> et <strong>Nom</strong>.
       </p>
 
       {error && (
-        <div className="mb-4 flex items-center gap-2 rounded-lg border border-red-alert/30 bg-red-alert/10 px-4 py-2 text-sm text-red-alert">
+        <div className="mb-4 flex items-center gap-2 rounded-lg border border-terracotta/30 bg-terracotta/10 px-4 py-2 text-sm text-terracotta">
           <AlertCircle className="h-4 w-4 shrink-0" />
           {error}
         </div>
       )}
 
       {step === 'upload' && fromOnboarding && prefillIngredients.length > 0 && (
-        <div className="mb-6 rounded-2xl border border-green-deep/20 bg-green-deep/5 p-6">
-          <h2 className="font-display text-lg font-semibold text-green-deep">Ingrédients détectés depuis l&apos;onboarding</h2>
-          <p className="mt-1 text-sm text-gray-warm">
+        <div className="mb-6 rounded-xl border border-charcoal/8 bg-white p-6">
+          <h2 className="font-display text-lg font-semibold text-charcoal">Ingrédients détectés depuis l&apos;onboarding</h2>
+          <p className="mt-1 text-sm text-charcoal/50">
             Créez des produits à partir des ingrédients détectés à l&apos;étape 1.
           </p>
           <ul className="mt-3 space-y-2">
             {prefillIngredients.map((ing, idx) => (
-              <li key={idx} className="flex items-center justify-between rounded-lg border border-green-deep/10 bg-white px-4 py-2 text-sm">
+              <li key={idx} className="flex items-center justify-between rounded-lg border border-charcoal/8 bg-white px-4 py-2 text-sm">
                 <span className="font-medium text-charcoal">{ing.name}</span>
-                <span className="text-gray-warm">{ing.qty ?? '—'}</span>
+                <span className="text-charcoal/50">{ing.qty ?? '—'}</span>
               </li>
             ))}
           </ul>
@@ -284,7 +287,7 @@ export default function ImportStocksPage() {
             type="button"
             onClick={createFromPrefill}
             disabled={prefillCreating}
-            className="mt-4 inline-flex items-center gap-2 rounded-lg bg-green-mid px-4 py-2 font-display text-sm font-bold text-white disabled:opacity-70"
+            className="mt-4 inline-flex items-center gap-2 rounded-lg bg-green-deep px-4 py-2 font-display text-sm font-bold text-cream hover:bg-forest-green transition-colors disabled:opacity-70"
           >
             {prefillCreating ? (
               <>
@@ -299,25 +302,25 @@ export default function ImportStocksPage() {
       )}
 
       {step === 'upload' && (
-        <div className="rounded-2xl border border-green-deep/10 bg-white p-6 shadow-sm">
+        <div className="rounded-xl border border-charcoal/8 bg-white p-6 shadow-sm">
           <div className="flex flex-col gap-6 sm:flex-row sm:items-start">
             <div className="flex-1">
-              <h2 className="font-display text-lg font-semibold text-green-deep">1. Télécharger le template</h2>
-              <p className="mt-1 text-sm text-gray-warm">
+              <h2 className="font-display text-lg font-semibold text-charcoal">1. Télécharger le template</h2>
+              <p className="mt-1 text-sm text-charcoal/50">
                 Utilisez notre modèle CSV pour remplir vos produits (SKU, nom, quantité, etc.).
               </p>
               <button
                 type="button"
                 onClick={downloadTemplate}
-                className="mt-3 inline-flex items-center gap-2 rounded-lg border border-green-deep/30 bg-white px-4 py-2 font-display text-sm font-semibold text-green-deep hover:bg-cream/50"
+                className="mt-3 inline-flex items-center gap-2 rounded-lg border border-charcoal/15 bg-white px-4 py-2 font-display text-sm font-semibold text-charcoal hover:bg-cream/50 transition-colors"
               >
                 <Download className="h-4 w-4" />
                 Télécharger le template CSV
               </button>
             </div>
             <div className="flex-1">
-              <h2 className="font-display text-lg font-semibold text-green-deep">2. Choisir un fichier</h2>
-              <p className="mt-1 text-sm text-gray-warm">
+              <h2 className="font-display text-lg font-semibold text-charcoal">2. Choisir un fichier</h2>
+              <p className="mt-1 text-sm text-charcoal/50">
                 CSV ou Excel (.xlsx, .xls), max {MAX_FILE_SIZE_MB} Mo.
               </p>
               <input
@@ -331,7 +334,7 @@ export default function ImportStocksPage() {
                 }}
               />
               <div
-                className="mt-3 flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-green-deep/20 bg-cream/50 py-10 hover:border-green-mid/50"
+                className="mt-3 flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-charcoal/15 bg-cream/50 py-10 hover:border-green-deep/30 transition-colors"
                 role="button"
                 tabIndex={0}
                 onKeyDown={(e) => e.key === 'Enter' && fileInputRef.current?.click()}
@@ -344,17 +347,17 @@ export default function ImportStocksPage() {
                 }}
               >
                 {loading ? (
-                  <Loader2 className="h-10 w-10 animate-spin text-green-mid" />
+                  <Loader2 className="h-10 w-10 animate-spin text-green-deep" />
                 ) : (
                   <>
                     <Upload className="mb-2 h-10 w-10 text-green-deep/60" />
-                    <p className="font-display text-sm font-semibold text-green-deep">
+                    <p className="font-display text-sm font-semibold text-charcoal">
                       Glissez un fichier ici ou cliquez pour parcourir
                     </p>
                     <button
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
-                      className="mt-3 rounded-lg bg-green-mid px-4 py-2 font-display text-sm font-bold text-white hover:bg-green-deep"
+                      className="mt-3 rounded-lg bg-green-deep px-4 py-2 font-display text-sm font-bold text-cream hover:bg-forest-green transition-colors"
                     >
                       Parcourir
                     </button>
@@ -368,28 +371,28 @@ export default function ImportStocksPage() {
 
       {step === 'preview' && preview && (
         <div className="space-y-6">
-          <div className="rounded-2xl border border-green-deep/10 bg-white p-6 shadow-sm">
+          <div className="rounded-xl border border-charcoal/8 bg-white p-6 shadow-sm">
             <div className="flex items-center justify-between">
-              <h2 className="font-display text-lg font-semibold text-green-deep">Aperçu et mapping</h2>
-              <span className="text-sm text-gray-warm">{file?.name}</span>
+              <h2 className="font-display text-lg font-semibold text-charcoal">Aperçu et mapping</h2>
+              <span className="text-sm text-charcoal/50">{file?.name}</span>
             </div>
-            <p className="mt-1 text-sm text-gray-warm">
+            <p className="mt-1 text-sm text-charcoal/50">
               Associez chaque colonne du fichier à un champ produit. SKU et Nom sont obligatoires.
             </p>
-            <p className="mt-2 text-xs text-gray-warm">
+            <p className="mt-2 text-xs text-charcoal/50">
               Emplacement et fournisseur : si le nom n&apos;existe pas déjà dans votre base, il sera ignoré (produit importé sans lien).
             </p>
             <div className="mt-4 overflow-x-auto">
-              <table className="min-w-full border border-cream-dark text-left text-sm">
+              <table className="min-w-full border border-charcoal/8 text-left text-sm">
                 <thead>
                   <tr className="bg-cream/50">
-                    <th className="border-b border-cream-dark px-3 py-2 font-semibold text-green-deep">Colonne fichier</th>
-                    <th className="border-b border-cream-dark px-3 py-2 font-semibold text-green-deep">Champ produit</th>
+                    <th className="border-b border-charcoal/8 px-3 py-2 font-semibold text-charcoal">Colonne fichier</th>
+                    <th className="border-b border-charcoal/8 px-3 py-2 font-semibold text-charcoal">Champ produit</th>
                   </tr>
                 </thead>
                 <tbody>
                   {preview.columns.map((col) => (
-                    <tr key={col} className="border-b border-cream-dark">
+                    <tr key={col} className="border-b border-charcoal/8">
                       <td className="px-3 py-2">{col || '(vide)'}</td>
                       <td className="px-3 py-2">
                         <select
@@ -397,7 +400,7 @@ export default function ImportStocksPage() {
                           onChange={(e) =>
                             setMapping((prev) => ({ ...prev, [col]: e.target.value as ProductField }))
                           }
-                          className="w-full max-w-[200px] rounded border border-cream-dark bg-white px-2 py-1.5 text-sm"
+                          className="w-full max-w-[200px] rounded border border-charcoal/15 bg-white px-2 py-1.5 text-sm focus:outline-none focus:border-green-deep focus:ring-1 focus:ring-green-deep/20 transition-colors"
                         >
                           {PRODUCT_FIELDS.map((opt) => (
                             <option key={opt.value || 'ignore'} value={opt.value}>
@@ -412,13 +415,13 @@ export default function ImportStocksPage() {
               </table>
             </div>
             <div className="mt-4">
-              <h3 className="font-display text-sm font-semibold text-green-deep">Aperçu des données (20 premières lignes)</h3>
-              <div className="mt-2 overflow-x-auto rounded-lg border border-cream-dark">
+              <h3 className="font-display text-sm font-semibold text-charcoal">Aperçu des données (20 premières lignes)</h3>
+              <div className="mt-2 overflow-x-auto rounded-lg border border-charcoal/8">
                 <table className="min-w-full text-left text-xs">
                   <thead>
                     <tr className="bg-cream/50">
                       {preview.columns.map((c) => (
-                        <th key={c} className="whitespace-nowrap border-b border-cream-dark px-2 py-1.5 font-medium">
+                        <th key={c} className="whitespace-nowrap border-b border-charcoal/8 px-2 py-1.5 font-medium">
                           {c}
                         </th>
                       ))}
@@ -426,9 +429,9 @@ export default function ImportStocksPage() {
                   </thead>
                   <tbody>
                     {preview.sampleRows.slice(0, 20).map((row, i) => (
-                      <tr key={i} className="border-b border-cream-dark/50">
+                      <tr key={i} className="border-b border-charcoal/5">
                         {preview.columns.map((c) => (
-                          <td key={c} className="max-w-[120px] truncate border-r border-cream-dark/50 px-2 py-1">
+                          <td key={c} className="max-w-[120px] truncate border-r border-charcoal/5 px-2 py-1">
                             {row[c] ?? ''}
                           </td>
                         ))}
@@ -443,7 +446,7 @@ export default function ImportStocksPage() {
                 type="button"
                 onClick={runImport}
                 disabled={!canImport() || loading}
-                className="inline-flex items-center gap-2 rounded-lg bg-green-mid px-4 py-2 font-display text-sm font-bold text-white hover:bg-green-deep disabled:opacity-50"
+                className="inline-flex items-center gap-2 rounded-lg bg-green-deep px-4 py-2 font-display text-sm font-bold text-cream hover:bg-forest-green transition-colors disabled:opacity-50"
               >
                 {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileSpreadsheet className="h-4 w-4" />}
                 Lancer l&apos;import
@@ -451,13 +454,13 @@ export default function ImportStocksPage() {
               <button
                 type="button"
                 onClick={reset}
-                className="rounded-lg border border-green-deep/30 px-4 py-2 font-display text-sm font-semibold text-green-deep hover:bg-cream/50"
+                className="rounded-lg border border-charcoal/15 px-4 py-2 font-display text-sm font-semibold text-charcoal hover:bg-cream/50 transition-colors"
               >
                 Changer de fichier
               </button>
             </div>
             {!canImport() && (
-              <p className="mt-2 text-sm text-orange-warn">
+              <p className="mt-2 text-sm text-gold">
                 Associez au moins une colonne à <strong>SKU</strong> et une à <strong>Nom</strong> pour lancer l&apos;import.
               </p>
             )}
@@ -466,34 +469,34 @@ export default function ImportStocksPage() {
       )}
 
       {step === 'report' && result && (
-        <div className="rounded-2xl border border-green-deep/10 bg-white p-6 shadow-sm">
-          <h2 className="font-display text-lg font-semibold text-green-deep">Rapport d&apos;import</h2>
+        <div className="rounded-xl border border-charcoal/8 bg-white p-6 shadow-sm">
+          <h2 className="font-display text-lg font-semibold text-charcoal">Rapport d&apos;import</h2>
           <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div className="rounded-lg border border-green-bright/30 bg-green-light/20 p-4">
               <p className="text-2xl font-bold text-green-deep">{result.imported}</p>
-              <p className="text-sm text-gray-warm">Importés</p>
+              <p className="text-sm text-charcoal/50">Importés</p>
             </div>
-            <div className="rounded-lg border border-cream-dark bg-cream/30 p-4">
+            <div className="rounded-lg border border-charcoal/8 bg-cream/30 p-4">
               <p className="text-2xl font-bold text-charcoal">{result.totalRows}</p>
-              <p className="text-sm text-gray-warm">Lignes totales</p>
+              <p className="text-sm text-charcoal/50">Lignes totales</p>
             </div>
-            <div className="rounded-lg border border-cream-dark bg-cream/30 p-4">
+            <div className="rounded-lg border border-charcoal/8 bg-cream/30 p-4">
               <p className="text-2xl font-bold text-charcoal">{result.ignored}</p>
-              <p className="text-sm text-gray-warm">Ignorées</p>
+              <p className="text-sm text-charcoal/50">Ignorées</p>
             </div>
-            <div className="rounded-lg border border-orange-warn/30 bg-orange-warn/10 p-4">
-              <p className="text-2xl font-bold text-orange-warn">{result.errors.length}</p>
-              <p className="text-sm text-gray-warm">Erreurs</p>
+            <div className="rounded-lg border border-gold/30 bg-gold/10 p-4">
+              <p className="text-2xl font-bold text-gold">{result.errors.length}</p>
+              <p className="text-sm text-charcoal/50">Erreurs</p>
             </div>
           </div>
           {result.errors.length > 0 && (
             <div className="mt-6">
               <h3 className="font-display text-sm font-semibold text-charcoal">Détail des erreurs</h3>
-              <ul className="mt-2 max-h-60 overflow-y-auto rounded-lg border border-cream-dark">
+              <ul className="mt-2 max-h-60 overflow-y-auto rounded-lg border border-charcoal/8">
                 {result.errors.map((err, i) => (
-                  <li key={i} className="border-b border-cream-dark/50 px-3 py-2 text-sm last:border-0">
+                  <li key={i} className="border-b border-charcoal/5 px-3 py-2 text-sm last:border-0">
                     <span className="font-medium">Ligne {err.row}</span>
-                    {err.value != null && <span className="text-gray-warm"> — {String(err.value).slice(0, 50)}</span>}
+                    {err.value != null && <span className="text-charcoal/50"> — {String(err.value).slice(0, 50)}</span>}
                     : {err.message}
                   </li>
                 ))}
@@ -504,20 +507,20 @@ export default function ImportStocksPage() {
             <button
               type="button"
               onClick={reset}
-              className="rounded-lg bg-green-mid px-4 py-2 font-display text-sm font-bold text-white hover:bg-green-deep"
+              className="rounded-lg bg-green-deep px-4 py-2 font-display text-sm font-bold text-cream hover:bg-forest-green transition-colors"
             >
               Nouvel import
             </button>
             <Link
               href="/stocks"
-              className="rounded-lg border border-green-deep/30 px-4 py-2 font-display text-sm font-semibold text-green-deep hover:bg-cream/50"
+              className="rounded-lg border border-charcoal/15 px-4 py-2 font-display text-sm font-semibold text-charcoal hover:bg-cream/50 transition-colors"
             >
               Voir les stocks
             </Link>
             {fromOnboarding && (
               <Link
                 href="/onboarding"
-                className="rounded-lg border border-green-deep/30 px-4 py-2 font-display text-sm font-semibold text-green-deep hover:bg-cream/50"
+                className="rounded-lg border border-charcoal/15 px-4 py-2 font-display text-sm font-semibold text-charcoal hover:bg-cream/50 transition-colors"
               >
                 Retour à l&apos;onboarding
               </Link>

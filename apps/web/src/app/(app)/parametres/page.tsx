@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useApi } from '@/hooks/useApi';
 import { Download, Link2, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { PageHeader } from '@/components/ui/PageHeader';
 
 const STORAGE_KEY = 'flowstock_parametres';
 
@@ -168,26 +169,26 @@ export default function ParametresPage() {
   if (loading) {
     return (
       <div className="flex min-h-full items-center justify-center bg-cream">
-        <Loader2 className="h-8 w-8 animate-spin text-green-mid" />
+        <Loader2 className="h-8 w-8 animate-spin text-green-deep" />
       </div>
     );
   }
 
   return (
     <div className="min-h-full bg-cream font-body">
-      <div className="mx-auto max-w-2xl space-y-8 p-4 pb-24 md:pb-6">
-        <div>
-          <h1 className="font-display text-2xl font-bold text-green-deep">Paramètres du restaurant</h1>
-          <p className="text-sm text-gray-warm">Informations, intégrations et préférences</p>
-        </div>
+      <div className="mx-auto max-w-2xl space-y-8 p-6 pb-24 md:pb-6">
+        <PageHeader
+          title="Paramètres du restaurant"
+          subtitle="Informations, intégrations et préférences"
+        />
 
         {/* Infos générales */}
-        <section className="rounded-xl border border-green-deep/10 bg-white p-6 shadow-sm">
-          <h2 className="font-display text-lg font-bold text-green-deep">Informations générales</h2>
-          <p className="mt-1 text-xs text-gray-warm">Sauvegardées localement (TODO API tenant)</p>
+        <section className="rounded-xl border border-charcoal/8 bg-white p-6 shadow-sm">
+          <h2 className="font-display text-lg font-bold text-charcoal">Informations générales</h2>
+          <p className="mt-1 text-xs text-charcoal/50">Sauvegardées localement (TODO API tenant)</p>
           <div className="mt-4 space-y-4">
             <div>
-              <label htmlFor="param-nom" className="block text-sm font-medium text-charcoal">
+              <label htmlFor="param-nom" className="block text-xs font-medium text-charcoal/60 mb-1.5">
                 Nom du restaurant
               </label>
               <input
@@ -195,11 +196,11 @@ export default function ParametresPage() {
                 type="text"
                 value={form.nom ?? ''}
                 onChange={(e) => setForm((f) => ({ ...f, nom: e.target.value }))}
-                className="mt-1 w-full rounded-lg border border-green-deep/20 bg-white px-4 py-2 text-sm focus:border-green-mid focus:outline-none"
+                className="mt-1 w-full rounded-lg border border-charcoal/15 bg-white px-4 py-2 text-sm focus:outline-none focus:border-green-deep focus:ring-1 focus:ring-green-deep/20 transition-colors"
               />
             </div>
             <div>
-              <label htmlFor="param-adresse" className="block text-sm font-medium text-charcoal">
+              <label htmlFor="param-adresse" className="block text-xs font-medium text-charcoal/60 mb-1.5">
                 Adresse
               </label>
               <input
@@ -207,18 +208,18 @@ export default function ParametresPage() {
                 type="text"
                 value={form.adresse ?? ''}
                 onChange={(e) => setForm((f) => ({ ...f, adresse: e.target.value }))}
-                className="mt-1 w-full rounded-lg border border-green-deep/20 bg-white px-4 py-2 text-sm focus:border-green-mid focus:outline-none"
+                className="mt-1 w-full rounded-lg border border-charcoal/15 bg-white px-4 py-2 text-sm focus:outline-none focus:border-green-deep focus:ring-1 focus:ring-green-deep/20 transition-colors"
               />
             </div>
             <div>
-              <label htmlFor="param-type" className="block text-sm font-medium text-charcoal">
+              <label htmlFor="param-type" className="block text-xs font-medium text-charcoal/60 mb-1.5">
                 Type d&apos;établissement
               </label>
               <select
                 id="param-type"
                 value={form.typeEtablissement ?? 'Restaurant'}
                 onChange={(e) => setForm((f) => ({ ...f, typeEtablissement: e.target.value }))}
-                className="mt-1 w-full rounded-lg border border-green-deep/20 bg-white px-4 py-2 text-sm focus:border-green-mid focus:outline-none"
+                className="mt-1 w-full rounded-lg border border-charcoal/15 bg-white px-4 py-2 text-sm focus:outline-none focus:border-green-deep focus:ring-1 focus:ring-green-deep/20 transition-colors"
               >
                 <option value="Restaurant">Restaurant</option>
                 <option value="Brasserie">Brasserie</option>
@@ -228,7 +229,7 @@ export default function ParametresPage() {
               </select>
             </div>
             <div>
-              <label htmlFor="param-horaires" className="block text-sm font-medium text-charcoal">
+              <label htmlFor="param-horaires" className="block text-xs font-medium text-charcoal/60 mb-1.5">
                 Horaires d&apos;ouverture
               </label>
               <input
@@ -237,7 +238,7 @@ export default function ParametresPage() {
                 value={form.horaires ?? ''}
                 onChange={(e) => setForm((f) => ({ ...f, horaires: e.target.value }))}
                 placeholder="ex. 11h30-14h30, 19h-22h"
-                className="mt-1 w-full rounded-lg border border-green-deep/20 bg-white px-4 py-2 text-sm focus:border-green-mid focus:outline-none"
+                className="mt-1 w-full rounded-lg border border-charcoal/15 bg-white px-4 py-2 text-sm focus:outline-none focus:border-green-deep focus:ring-1 focus:ring-green-deep/20 transition-colors"
               />
             </div>
           </div>
@@ -245,7 +246,7 @@ export default function ParametresPage() {
             type="button"
             onClick={handleSaveInfos}
             disabled={saveLoading}
-            className="mt-4 inline-flex items-center gap-2 rounded-xl bg-green-mid px-4 py-2.5 font-display text-sm font-bold text-white disabled:opacity-70"
+            className="mt-4 inline-flex items-center gap-2 rounded-xl bg-green-deep px-4 py-2.5 font-display text-sm font-bold text-cream hover:bg-forest-green transition-colors disabled:opacity-70"
           >
             {saveLoading && <Loader2 className="h-4 w-4 animate-spin" />}
             Enregistrer
@@ -253,38 +254,38 @@ export default function ParametresPage() {
         </section>
 
         {/* Intégrations POS */}
-        <section className="rounded-xl border border-green-deep/10 bg-white p-6 shadow-sm">
-          <h2 className="font-display text-lg font-bold text-green-deep">Intégrations caisse (POS)</h2>
-          <div className="mt-4 flex items-center justify-between rounded-lg border border-green-deep/10 bg-cream/30 p-4">
+        <section className="rounded-xl border border-charcoal/8 bg-white p-6 shadow-sm">
+          <h2 className="font-display text-lg font-bold text-charcoal">Intégrations caisse (POS)</h2>
+          <div className="mt-4 flex items-center justify-between rounded-lg border border-charcoal/8 bg-cream/30 p-4">
             <div className="flex items-center gap-3">
-              <Link2 className="h-5 w-5 text-green-mid" />
+              <Link2 className="h-5 w-5 text-green-deep" />
               <div>
                 <p className="font-medium text-charcoal">Lightspeed</p>
-                <p className="text-sm text-gray-warm">
+                <p className="text-sm text-charcoal/50">
                   {posStatus?.connecte ? `Connecté · ${posStatus.lastSync}` : "Non connecté"}
                 </p>
               </div>
             </div>
             <span
-              className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-                posStatus?.connecte ? 'bg-green-mid/20 text-green-deep' : 'bg-gray-warm/20 text-gray-warm'
+              className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                posStatus?.connecte ? 'bg-green-deep/10 text-green-deep' : 'bg-charcoal/10 text-charcoal/50'
               }`}
             >
               {posStatus?.connecte ? 'Actif' : 'Inactif'}
             </span>
           </div>
-          <p className="mt-2 text-xs text-gray-warm">Saisie manuelle toujours disponible en secours.</p>
+          <p className="mt-2 text-xs text-charcoal/50">Saisie manuelle toujours disponible en secours.</p>
         </section>
 
         {/* Seuils alertes */}
-        <section className="rounded-xl border border-green-deep/10 bg-white p-6 shadow-sm">
-          <h2 className="font-display text-lg font-bold text-green-deep">Seuil d&apos;alerte stock</h2>
-          <p className="mt-1 text-sm text-gray-warm">
+        <section className="rounded-xl border border-charcoal/8 bg-white p-6 shadow-sm">
+          <h2 className="font-display text-lg font-bold text-charcoal">Seuil d&apos;alerte stock</h2>
+          <p className="mt-1 text-sm text-charcoal/50">
             En % du stock de référence (50–500 %) — déclenchement des alertes Rush
           </p>
           <div className="mt-4 flex gap-6">
             <div>
-              <label htmlFor="param-seuil-attention" className="block text-sm font-medium text-charcoal">
+              <label htmlFor="param-seuil-attention" className="block text-xs font-medium text-charcoal/60 mb-1.5">
                 Seuil attention (%)
               </label>
               <input
@@ -294,7 +295,7 @@ export default function ParametresPage() {
                 max="500"
                 value={form.seuilAttention ?? 120}
                 onChange={(e) => setForm((f) => ({ ...f, seuilAttention: parseInt(e.target.value, 10) || 120 }))}
-                className="mt-1 w-24 rounded-lg border border-green-deep/20 bg-white px-3 py-2 text-sm focus:border-green-mid focus:outline-none"
+                className="mt-1 w-24 rounded-lg border border-charcoal/15 bg-white px-3 py-2 text-sm focus:outline-none focus:border-green-deep focus:ring-1 focus:ring-green-deep/20 transition-colors"
               />
             </div>
           </div>
@@ -302,7 +303,7 @@ export default function ParametresPage() {
             type="button"
             onClick={handleSaveSeuils}
             disabled={thresholdLoading}
-            className="mt-4 inline-flex items-center gap-2 rounded-xl bg-green-mid px-4 py-2.5 font-display text-sm font-bold text-white disabled:opacity-70"
+            className="mt-4 inline-flex items-center gap-2 rounded-xl bg-green-deep px-4 py-2.5 font-display text-sm font-bold text-cream hover:bg-forest-green transition-colors disabled:opacity-70"
           >
             {thresholdLoading && <Loader2 className="h-4 w-4 animate-spin" />}
             Enregistrer
@@ -310,9 +311,9 @@ export default function ParametresPage() {
         </section>
 
         {/* Notifications */}
-        <section className="rounded-xl border border-green-deep/10 bg-white p-6 shadow-sm">
-          <h2 className="font-display text-lg font-bold text-green-deep">Notifications</h2>
-          <p className="mt-1 text-xs text-gray-warm">Sauvegardées localement</p>
+        <section className="rounded-xl border border-charcoal/8 bg-white p-6 shadow-sm">
+          <h2 className="font-display text-lg font-bold text-charcoal">Notifications</h2>
+          <p className="mt-1 text-xs text-charcoal/50">Sauvegardées localement</p>
           <div className="mt-4 space-y-4">
             <label className="flex cursor-pointer items-center justify-between">
               <span className="text-sm font-medium text-charcoal">Push (navigateur)</span>
@@ -320,7 +321,7 @@ export default function ParametresPage() {
                 type="checkbox"
                 checked={form.push ?? true}
                 onChange={(e) => setForm((f) => ({ ...f, push: e.target.checked }))}
-                className="h-4 w-4 rounded border-gray-300 text-green-mid focus:ring-green-mid"
+                className="h-4 w-4 rounded border-gray-300 text-green-deep focus:ring-green-deep"
               />
             </label>
             <label className="flex cursor-pointer items-center justify-between">
@@ -329,7 +330,7 @@ export default function ParametresPage() {
                 type="checkbox"
                 checked={form.sms ?? false}
                 onChange={(e) => setForm((f) => ({ ...f, sms: e.target.checked }))}
-                className="h-4 w-4 rounded border-gray-300 text-green-mid focus:ring-green-mid"
+                className="h-4 w-4 rounded border-gray-300 text-green-deep focus:ring-green-deep"
               />
             </label>
             <label className="flex cursor-pointer items-center justify-between">
@@ -338,51 +339,51 @@ export default function ParametresPage() {
                 type="checkbox"
                 checked={form.email ?? true}
                 onChange={(e) => setForm((f) => ({ ...f, email: e.target.checked }))}
-                className="h-4 w-4 rounded border-gray-300 text-green-mid focus:ring-green-mid"
+                className="h-4 w-4 rounded border-gray-300 text-green-deep focus:ring-green-deep"
               />
             </label>
           </div>
           <button
             type="button"
             onClick={handleSaveNotif}
-            className="mt-4 rounded-xl bg-green-mid px-4 py-2.5 font-display text-sm font-bold text-white"
+            className="mt-4 rounded-xl bg-green-deep px-4 py-2.5 font-display text-sm font-bold text-cream hover:bg-forest-green transition-colors"
           >
             Enregistrer
           </button>
         </section>
 
         {/* Gestion utilisateurs */}
-        <section className="rounded-xl border border-green-deep/10 bg-white p-6 shadow-sm">
-          <h2 className="font-display text-lg font-bold text-green-deep">Utilisateurs</h2>
-          <p className="mt-1 text-sm text-gray-warm">TODO : connecter à l&apos;API utilisateurs du tenant</p>
+        <section className="rounded-xl border border-charcoal/8 bg-white p-6 shadow-sm">
+          <h2 className="font-display text-lg font-bold text-charcoal">Utilisateurs</h2>
+          <p className="mt-1 text-sm text-charcoal/50">TODO : connecter à l&apos;API utilisateurs du tenant</p>
           <ul className="mt-4 space-y-3">
-            <li className="rounded-lg border border-green-deep/10 px-4 py-3 text-sm text-gray-warm">
+            <li className="rounded-lg border border-charcoal/8 px-4 py-3 text-sm text-charcoal/50">
               Aucun utilisateur invité pour le moment.
             </li>
           </ul>
           <button
             type="button"
             disabled
-            className="mt-4 rounded-lg border border-green-deep/20 px-4 py-2 text-sm font-medium text-gray-warm"
+            className="mt-4 rounded-lg border border-charcoal/15 px-4 py-2 text-sm font-medium text-charcoal/50"
           >
             Inviter un utilisateur (bientôt)
           </button>
         </section>
 
         {/* Langue / Fuseau */}
-        <section className="rounded-xl border border-green-deep/10 bg-white p-6 shadow-sm">
-          <h2 className="font-display text-lg font-bold text-green-deep">Langue et fuseau</h2>
-          <p className="mt-1 text-xs text-gray-warm">Sauvegardés localement</p>
+        <section className="rounded-xl border border-charcoal/8 bg-white p-6 shadow-sm">
+          <h2 className="font-display text-lg font-bold text-charcoal">Langue et fuseau</h2>
+          <p className="mt-1 text-xs text-charcoal/50">Sauvegardés localement</p>
           <div className="mt-4 space-y-4">
             <div>
-              <label htmlFor="param-langue" className="block text-sm font-medium text-charcoal">
+              <label htmlFor="param-langue" className="block text-xs font-medium text-charcoal/60 mb-1.5">
                 Langue
               </label>
               <select
                 id="param-langue"
                 value={form.langue ?? 'fr'}
                 onChange={(e) => setForm((f) => ({ ...f, langue: e.target.value }))}
-                className="mt-1 w-full rounded-lg border border-green-deep/20 bg-white px-4 py-2 text-sm focus:border-green-mid focus:outline-none"
+                className="mt-1 w-full rounded-lg border border-charcoal/15 bg-white px-4 py-2 text-sm focus:outline-none focus:border-green-deep focus:ring-1 focus:ring-green-deep/20 transition-colors"
               >
                 <option value="fr">Français</option>
                 <option value="en">English</option>
@@ -390,14 +391,14 @@ export default function ParametresPage() {
               </select>
             </div>
             <div>
-              <label htmlFor="param-fuseau" className="block text-sm font-medium text-charcoal">
+              <label htmlFor="param-fuseau" className="block text-xs font-medium text-charcoal/60 mb-1.5">
                 Fuseau horaire
               </label>
               <select
                 id="param-fuseau"
                 value={form.fuseau ?? 'Europe/Paris'}
                 onChange={(e) => setForm((f) => ({ ...f, fuseau: e.target.value }))}
-                className="mt-1 w-full rounded-lg border border-green-deep/20 bg-white px-4 py-2 text-sm focus:border-green-mid focus:outline-none"
+                className="mt-1 w-full rounded-lg border border-charcoal/15 bg-white px-4 py-2 text-sm focus:outline-none focus:border-green-deep focus:ring-1 focus:ring-green-deep/20 transition-colors"
               >
                 <option value="Europe/Paris">Europe/Paris</option>
                 <option value="Europe/London">Europe/London</option>
@@ -408,22 +409,22 @@ export default function ParametresPage() {
           <button
             type="button"
             onClick={handleSaveLangue}
-            className="mt-4 rounded-xl bg-green-mid px-4 py-2.5 font-display text-sm font-bold text-white"
+            className="mt-4 rounded-xl bg-green-deep px-4 py-2.5 font-display text-sm font-bold text-cream hover:bg-forest-green transition-colors"
           >
             Enregistrer
           </button>
         </section>
 
         {/* Export RGPD */}
-        <section className="rounded-xl border border-green-deep/10 bg-white p-6 shadow-sm">
-          <h2 className="font-display text-lg font-bold text-green-deep">Données personnelles (RGPD)</h2>
-          <p className="mt-1 text-sm text-gray-warm">
+        <section className="rounded-xl border border-charcoal/8 bg-white p-6 shadow-sm">
+          <h2 className="font-display text-lg font-bold text-charcoal">Données personnelles (RGPD)</h2>
+          <p className="mt-1 text-sm text-charcoal/50">
             Téléchargez une copie de vos données ou demandez la suppression du compte.
           </p>
           <button
             type="button"
             disabled
-            className="mt-4 inline-flex items-center gap-2 rounded-xl border border-green-deep/20 px-4 py-2.5 text-sm font-medium text-gray-warm"
+            className="mt-4 inline-flex items-center gap-2 rounded-xl border border-charcoal/15 px-4 py-2.5 text-sm font-medium text-charcoal/50"
           >
             <Download className="h-4 w-4" />
             Exporter mes données (bientôt)

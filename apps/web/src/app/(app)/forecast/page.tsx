@@ -16,6 +16,7 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import { useApi } from '@/hooks/useApi';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { PageHeader } from '@/components/ui/PageHeader';
 
 // Cast Recharts components for React 18 / Recharts typings compatibility (class components)
 const Rc = {
@@ -139,23 +140,25 @@ export default function ForecastPage() {
 
   return (
     <div className="min-h-full space-y-6 bg-cream font-body" role="region" aria-label="Prévisions de rupture" aria-live="polite">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-2xl font-display font-bold text-charcoal">Prévisions de rupture</h1>
-        <div className="flex items-center gap-2">
-          <label htmlFor="period-days" className="text-sm text-charcoal/60">Période (jours) :</label>
-          <select
-            id="period-days"
-            value={periodDays}
-            onChange={(e) => setPeriodDays(Number(e.target.value))}
-            className="rounded-xl border border-cream-dark bg-white px-3 py-1.5 text-sm text-charcoal"
-          >
-            <option value={7}>7</option>
-            <option value={30}>30</option>
-            <option value={90}>90</option>
-            <option value={365}>365</option>
-          </select>
-        </div>
-      </div>
+      <PageHeader
+        title="Prévisions de rupture"
+        actions={
+          <div className="flex items-center gap-2">
+            <label htmlFor="period-days" className="text-sm text-charcoal/60">Période (jours) :</label>
+            <select
+              id="period-days"
+              value={periodDays}
+              onChange={(e) => setPeriodDays(Number(e.target.value))}
+              className="rounded-xl border border-charcoal/15 bg-white px-3 py-1.5 text-sm text-charcoal focus:outline-none focus:border-green-deep focus:ring-1 focus:ring-green-deep/20 transition-colors"
+            >
+              <option value={7}>7</option>
+              <option value={30}>30</option>
+              <option value={90}>90</option>
+              <option value={365}>365</option>
+            </select>
+          </div>
+        }
+      />
 
       {error && (
         <div className="rounded-lg border border-terracotta/20 bg-terracotta/10 p-3 text-sm text-terracotta">
@@ -170,16 +173,16 @@ export default function ForecastPage() {
         </div>
       ) : (
         <>
-          <div className="rounded-xl border border-cream-dark bg-white p-4 shadow-sm">
+          <div className="rounded-xl border border-charcoal/8 bg-white p-4 shadow-sm">
             <p className="mb-3 text-sm text-charcoal/60">Sélectionnez les produits à comparer (courbe de stock jusqu’à la date de rupture estimée) :</p>
             <div className="flex flex-wrap gap-2">
               {estimates.map((e) => (
-                <label key={e.product_id} className="flex cursor-pointer items-center gap-2 rounded-xl border border-cream-dark px-3 py-2 hover:bg-cream/50">
+                <label key={e.product_id} className="flex cursor-pointer items-center gap-2 rounded-xl border border-charcoal/8 px-3 py-2 hover:bg-cream/50">
                   <input
                     type="checkbox"
                     checked={selectedIds.has(e.product_id)}
                     onChange={() => toggleProduct(e.product_id)}
-                    className="h-4 w-4 rounded border-cream-dark text-green-deep focus:ring-green-deep"
+                    className="h-4 w-4 rounded border-charcoal/15 text-green-deep focus:ring-green-deep"
                   />
                   <span className="text-sm font-medium text-charcoal">{e.product_name}</span>
                   <span
@@ -201,7 +204,7 @@ export default function ForecastPage() {
             </div>
           </div>
 
-          <div className="rounded-xl border border-cream-dark bg-white p-4 shadow-sm">
+          <div className="rounded-xl border border-charcoal/8 bg-white p-4 shadow-sm">
             <h3 className="mb-4 font-display text-sm font-bold text-charcoal">Évolution du stock (tendance)</h3>
             <div className="h-80 w-full" role="img" aria-label="Courbes de prévision de stock par produit">
               {chartData.length === 0 ? (
@@ -248,12 +251,12 @@ export default function ForecastPage() {
             </div>
           </div>
 
-          <div className="rounded-xl border border-cream-dark bg-white p-4 shadow-sm">
+          <div className="rounded-xl border border-charcoal/8 bg-white p-4 shadow-sm">
             <h3 className="mb-3 font-display text-sm font-bold text-charcoal">Détail par produit</h3>
             <div className="overflow-x-auto">
               <table className="min-w-full text-sm">
                 <thead>
-                  <tr className="border-b border-cream-dark text-left text-charcoal/60">
+                  <tr className="border-b border-charcoal/8 text-left text-charcoal/60">
                     <th className="pb-2 pr-4 font-medium">Produit</th>
                     <th className="pb-2 pr-4 font-medium">Stock actuel</th>
                     <th className="pb-2 pr-4 font-medium">Jours restants</th>
@@ -263,7 +266,7 @@ export default function ForecastPage() {
                 </thead>
                 <tbody>
                   {estimates.map((e) => (
-                    <tr key={e.product_id} className="border-b border-cream-dark/50">
+                    <tr key={e.product_id} className="border-b border-charcoal/5">
                       <td className="py-2 pr-4 font-medium text-charcoal">{e.product_name}</td>
                       <td className="py-2 pr-4">{e.current_stock} {e.unit}</td>
                       <td className="py-2 pr-4">{e.days_remaining != null ? e.days_remaining : '—'}</td>

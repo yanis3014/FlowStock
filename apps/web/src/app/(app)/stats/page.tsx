@@ -26,6 +26,7 @@ const Rc = {
 import { useAuth } from '@/contexts/AuthContext';
 import { useApi } from '@/hooks/useApi';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { PageHeader } from '@/components/ui/PageHeader';
 
 interface SalesStats {
   today: { quantity_sold: number; total_amount: number | null; count: number };
@@ -104,25 +105,27 @@ export default function StatsPage() {
 
   return (
     <div className="min-h-full space-y-6 bg-cream font-body" role="region" aria-label="Statistiques" aria-live="polite">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-2xl font-display font-bold text-charcoal">Statistiques</h1>
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={() => setPeriod('7')}
-            className={`rounded-xl px-3 py-1.5 text-sm font-medium transition-colors ${period === '7' ? 'bg-green-deep text-cream hover:bg-forest-green' : 'bg-cream-dark text-charcoal hover:bg-cream-dark/80'}`}
-          >
-            7 jours
-          </button>
-          <button
-            type="button"
-            onClick={() => setPeriod('30')}
-            className={`rounded-xl px-3 py-1.5 text-sm font-medium transition-colors ${period === '30' ? 'bg-green-deep text-cream hover:bg-forest-green' : 'bg-cream-dark text-charcoal hover:bg-cream-dark/80'}`}
-          >
-            30 jours
-          </button>
-        </div>
-      </div>
+      <PageHeader
+        title="Statistiques"
+        actions={
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setPeriod('7')}
+              className={`rounded-xl px-3 py-1.5 text-sm font-medium transition-colors ${period === '7' ? 'bg-green-deep text-cream hover:bg-forest-green' : 'bg-cream/50 text-charcoal hover:bg-cream/80'}`}
+            >
+              7 jours
+            </button>
+            <button
+              type="button"
+              onClick={() => setPeriod('30')}
+              className={`rounded-xl px-3 py-1.5 text-sm font-medium transition-colors ${period === '30' ? 'bg-green-deep text-cream hover:bg-forest-green' : 'bg-cream/50 text-charcoal hover:bg-cream/80'}`}
+            >
+              30 jours
+            </button>
+          </div>
+        }
+      />
 
       {error && (
         <div className="rounded-lg border border-terracotta/20 bg-terracotta/10 p-3 text-sm text-terracotta">
@@ -144,7 +147,7 @@ export default function StatsPage() {
         <>
           {stats && (
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-              <div className="rounded-xl border border-cream-dark bg-white p-4 shadow-sm">
+              <div className="rounded-xl border border-charcoal/8 bg-white p-4 shadow-sm">
                 <div className="flex items-center gap-2">
                   <TrendingUp className="h-5 w-5 text-green-deep" />
                   <span className="text-sm font-medium text-charcoal/60">Ventes hier</span>
@@ -156,7 +159,7 @@ export default function StatsPage() {
                 </p>
                 <p className="text-xs text-charcoal/60">{stats.yesterday.count} vente(s)</p>
               </div>
-              <div className="rounded-xl border border-cream-dark bg-white p-4 shadow-sm">
+              <div className="rounded-xl border border-charcoal/8 bg-white p-4 shadow-sm">
                 <div className="flex items-center gap-2">
                   <TrendingUp className="h-5 w-5 text-green-deep" />
                   <span className="text-sm font-medium text-charcoal/60">Cette semaine</span>
@@ -168,7 +171,7 @@ export default function StatsPage() {
                 </p>
                 <p className="text-xs text-charcoal/60">{stats.this_week.count} vente(s)</p>
               </div>
-              <div className="rounded-xl border border-cream-dark bg-white p-4 shadow-sm">
+              <div className="rounded-xl border border-charcoal/8 bg-white p-4 shadow-sm">
                 <div className="flex items-center gap-2">
                   <Package className="h-5 w-5 text-green-deep" />
                   <span className="text-sm font-medium text-charcoal/60">Ce mois</span>
@@ -180,7 +183,7 @@ export default function StatsPage() {
                 </p>
                 <p className="text-xs text-charcoal/60">{stats.this_month.count} vente(s)</p>
               </div>
-              <div className="rounded-xl border border-cream-dark bg-white p-4 shadow-sm">
+              <div className="rounded-xl border border-charcoal/8 bg-white p-4 shadow-sm">
                 <div className="flex items-center gap-2">
                   <TrendingUp className="h-5 w-5 text-gold" />
                   <span className="text-sm font-medium text-charcoal/60">Aujourd&apos;hui</span>
@@ -195,7 +198,7 @@ export default function StatsPage() {
             </div>
           )}
 
-          <div className="rounded-xl border border-cream-dark bg-white p-4 shadow-sm">
+          <div className="rounded-xl border border-charcoal/8 bg-white p-4 shadow-sm">
             <h3 className="mb-4 font-display text-sm font-bold text-charcoal">Ventes par jour</h3>
             <div className="h-64 w-full" role="img" aria-label="Graphique des ventes par jour">
               <Rc.ResponsiveContainer width="100%" height="100%">
@@ -214,7 +217,7 @@ export default function StatsPage() {
             </div>
           </div>
 
-          <div className="rounded-xl border border-cream-dark bg-white p-4 shadow-sm">
+          <div className="rounded-xl border border-charcoal/8 bg-white p-4 shadow-sm">
             <h3 className="mb-4 font-display text-sm font-bold text-charcoal">Top 10 produits (quantité vendue)</h3>
             <div className="h-64 w-full" role="img" aria-label="Top produits par quantité vendue">
               <Rc.ResponsiveContainer width="100%" height="100%">

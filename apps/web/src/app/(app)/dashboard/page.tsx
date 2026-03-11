@@ -8,6 +8,7 @@ import { useApi } from '@/hooks/useApi';
 import { DashboardSkeleton } from '@/components/dashboard/DashboardSkeleton';
 import { OnboardingBanner } from '@/components/onboarding/OnboardingBanner';
 import { useOnboardingStatus } from '@/hooks/useOnboardingStatus';
+import { PageHeader } from '@/components/ui/PageHeader';
 
 interface SalesYesterday {
   total_amount?: number;
@@ -174,37 +175,37 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-full bg-cream font-body">
-      <div className="mx-auto max-w-6xl space-y-6 p-4 pb-24 md:pb-6">
+      <div className="mx-auto max-w-6xl space-y-6 p-6 pb-24 md:pb-6">
         {!onboardingLoading && !onboardingCompleted && <OnboardingBanner />}
 
         {error && (
-          <div className="rounded-xl border border-red-alert/30 bg-red-alert/10 px-4 py-3 text-sm text-red-alert">
+          <div className="rounded-xl border border-terracotta/30 bg-terracotta/10 px-4 py-3 text-sm text-terracotta">
             {error}
           </div>
         )}
 
         {/* Story 2.5: Notification in-app au passage dégradé / rétabli (Tasks 3.3, 3.4) */}
         {posNotification === 'degraded' && (
-          <div className="rounded-xl border border-amber-500/50 bg-amber-50 px-4 py-2 text-sm text-amber-900" role="alert">
+          <div className="rounded-xl border border-gold/40 bg-gold/10 px-4 py-2 text-sm text-charcoal" role="alert">
             Synchro POS interrompue — vous pouvez continuer avec la saisie manuelle des ventes.
           </div>
         )}
         {posNotification === 'recovered' && (
-          <div className="rounded-xl border border-green-600/40 bg-green-50 px-4 py-2 text-sm text-green-800" role="alert">
+          <div className="rounded-xl border border-green-deep/30 bg-green-deep/8 px-4 py-2 text-sm text-green-deep" role="alert">
             Synchro POS rétablie.
           </div>
         )}
 
         {/* Story 2.5: Bandeau mode dégradé POS */}
         {posSyncStatus?.is_degraded && (
-          <div className="rounded-xl border border-amber-500/50 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-            <p className="font-semibold">Synchro POS interrompue</p>
-            <p className="mt-1 text-amber-800">
+          <div className="rounded-xl border border-gold/40 bg-gold/10 px-4 py-3 text-sm text-charcoal">
+            <p className="font-medium text-charcoal">Synchro POS interrompue</p>
+            <p className="mt-1 text-charcoal/60">
               La connexion avec votre caisse est temporairement coupée. Consultez la liste des ventes ; la saisie manuelle des ventes sera disponible prochainement (Story 3.6).
             </p>
             <Link
               href="/sales"
-              className="mt-2 inline-block font-medium text-amber-900 underline hover:no-underline"
+              className="mt-2 inline-block font-medium text-green-deep underline hover:no-underline"
             >
               Voir les ventes →
             </Link>
@@ -212,70 +213,66 @@ export default function DashboardPage() {
         )}
 
         {/* Message d'accueil + CTA Rush */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <h1 className="font-display text-2xl font-bold text-green-deep md:text-3xl">
-              Bonjour{prenom ? ` ${prenom}` : ''} — Service midi dans 2h
-            </h1>
-            <p className="mt-1 text-sm text-gray-warm">
-              Votre vue d&apos;ensemble du jour
-            </p>
-          </div>
-          <Link
-            href="/rush"
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-green-mid px-6 py-3.5 font-display text-sm font-bold tracking-wide text-white shadow-sm transition-opacity hover:opacity-95"
-          >
-            <Zap className="h-5 w-5" />
-            LANCER LE MODE RUSH
-          </Link>
-        </div>
+        <PageHeader
+          title={`Bonjour${prenom ? ` ${prenom}` : ''} — Service midi dans 2h`}
+          subtitle="Votre vue d'ensemble du jour"
+          actions={
+            <Link
+              href="/rush"
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-green-deep px-5 py-2.5 font-display text-sm font-bold text-cream shadow-sm transition-colors hover:bg-forest-green"
+            >
+              <Zap className="h-4 w-4" />
+              Mode Rush
+            </Link>
+          }
+        />
 
         {/* 4 KPIs — Warm Tech */}
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-          <div className="rounded-xl border-l-4 border-green-mid bg-cream-dark/80 p-4">
-            <p className="font-display text-[10px] font-bold uppercase tracking-wider text-gray-warm">
+          <div className="rounded-xl border border-charcoal/8 bg-white p-4 shadow-sm">
+            <p className="font-display text-[10px] font-bold uppercase tracking-wider text-charcoal/50">
               Chiffre d&apos;affaires (hier)
             </p>
-            <p className="mt-1 font-display text-xl font-extrabold text-green-deep">
+            <p className="mt-1 font-display text-xl font-bold text-charcoal">
               {formatCurrency(sales.total_amount)}
             </p>
-            <p className="mt-0.5 text-xs font-semibold text-green-mid">
+            <p className="mt-0.5 text-xs font-medium text-green-deep">
               {sales.change_percent != null ? `${(sales.change_percent >= 0 ? '+' : '')}${sales.change_percent.toFixed(1)}% vs sem.` : '—'}
             </p>
           </div>
-          <div className="rounded-xl border-l-4 border-terracotta bg-cream-dark/80 p-4">
-            <p className="font-display text-[10px] font-bold uppercase tracking-wider text-gray-warm">
+          <div className="rounded-xl border border-charcoal/8 bg-white p-4 shadow-sm">
+            <p className="font-display text-[10px] font-bold uppercase tracking-wider text-charcoal/50">
               Valeur stock
             </p>
-            <p className="mt-1 font-display text-xl font-extrabold text-green-deep">
+            <p className="mt-1 font-display text-xl font-bold text-charcoal">
               {formatCurrency(stock.total_value)}
             </p>
-            <p className="mt-0.5 text-xs font-semibold text-green-mid">{stock.product_count ?? 0} produits</p>
+            <p className="mt-0.5 text-xs font-medium text-charcoal/50">{stock.product_count ?? 0} produits</p>
           </div>
-          <div className="rounded-xl border-l-4 border-gold bg-cream-dark/80 p-4">
-            <p className="font-display text-[10px] font-bold uppercase tracking-wider text-gray-warm">
+          <div className="rounded-xl border border-charcoal/8 bg-white p-4 shadow-sm">
+            <p className="font-display text-[10px] font-bold uppercase tracking-wider text-charcoal/50">
               Stocks à surveiller
             </p>
-            <p className="mt-1 font-display text-xl font-extrabold text-green-deep">
+            <p className="mt-1 font-display text-xl font-bold text-charcoal">
               {(stock.low_stock_count ?? 0) + (stock.critical_stock_count ?? 0)}
             </p>
-            <p className="mt-0.5 text-xs font-semibold text-green-mid">produits en alerte</p>
+            <p className="mt-0.5 text-xs font-medium text-gold">produits en alerte</p>
           </div>
-          <div className="rounded-xl border-l-4 border-blue-500 bg-cream-dark/80 p-4">
-            <p className="font-display text-[10px] font-bold uppercase tracking-wider text-gray-warm">
+          <div className="rounded-xl border border-charcoal/8 bg-white p-4 shadow-sm">
+            <p className="font-display text-[10px] font-bold uppercase tracking-wider text-charcoal/50">
               Transactions (hier)
             </p>
-            <p className="mt-1 font-display text-xl font-extrabold text-green-deep">
+            <p className="mt-1 font-display text-xl font-bold text-charcoal">
               {formatNumber(sales.transaction_count)}
             </p>
-            <p className="mt-0.5 text-xs font-semibold text-gray-warm">ventes</p>
+            <p className="mt-0.5 text-xs font-medium text-charcoal/50">ventes</p>
           </div>
         </div>
 
         {/* Alertes urgentes */}
-        <section className="rounded-2xl border border-green-deep/10 bg-white p-5 shadow-sm">
-          <h2 className="mb-3 flex items-center gap-2 font-display text-sm font-bold text-green-deep">
-            <AlertTriangle className="h-5 w-5 text-orange-warn" />
+        <section className="rounded-xl border border-charcoal/8 bg-white p-5 shadow-sm">
+          <h2 className="mb-3 flex items-center gap-2 font-display text-sm font-bold text-charcoal">
+            <AlertTriangle className="h-4 w-4 text-gold" />
             Alertes urgentes
           </h2>
           {alertesUrgentes.length > 0 ? (
@@ -284,10 +281,10 @@ export default function DashboardPage() {
                 const state = actionStates[a.id] ?? 'idle';
                 const levelClass =
                   a.level === 'high'
-                    ? 'border-l-red-alert bg-red-alert/5'
+                    ? 'border-l-terracotta bg-terracotta/5'
                     : a.level === 'medium'
-                      ? 'border-l-orange-warn bg-orange-warn/5'
-                      : 'border-l-gray-warm bg-cream-dark';
+                      ? 'border-l-gold bg-gold/5'
+                      : 'border-l-charcoal/20 bg-cream/50';
                 return (
                   <li
                     key={a.id}
@@ -300,7 +297,7 @@ export default function DashboardPage() {
                       type="button"
                       onClick={() => handleCommander(a.id)}
                       disabled={state === 'loading' || state === 'confirmed'}
-                      className="shrink-0 rounded-lg bg-green-mid px-3 py-1.5 text-xs font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-70"
+                      className="shrink-0 rounded-lg bg-green-deep px-3 py-1.5 text-xs font-medium text-cream transition-colors hover:bg-forest-green disabled:opacity-70"
                     >
                       {state === 'loading' && <Loader2 className="inline h-3.5 w-3.5 animate-spin" />}
                       {state === 'confirmed' && <Check className="inline h-3.5 w-3.5" />}
@@ -313,7 +310,7 @@ export default function DashboardPage() {
               })}
             </ul>
           ) : (
-            <p className="text-sm text-gray-warm">Aucune alerte urgente.</p>
+            <p className="text-sm text-charcoal/50">Aucune alerte urgente.</p>
           )}
         </section>
 
