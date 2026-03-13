@@ -60,4 +60,4 @@ so that **les prochaines extractions de menu soient plus proches de mes portions
 
 - Agent: Claude Sonnet 4.6
 - Date: 2026-03-13
-- Status: review
+- Status: done

@@ -78,10 +78,10 @@ development_status:
   4-5-statistiques-essentielles: backlog
   epic-4-retrospective: optional
 
-  epic-5: backlog
-  5-1-upload-photo-menu-carte-et-extraction-ia-vision-nlp: backlog
-  5-2-validation-humaine-et-enregistrement-fiche-technique: backlog
-  5-3-feedback-loop-et-amelioration-du-modele: backlog
+  epic-5: done
+  5-1-upload-photo-menu-carte-et-extraction-ia-vision-nlp: done
+  5-2-validation-humaine-et-enregistrement-fiche-technique: done
+  5-3-feedback-loop-et-amelioration-du-modele: done
   epic-5-retrospective: optional
 
   epic-6: backlog

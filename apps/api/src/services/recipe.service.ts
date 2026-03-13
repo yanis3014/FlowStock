@@ -162,43 +162,50 @@ export async function getRecipeById(id: string, tenantId: string): Promise<Recip
 export async function createRecipe(tenantId: string, input: RecipeCreateInput): Promise<Recipe> {
   const db = getDatabase();
 
-  const recipeResult = await db.query<RecipeRow>(
-    `INSERT INTO recipes (tenant_id, name, category, source, confidence, ai_note)
-     VALUES ($1, $2, $3, $4, $5, $6)
-     RETURNING *`,
-    [
-      tenantId,
-      input.name.trim(),
-      input.category?.trim() ?? null,
-      input.source ?? 'manual',
-      input.confidence ?? null,
-      input.ai_note?.trim() ?? null,
-    ]
-  );
-
-  const recipe = recipeResult.rows[0];
-
-  const ingredients: RecipeIngredient[] = [];
-  for (let i = 0; i < input.ingredients.length; i++) {
-    const ing = input.ingredients[i];
-    const ingResult = await db.query<RecipeIngredientRow>(
-      `INSERT INTO recipe_ingredients (recipe_id, tenant_id, product_id, ingredient_name, quantity, unit, sort_order)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
+  await db.query('BEGIN');
+  try {
+    const recipeResult = await db.query<RecipeRow>(
+      `INSERT INTO recipes (tenant_id, name, category, source, confidence, ai_note)
+       VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING *`,
       [
-        recipe.id,
         tenantId,
-        ing.product_id ?? null,
-        ing.ingredient_name.trim(),
-        ing.quantity,
-        ing.unit.trim(),
-        ing.sort_order ?? i,
+        input.name.trim(),
+        input.category?.trim() ?? null,
+        input.source ?? 'manual',
+        input.confidence ?? null,
+        input.ai_note?.trim() ?? null,
       ]
     );
-    ingredients.push(mapIngredientRow(ingResult.rows[0]));
-  }
 
-  return mapRecipeRow(recipe, ingredients);
+    const recipe = recipeResult.rows[0];
+
+    const ingredients: RecipeIngredient[] = [];
+    for (let i = 0; i < input.ingredients.length; i++) {
+      const ing = input.ingredients[i];
+      const ingResult = await db.query<RecipeIngredientRow>(
+        `INSERT INTO recipe_ingredients (recipe_id, tenant_id, product_id, ingredient_name, quantity, unit, sort_order)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)
+         RETURNING *`,
+        [
+          recipe.id,
+          tenantId,
+          ing.product_id ?? null,
+          ing.ingredient_name.trim(),
+          ing.quantity,
+          ing.unit.trim(),
+          ing.sort_order ?? i,
+        ]
+      );
+      ingredients.push(mapIngredientRow(ingResult.rows[0]));
+    }
+
+    await db.query('COMMIT');
+    return mapRecipeRow(recipe, ingredients);
+  } catch (err) {
+    await db.query('ROLLBACK');
+    throw err;
+  }
 }
 
 export async function updateRecipe(
@@ -232,29 +239,38 @@ export async function updateRecipe(
   }
 
   params.push(id, tenantId);
-  await db.query(
-    `UPDATE recipes SET ${setClauses.join(', ')} WHERE id = $${paramIdx} AND tenant_id = $${paramIdx + 1}`,
-    params
-  );
 
-  if (input.ingredients !== undefined) {
-    await db.query(`DELETE FROM recipe_ingredients WHERE recipe_id = $1`, [id]);
-    for (let i = 0; i < input.ingredients.length; i++) {
-      const ing = input.ingredients[i];
-      await db.query(
-        `INSERT INTO recipe_ingredients (recipe_id, tenant_id, product_id, ingredient_name, quantity, unit, sort_order)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-        [
-          id,
-          tenantId,
-          ing.product_id ?? null,
-          ing.ingredient_name.trim(),
-          ing.quantity,
-          ing.unit.trim(),
-          ing.sort_order ?? i,
-        ]
-      );
+  await db.query('BEGIN');
+  try {
+    await db.query(
+      `UPDATE recipes SET ${setClauses.join(', ')} WHERE id = $${paramIdx} AND tenant_id = $${paramIdx + 1}`,
+      params
+    );
+
+    if (input.ingredients !== undefined) {
+      await db.query(`DELETE FROM recipe_ingredients WHERE recipe_id = $1`, [id]);
+      for (let i = 0; i < input.ingredients.length; i++) {
+        const ing = input.ingredients[i];
+        await db.query(
+          `INSERT INTO recipe_ingredients (recipe_id, tenant_id, product_id, ingredient_name, quantity, unit, sort_order)
+           VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+          [
+            id,
+            tenantId,
+            ing.product_id ?? null,
+            ing.ingredient_name.trim(),
+            ing.quantity,
+            ing.unit.trim(),
+            ing.sort_order ?? i,
+          ]
+        );
+      }
     }
+
+    await db.query('COMMIT');
+  } catch (err) {
+    await db.query('ROLLBACK');
+    throw err;
   }
 
   return getRecipeById(id, tenantId);

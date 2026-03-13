@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, CheckCircle, Loader2, AlertCircle, Plus, Trash2, Search, ChevronDown, ChevronUp } from 'lucide-react';
 import { toast } from 'sonner';
@@ -43,9 +43,8 @@ interface ProductOption {
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 
-let _uid = 0;
 function uid(): string {
-  return `_${++_uid}`;
+  return `_${Math.random().toString(36).slice(2)}_${Date.now().toString(36)}`;
 }
 
 function confidenceBadgeClass(c: 'high' | 'medium' | 'low'): string {
@@ -481,11 +480,6 @@ export default function MenuScanPage() {
       const ok = await saveDish(dish);
       if (ok) {
         toast.success(`"${dish.nom}" enregistrée avec succès`);
-        setDishes((prev) => {
-          const allSaved = prev.every((d) => d._id === dish._id ? true : d.saved);
-          if (allSaved) setStep('ALL_SAVED');
-          return prev;
-        });
       }
     },
     [saveDish]
@@ -502,13 +496,19 @@ export default function MenuScanPage() {
     setValidatingAll(false);
     if (allOk) {
       toast.success('Toutes les fiches techniques ont été enregistrées !');
-      setStep('ALL_SAVED');
     }
   }, [dishes, saveDish]);
 
   const savedCount = dishes.filter((d) => d.saved).length;
   const totalCount = dishes.length;
   const allSaved = totalCount > 0 && savedCount === totalCount;
+
+  // Détecte quand toutes les fiches ont été enregistrées
+  useEffect(() => {
+    if (step === 'REVIEW' && allSaved) {
+      setStep('ALL_SAVED');
+    }
+  }, [allSaved, step]);
 
   return (
     <div className="min-h-full bg-cream font-body">

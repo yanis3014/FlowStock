@@ -58,4 +58,13 @@ so that **je n'ai pas à saisir manuellement chaque plat et ses ingrédients**.
 
 - Agent: Claude Sonnet 4.6
 - Date: 2026-03-13
-- Status: review
+- Status: done
+
+## Code Review
+
+**Problèmes trouvés et corrigés :**
+
+1. [HIGH] `uid()` utilisait un compteur global mutant — remplacé par une fonction aléatoire non-collisionnante
+2. [HIGH] `createRecipe` : pas de transaction — ingrédients insérés en boucle sans rollback → ajout `BEGIN/COMMIT/ROLLBACK`
+3. [MEDIUM] `handleValidateDish` : `setStep` appelé dans un updater `setDishes` (anti-pattern React) → refactorisé avec `useEffect` pour détecter `allSaved`
+4. [MEDIUM] `updateRecipe` : même problème que createRecipe → ajout `BEGIN/COMMIT/ROLLBACK`

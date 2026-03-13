@@ -66,4 +66,4 @@ so that **mes fiches sont précises et liées à mes produits en stock**.
 
 - Agent: Claude Sonnet 4.6
 - Date: 2026-03-13
-- Status: review
+- Status: done
