@@ -42,6 +42,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { href: '/suppliers', label: 'Fournisseurs', icon: 'Truck' },
       { href: '/locations', label: 'Emplacements', icon: 'MapPin' },
       { href: '/fiches-techniques', label: 'Fiches techniques', icon: 'FileText' },
+      { href: '/menu-scan', label: 'Scan menu IA', icon: 'Camera' },
       { href: '/import-stocks', label: 'Import stocks', icon: 'Upload' },
       { href: '/import-sales', label: 'Import ventes', icon: 'Upload', hidden: true },
     ],

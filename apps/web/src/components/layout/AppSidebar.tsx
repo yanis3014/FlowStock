@@ -28,6 +28,7 @@ import {
   PlayCircle,
   ShieldCheck,
   Receipt,
+  Camera,
   type LucideIcon,
 } from 'lucide-react';
 import { NAV_GROUPS, type NavItem } from '@/lib/nav-config';
@@ -57,6 +58,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   PlayCircle,
   ShieldCheck,
   Receipt,
+  Camera,
 };
 
 const ALLOWED_ADMIN_ROLES = ['admin', 'owner'];

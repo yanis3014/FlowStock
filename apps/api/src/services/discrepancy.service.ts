@@ -13,8 +13,7 @@
  * Anomaly: ecart_pct > anomaly_threshold_pct (default: 10%)
  */
 import { getDatabase } from '../database/connection';
-import { config } from '../config';
-import OpenAI from 'openai';
+import { getOpenAIClient } from '../lib/openai';
 import type { StockDiscrepancy, DiscrepancyReport } from '@bmad/shared';
 
 const DEFAULT_PERIOD_DAYS = 30;
@@ -29,11 +28,6 @@ interface ProductMovementStats {
   total_losses: string;
   total_pos_sales: string;
   total_entries: string;
-}
-
-function getOpenAIClient(): OpenAI | null {
-  if (!config.OPENAI_API_KEY) return null;
-  return new OpenAI({ apiKey: config.OPENAI_API_KEY });
 }
 
 /**

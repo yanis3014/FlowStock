@@ -419,7 +419,7 @@ Règles importantes :
                         "Content-Type": "application/json"
                     },
                     json={
-                        "model": "gpt-4",
+                        "model": "gpt-4o-mini",
                         "messages": [
                             {"role": "system", "content": prompt["system"]},
                             *prompt["messages"]

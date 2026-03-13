@@ -11,7 +11,7 @@ import type {
   ValidateInvoiceResult,
 } from '@bmad/shared';
 
-const OPENAI_URL = 'https://api.openai.com/v1/chat/completions';
+import { OPENAI_URL, getOpenAIKey } from '../lib/openai';
 
 const OCR_SYSTEM_PROMPT = `Tu es un assistant expert en lecture de factures fournisseurs de restaurant.
 Extrais TOUTES les lignes produits de cette facture.
@@ -59,14 +59,9 @@ Réponds en JSON :
 }`;
 }
 
-function getApiKey(): string {
-  const key = process.env.OPENAI_API_KEY;
-  if (!key?.trim()) throw new Error('OPENAI_API_KEY manquante. Configurez-la dans .env pour utiliser l\'OCR IA.');
-  return key.trim();
-}
 
 async function callOpenAiOcr(base64Data: string, mimeType: string): Promise<string> {
-  const apiKey = getApiKey();
+  const apiKey = getOpenAIKey();
 
   const isImage = mimeType.startsWith('image/');
   const contentParts: unknown[] = [];
@@ -262,7 +257,7 @@ async function matchLinesWithAI(
     return invoiceLines.map((_, i) => ({ index: i, product_id: null, confidence: 'low' }));
   }
 
-  const apiKey = getApiKey();
+  const apiKey = getOpenAIKey();
   const prompt = buildMatchingPrompt(invoiceLines, products);
 
   const res = await fetch(OPENAI_URL, {

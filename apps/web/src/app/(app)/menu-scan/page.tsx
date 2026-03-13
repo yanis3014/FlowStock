@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { ArrowLeft, CheckCircle, Loader2, AlertCircle, Plus, Trash2, Search, ChevronDown, ChevronUp } from 'lucide-react';
 import { toast } from 'sonner';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { ImageDropZone } from '@/components/image/ImageDropZone';
+import { FileUploadZone } from '@/components/ui/FileUploadZone';
 import { useAuth } from '@/contexts/AuthContext';
 import { useApi } from '@/hooks/useApi';
 import { extractMenuFromImage } from './actions';
@@ -533,8 +533,9 @@ export default function MenuScanPage() {
             <h2 className="font-display font-bold text-green-deep">
               {step === 'REVIEW' ? 'Analyser un autre menu' : 'Photo de votre menu'}
             </h2>
-            <ImageDropZone
-              onImageSelected={handleImageSelected}
+            <FileUploadZone
+              onFileSelected={handleImageSelected}
+              readAs="dataUrl"
               disabled={false}
             />
           </div>
