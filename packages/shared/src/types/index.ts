@@ -136,7 +136,56 @@ export interface SupplierUpdateInput {
 }
 
 // Story 2.4: Stock movement history
-export type MovementType = 'creation' | 'quantity_update' | 'deletion' | 'import' | 'pos_sale';
+export type MovementType = 'creation' | 'quantity_update' | 'deletion' | 'import' | 'pos_sale' | 'entree_livraison';
+
+// Epic 7: Invoice / Facture OCR
+export type InvoiceConfidence = 'high' | 'medium' | 'low';
+export type InvoiceStatus = 'pending' | 'reviewing' | 'traitee' | 'erreur';
+
+export interface InvoiceLine {
+  id?: string;
+  designation: string;
+  quantite: number;
+  unite: string | null;
+  prix_unitaire_ht: number | null;
+  montant_ht: number | null;
+  product_id?: string | null;
+}
+
+export interface Invoice {
+  id: string;
+  supplier_id: string | null;
+  supplier_name: string | null;
+  invoice_date: string | null;
+  file_name: string | null;
+  file_mime: string | null;
+  total_ht: number | null;
+  confidence: InvoiceConfidence | null;
+  status: InvoiceStatus;
+  lines: InvoiceLine[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface InvoiceOcrResult {
+  invoice_id: string;
+  fournisseur: string | null;
+  date_facture: string | null;
+  lignes: InvoiceLine[];
+  total_ht: number | null;
+  confiance: InvoiceConfidence;
+}
+
+export interface ValidateInvoiceInput {
+  lines: InvoiceLine[];
+  supplier_name?: string | null;
+  invoice_date?: string | null;
+}
+
+export interface ValidateInvoiceResult {
+  updated: Array<{ product_id: string; product_name: string; qty_added: number }>;
+  unmatched: Array<{ designation: string; quantite: number }>;
+}
 
 export interface StockMovement {
   id: string;

@@ -97,12 +97,12 @@ development_status:
   6-10-integration-chat-ia-avec-generation-commandes: backlog
   epic-6-retrospective: optional
 
-  epic-7: backlog
-  7-1-upload-photo-facture: backlog
-  7-2-extraction-ia-facture-ocr: backlog
-  7-3-verification-automatique-commande-vs-facture: backlog
-  7-4-integration-automatique-bdd: backlog
-  7-5-fallback-saisie-manuelle-facture: backlog
+  epic-7: done
+  7-1-upload-photo-facture: done
+  7-2-extraction-ia-facture-ocr: done
+  7-3-verification-automatique-commande-vs-facture: done
+  7-4-integration-automatique-bdd: done
+  7-5-fallback-saisie-manuelle-facture: done
   epic-7-retrospective: optional
 
   epic-8: backlog

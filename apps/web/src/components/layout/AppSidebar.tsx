@@ -25,6 +25,7 @@ import {
   CreditCard,
   PlayCircle,
   ShieldCheck,
+  Receipt,
   type LucideIcon,
 } from 'lucide-react';
 import { NAV_GROUPS, type NavItem } from '@/lib/nav-config';
@@ -50,6 +51,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   CreditCard,
   PlayCircle,
   ShieldCheck,
+  Receipt,
 };
 
 const ALLOWED_ADMIN_ROLES = ['admin', 'owner'];
