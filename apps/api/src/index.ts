@@ -25,7 +25,15 @@ import dashboardRoutes from './routes/dashboard.routes';
 import webhooksPosRoutes from './routes/webhooks.pos.routes';
 import posMappingRoutes from './routes/pos-mapping.routes';
 import adminRoutes from './routes/admin.routes';
+import lossesRoutes from './routes/losses.routes';
+import discrepancyRoutes from './routes/discrepancy.routes';
+import invoiceRoutes from './routes/invoice.routes';
+import recipeRoutes from './routes/recipe.routes';
+import extractionFeedbackRoutes from './routes/extraction-feedback.routes';
+import predictionsRoutes from './routes/predictions.routes';
+import recommendationsRoutes from './routes/recommendations.routes';
 import { runPeriodicEvaluation } from './services/pos-sync-status.service';
+import { computeAllTenantsSnapshots } from './services/daily-snapshot.service';
 import { openApiDocument } from './openapi/spec';
 import type { HealthResponse } from '@bmad/shared';
 
@@ -121,6 +129,13 @@ app.use('/sales', salesRoutes);
 app.use('/formulas', formulaRoutes);
 app.use('/stock-estimates', stockEstimateRoutes);
 app.use('/dashboard', dashboardRoutes);
+app.use('/losses', lossesRoutes);
+app.use('/discrepancies', discrepancyRoutes);
+app.use('/invoices', invoiceRoutes);
+app.use('/recipes', recipeRoutes);
+app.use('/extraction-feedback', extractionFeedbackRoutes);
+app.use('/predictions', predictionsRoutes);
+app.use('/recommendations', recommendationsRoutes);
 app.use('/api/admin', adminRoutes);
 
 // Story 2.2: Import stocks page
@@ -268,6 +283,15 @@ function startServer(): void {
     // Story 2.5: periodic POS sync degraded evaluation (every 2 min)
     if (config.NODE_ENV !== 'test') {
       setInterval(() => runPeriodicEvaluation().catch(() => {}), 2 * 60 * 1000);
+      // Story 6-1: daily snapshot CRON at midnight
+      const now = new Date();
+      const msUntilMidnight =
+        new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 5, 0).getTime() -
+        now.getTime();
+      setTimeout(() => {
+        computeAllTenantsSnapshots().catch(() => {});
+        setInterval(() => computeAllTenantsSnapshots().catch(() => {}), 24 * 60 * 60 * 1000);
+      }, msUntilMidnight);
     }
   });
 }

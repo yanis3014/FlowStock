@@ -23,6 +23,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { href: '/rush', label: 'Mode Rush', icon: 'Zap' },
       { href: '/dashboard', label: 'Dashboard', icon: 'LayoutDashboard' },
       { href: '/stocks', label: 'Stocks', icon: 'Package' },
+      { href: '/livraisons/nouvelle', label: 'Livraisons', icon: 'Receipt' },
       { href: '/sales', label: 'Ventes', icon: 'ShoppingCart' },
     ],
   },
@@ -32,6 +33,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { href: '/stats', label: 'Stats', icon: 'BarChart2' },
       { href: '/forecast', label: 'Prévisions', icon: 'TrendingUp' },
       { href: '/movements', label: 'Mouvements', icon: 'ArrowLeftRight' },
+      { href: '/pertes', label: 'Pertes & Écarts', icon: 'TrendingDown' },
     ],
   },
   {
@@ -40,6 +42,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { href: '/suppliers', label: 'Fournisseurs', icon: 'Truck' },
       { href: '/locations', label: 'Emplacements', icon: 'MapPin' },
       { href: '/fiches-techniques', label: 'Fiches techniques', icon: 'FileText' },
+      { href: '/menu-scan', label: 'Scan menu IA', icon: 'Camera' },
       { href: '/import-stocks', label: 'Import stocks', icon: 'Upload' },
       { href: '/import-sales', label: 'Import ventes', icon: 'Upload', hidden: true },
     ],
@@ -48,6 +51,7 @@ export const NAV_GROUPS: NavGroup[] = [
     label: 'Intelligence IA',
     items: [
       { href: '/suggestions', label: 'Suggestions IA', icon: 'Lightbulb' },
+      { href: '/commandes', label: 'Commandes IA', icon: 'ShoppingBag' },
       { href: '/chat', label: 'Chat IA', icon: 'MessageSquare' },
       { href: '/formulas', label: 'Formules', icon: 'Calculator' },
     ],

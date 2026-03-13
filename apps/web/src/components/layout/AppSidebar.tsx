@@ -13,23 +13,28 @@ import {
   ShoppingCart,
   BarChart2,
   TrendingUp,
+  TrendingDown,
   ArrowLeftRight,
   Truck,
   MapPin,
   FileText,
   Upload,
   Lightbulb,
+  ShoppingBag,
   MessageSquare,
   Calculator,
   Settings,
   CreditCard,
   PlayCircle,
   ShieldCheck,
+  Receipt,
+  Camera,
   type LucideIcon,
 } from 'lucide-react';
 import { NAV_GROUPS, type NavItem } from '@/lib/nav-config';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOnboardingStatus } from '@/hooks/useOnboardingStatus';
+import { useAlertCount } from '@/hooks/useAlertCount';
 
 const ICON_MAP: Record<string, LucideIcon> = {
   Zap,
@@ -38,18 +43,22 @@ const ICON_MAP: Record<string, LucideIcon> = {
   ShoppingCart,
   BarChart2,
   TrendingUp,
+  TrendingDown,
   ArrowLeftRight,
   Truck,
   MapPin,
   FileText,
   Upload,
   Lightbulb,
+  ShoppingBag,
   MessageSquare,
   Calculator,
   Settings,
   CreditCard,
   PlayCircle,
   ShieldCheck,
+  Receipt,
+  Camera,
 };
 
 const ALLOWED_ADMIN_ROLES = ['admin', 'owner'];
@@ -67,12 +76,14 @@ function SidebarItem({
   isActive,
   collapsed,
   showIndicator,
+  alertCount,
   onClick,
 }: {
   item: NavItem;
   isActive: boolean;
   collapsed: boolean;
   showIndicator?: boolean;
+  alertCount?: number;
   onClick?: () => void;
 }) {
   const Icon = item.icon ? ICON_MAP[item.icon] : null;
@@ -88,7 +99,19 @@ function SidebarItem({
       className={linkClass}
       title={collapsed ? item.label : undefined}
     >
-      {Icon && <Icon className="h-5 w-5 shrink-0" strokeWidth={2} />}
+      {Icon && (
+        <span className="relative shrink-0">
+          <Icon className="h-5 w-5" strokeWidth={2} />
+          {alertCount != null && alertCount > 0 && (
+            <span
+              className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-terracotta text-[9px] font-bold text-cream"
+              aria-label={`${alertCount} alerte${alertCount > 1 ? 's' : ''}`}
+            >
+              {alertCount > 9 ? '9+' : alertCount}
+            </span>
+          )}
+        </span>
+      )}
       {(!collapsed || !Icon) && <span className="truncate">{item.label}</span>}
       {showIndicator && <span className="ml-auto h-2 w-2 flex-shrink-0 rounded-full bg-terracotta" aria-hidden="true" />}
     </Link>
@@ -105,6 +128,7 @@ export function AppSidebar({
   const pathname = usePathname();
   const { user } = useAuth();
   const { completed: onboardingCompleted, loading: onboardingLoading } = useOnboardingStatus();
+  const { count: alertCount } = useAlertCount();
 
   const handleEscape = useCallback(
     (e: KeyboardEvent) => {
@@ -183,6 +207,7 @@ export function AppSidebar({
                     isActive={pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href))}
                     collapsed={collapsed}
                     showIndicator={item.href === '/onboarding' && !onboardingLoading && !onboardingCompleted}
+                    alertCount={item.href === '/dashboard' ? alertCount : undefined}
                     onClick={isMobile ? onMobileClose : undefined}
                   />
                 ))}

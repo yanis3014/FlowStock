@@ -136,7 +136,118 @@ export interface SupplierUpdateInput {
 }
 
 // Story 2.4: Stock movement history
-export type MovementType = 'creation' | 'quantity_update' | 'deletion' | 'import' | 'pos_sale';
+// Epics 6+7+8: combined movement types (canonical set)
+export type MovementType =
+  | 'creation'
+  | 'quantity_update'
+  | 'deletion'
+  | 'import'
+  | 'pos_sale'
+  | 'loss'
+  | 'perte'
+  | 'entree_livraison'
+  | 'livraison'
+  | 'commande_en_cours';
+
+// Epic 8.1: Loss declaration
+export type LossReason = 'expired' | 'broken' | 'theft' | 'prep_error' | 'other';
+
+export interface LossDeclarationInput {
+  product_id: string;
+  quantity: number;
+  reason: LossReason;
+  notes?: string | null;
+}
+
+export interface LossDeclaration {
+  id: string;
+  product_id: string;
+  product_name: string;
+  product_sku: string;
+  quantity: number;
+  quantity_before: number;
+  quantity_after: number;
+  reason: LossReason;
+  notes: string | null;
+  user_id: string | null;
+  created_at: string;
+}
+
+// Epic 8.2: Stock discrepancy analysis
+export interface StockDiscrepancy {
+  product_id: string;
+  product_name: string;
+  product_sku: string;
+  unit: string;
+  stock_theorique: number;
+  stock_reel: number;
+  ecart: number;
+  ecart_pct: number;
+  is_anomaly: boolean;
+  anomaly_threshold_pct: number;
+  total_entries: number;
+  total_pos_sales: number;
+  total_losses: number;
+  ai_analysis: string | null;
+}
+
+export interface DiscrepancyReport {
+  generated_at: string;
+  period_days: number;
+  anomaly_threshold_pct: number;
+  items: StockDiscrepancy[];
+  anomaly_count: number;
+  ai_summary: string | null;
+}
+
+// Epic 7: Invoice / Facture OCR
+export type InvoiceConfidence = 'high' | 'medium' | 'low';
+export type InvoiceStatus = 'pending' | 'reviewing' | 'traitee' | 'erreur';
+
+export interface InvoiceLine {
+  id?: string;
+  designation: string;
+  quantite: number;
+  unite: string | null;
+  prix_unitaire_ht: number | null;
+  montant_ht: number | null;
+  product_id?: string | null;
+}
+
+export interface Invoice {
+  id: string;
+  supplier_id: string | null;
+  supplier_name: string | null;
+  invoice_date: string | null;
+  file_name: string | null;
+  file_mime: string | null;
+  total_ht: number | null;
+  confidence: InvoiceConfidence | null;
+  status: InvoiceStatus;
+  lines: InvoiceLine[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface InvoiceOcrResult {
+  invoice_id: string;
+  fournisseur: string | null;
+  date_facture: string | null;
+  lignes: InvoiceLine[];
+  total_ht: number | null;
+  confiance: InvoiceConfidence;
+}
+
+export interface ValidateInvoiceInput {
+  lines: InvoiceLine[];
+  supplier_name?: string | null;
+  invoice_date?: string | null;
+}
+
+export interface ValidateInvoiceResult {
+  updated: Array<{ product_id: string; product_name: string; qty_added: number }>;
+  unmatched: Array<{ designation: string; quantite: number }>;
+}
 
 export interface StockMovement {
   id: string;
@@ -224,4 +335,89 @@ export interface SaleSummaryFilters {
   product_id?: string;
   location_id?: string;
   group_by?: 'day' | 'product' | 'location';
+}
+
+// === Epic 5 — Scan-to-Recipe (fiches techniques IA) ===
+
+export interface RecipeIngredient {
+  id: string;
+  recipe_id: string;
+  tenant_id: string;
+  product_id: string | null;
+  ingredient_name: string;
+  quantity: number;
+  unit: string;
+  sort_order: number;
+  created_at: string;
+}
+
+export interface Recipe {
+  id: string;
+  tenant_id: string;
+  name: string;
+  category: string | null;
+  source: 'manual' | 'scan_ia';
+  confidence: 'high' | 'medium' | 'low' | null;
+  ai_note: string | null;
+  is_active: boolean;
+  ingredients: RecipeIngredient[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface RecipeIngredientInput {
+  product_id?: string | null;
+  ingredient_name: string;
+  quantity: number;
+  unit: string;
+  sort_order?: number;
+}
+
+export interface RecipeCreateInput {
+  name: string;
+  category?: string;
+  source?: 'manual' | 'scan_ia';
+  confidence?: 'high' | 'medium' | 'low';
+  ai_note?: string;
+  ingredients: RecipeIngredientInput[];
+}
+
+export interface RecipeUpdateInput {
+  name?: string;
+  category?: string;
+  ai_note?: string;
+  ingredients?: RecipeIngredientInput[];
+}
+
+export interface ExtractedIngredient {
+  nom: string;
+  quantite: number;
+  unite: string;
+}
+
+export interface ExtractedDish {
+  nom: string;
+  categorie?: string;
+  ingredients: ExtractedIngredient[];
+  confiance: 'high' | 'medium' | 'low';
+  note?: string;
+}
+
+export interface MenuExtractionResult {
+  plats: ExtractedDish[];
+}
+
+export interface ExtractionFeedback {
+  id: string;
+  tenant_id: string;
+  plat_nom: string;
+  extraction_ia: ExtractedDish;
+  correction_humaine: ExtractedDish;
+  created_at: string;
+}
+
+export interface ExtractionFeedbackCreateInput {
+  plat_nom: string;
+  extraction_ia: ExtractedDish;
+  correction_humaine: ExtractedDish;
 }

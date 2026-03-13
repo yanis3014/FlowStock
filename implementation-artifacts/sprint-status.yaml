@@ -70,42 +70,42 @@ development_status:
   3-10-calculs-basiques-temps-stock-sans-ia: done
   epic-3-retrospective: optional
 
-  epic-4: backlog
-  4-1-chat-ia-conversationnel-avec-memoire-contextuelle: ready-for-dev
-  4-2-dashboard-principal-avec-vue-d-ensemble: backlog
-  4-3-visualisation-interactive-des-courbes-de-prevision: backlog
-  4-4-alertes-visuelles: backlog
-  4-5-statistiques-essentielles: backlog
+  epic-4: done
+  4-1-chat-ia-conversationnel-avec-memoire-contextuelle: done
+  4-2-dashboard-principal-avec-vue-d-ensemble: done
+  4-3-visualisation-interactive-des-courbes-de-prevision: done
+  4-4-alertes-visuelles: done
+  4-5-statistiques-essentielles: done
   epic-4-retrospective: optional
 
-  epic-5: backlog
-  5-1-upload-photo-menu-carte-et-extraction-ia-vision-nlp: backlog
-  5-2-validation-humaine-et-enregistrement-fiche-technique: backlog
-  5-3-feedback-loop-et-amelioration-du-modele: backlog
+  epic-5: done
+  5-1-upload-photo-menu-carte-et-extraction-ia-vision-nlp: done
+  5-2-validation-humaine-et-enregistrement-fiche-technique: done
+  5-3-feedback-loop-et-amelioration-du-modele: done
   epic-5-retrospective: optional
 
-  epic-6: backlog
-  6-1-infrastructure-ml-modeles-de-base: backlog
-  6-2-analyse-tendances-apprentissage-progressif: backlog
-  6-3-prediction-ruptures-stocks: backlog
-  6-4-reentrainement-automatique-quotidien: backlog
-  6-5-monitoring-performance-ia: backlog
-  6-6-generation-recommandations-commande: backlog
-  6-7-validation-commande-un-clic: backlog
-  6-8-gestion-autonomie-ia-limites-defaut: backlog
-  6-9-progression-autonomie-graduelle-premium-plus: backlog
-  6-10-integration-chat-ia-avec-generation-commandes: backlog
+  epic-6: done
+  6-1-infrastructure-ml-modeles-de-base: done
+  6-2-analyse-tendances-apprentissage-progressif: done
+  6-3-prediction-ruptures-stocks: done
+  6-4-reentrainement-automatique-quotidien: done
+  6-5-monitoring-performance-ia: done
+  6-6-generation-recommandations-commande: done
+  6-7-validation-commande-un-clic: done
+  6-8-gestion-autonomie-ia-limites-defaut: done
+  6-9-progression-autonomie-graduelle-premium-plus: done
+  6-10-integration-chat-ia-avec-generation-commandes: done
   epic-6-retrospective: optional
 
-  epic-7: backlog
-  7-1-upload-photo-facture: backlog
-  7-2-extraction-ia-facture-ocr: backlog
-  7-3-verification-automatique-commande-vs-facture: backlog
-  7-4-integration-automatique-bdd: backlog
-  7-5-fallback-saisie-manuelle-facture: backlog
+  epic-7: done
+  7-1-upload-photo-facture: done
+  7-2-extraction-ia-facture-ocr: done
+  7-3-verification-automatique-commande-vs-facture: done
+  7-4-integration-automatique-bdd: done
+  7-5-fallback-saisie-manuelle-facture: done
   epic-7-retrospective: optional
 
-  epic-8: backlog
-  8-1-declaration-perte-express-2-clics: backlog
-  8-2-analyse-ecarts-theorique-reel-alertes-anomalies: backlog
+  epic-8: done
+  8-1-declaration-perte-express-2-clics: done
+  8-2-analyse-ecarts-theorique-reel-alertes-anomalies: done
   epic-8-retrospective: optional

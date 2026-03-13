@@ -8,7 +8,7 @@ import { useApi } from '@/hooks/useApi';
 import { toast } from 'sonner';
 import { FileSpreadsheet, Loader2, AlertCircle, CheckCircle } from 'lucide-react';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { DropZone } from '@/components/csv/DropZone';
+import { FileUploadZone } from '@/components/ui/FileUploadZone';
 import { transformCsvWithAI } from './actions';
 import type { CsvTransformResult } from '@/types/csv-import';
 
@@ -284,7 +284,7 @@ export default function ImportStocksPage() {
               Glissez votre CSV (export caisse, fournisseur, Excel…) — max {MAX_FILE_SIZE_MB} Mo. L&apos;IA mappe automatiquement les colonnes puis vous validez l&apos;import.
             </p>
             <div className="mt-4">
-              <DropZone onFileSelected={handleFileSelected} accept={['.csv', '.txt']} maxSizeMb={MAX_FILE_SIZE_MB} />
+              <FileUploadZone onFileSelected={handleFileSelected} accept={['.csv', '.txt']} maxSizeMb={MAX_FILE_SIZE_MB} readAs="text" />
             </div>
           </div>
         )}
