@@ -26,8 +26,26 @@ export interface DashboardSummary {
     message: string;
     created_at: string;
   }>;
+  unread_alert_count: number;
   pending_orders: number;
   pending_invoices: number;
+}
+
+export interface RecentMovement {
+  id: string;
+  product_id: string;
+  product_name: string;
+  movement_type: string;
+  quantity_before: number | null;
+  quantity_after: number | null;
+  reason: string | null;
+  created_at: string;
+}
+
+export interface DailyConsumption {
+  date: string;
+  quantity_sold: number;
+  total_amount: number | null;
 }
 
 /**
@@ -73,13 +91,116 @@ function shouldTriggerLowStockAlert(
 }
 
 /**
+ * Get IDs of alerts already read by user in this tenant
+ */
+async function getReadAlertIds(tenantId: string, userId: string): Promise<Set<string>> {
+  const db = getDatabase();
+  const result = await db.query<{ alert_id: string }>(
+    'SELECT alert_id FROM alert_reads WHERE tenant_id = $1 AND user_id = $2',
+    [tenantId, userId]
+  );
+  return new Set(result.rows.map((r) => r.alert_id));
+}
+
+/**
+ * Mark an alert as read for a user in a tenant
+ */
+export async function markAlertAsRead(tenantId: string, userId: string, alertId: string): Promise<void> {
+  const db = getDatabase();
+  await db.query(
+    `INSERT INTO alert_reads (tenant_id, user_id, alert_id)
+     VALUES ($1, $2, $3)
+     ON CONFLICT (tenant_id, user_id, alert_id) DO NOTHING`,
+    [tenantId, userId, alertId]
+  );
+}
+
+/**
+ * Get the 5 most recent stock movements across all products for a tenant
+ */
+export async function getRecentMovements(tenantId: string, limit = 5): Promise<RecentMovement[]> {
+  const db = getDatabase();
+  const result = await db.query<{
+    id: string;
+    product_id: string;
+    product_name: string;
+    movement_type: string;
+    quantity_before: string | null;
+    quantity_after: string | null;
+    reason: string | null;
+    created_at: Date;
+  }>(
+    `SELECT m.id, m.product_id, p.name AS product_name,
+            m.movement_type, m.quantity_before, m.quantity_after,
+            m.reason, m.created_at
+     FROM stock_movements m
+     JOIN products p ON p.id = m.product_id
+     WHERE m.tenant_id = $1
+     ORDER BY m.created_at DESC
+     LIMIT $2`,
+    [tenantId, limit]
+  );
+  return result.rows.map((r) => ({
+    id: r.id,
+    product_id: r.product_id,
+    product_name: r.product_name,
+    movement_type: r.movement_type,
+    quantity_before: r.quantity_before != null ? parseFloat(r.quantity_before) : null,
+    quantity_after: r.quantity_after != null ? parseFloat(r.quantity_after) : null,
+    reason: r.reason,
+    created_at: r.created_at.toISOString(),
+  }));
+}
+
+/**
+ * Get daily sales consumption for the last N days (for the météo stock widget)
+ */
+export async function getDailyConsumption(tenantId: string, days = 7): Promise<DailyConsumption[]> {
+  const db = getDatabase();
+  const dateFrom = new Date();
+  dateFrom.setDate(dateFrom.getDate() - days);
+
+  const result = await db.query<{
+    sale_date: string;
+    quantity_sold: string;
+    total_amount: string | null;
+  }>(
+    `SELECT DATE(created_at AT TIME ZONE 'UTC') AS sale_date,
+            COALESCE(SUM(quantity_sold), 0) AS quantity_sold,
+            SUM(unit_price * quantity_sold) AS total_amount
+     FROM sales
+     WHERE tenant_id = $1 AND created_at >= $2
+     GROUP BY DATE(created_at AT TIME ZONE 'UTC')
+     ORDER BY sale_date ASC`,
+    [tenantId, dateFrom.toISOString()]
+  );
+
+  // Fill missing days with 0
+  const resultMap = new Map(result.rows.map((r) => [r.sale_date, r]));
+  const allDays: DailyConsumption[] = [];
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const key = d.toISOString().split('T')[0];
+    const row = resultMap.get(key);
+    allDays.push({
+      date: key,
+      quantity_sold: row ? parseFloat(row.quantity_sold) : 0,
+      total_amount: row?.total_amount != null ? parseFloat(row.total_amount) : null,
+    });
+  }
+  return allDays;
+}
+
+/**
  * Get dashboard summary data for a tenant
  */
-export async function getDashboardSummary(tenantId: string): Promise<DashboardSummary> {
+export async function getDashboardSummary(tenantId: string, userId?: string): Promise<DashboardSummary> {
   const db = getDatabase();
 
   // Get tenant alert threshold
   const alertThreshold = await getTenantAlertThreshold(tenantId);
+  const readAlertIds = userId ? await getReadAlertIds(tenantId, userId) : new Set<string>();
 
   // Get sales stats (yesterday data)
   const salesStats = await getSalesStats(tenantId);
@@ -198,6 +319,10 @@ export async function getDashboardSummary(tenantId: string): Promise<DashboardSu
     return severityOrder[b.severity] - severityOrder[a.severity];
   });
 
+  const allAlerts = alerts.slice(0, 10);
+  const unreadAlerts = allAlerts.filter((a) => !readAlertIds.has(a.id));
+  const unreadCount = unreadAlerts.length;
+
   return {
     sales_yesterday: {
       total_amount: yesterdayAmount,
@@ -210,9 +335,10 @@ export async function getDashboardSummary(tenantId: string): Promise<DashboardSu
       low_stock_count: lowStockCount,
       critical_stock_count: criticalStockCount,
     },
-    alerts: alerts.slice(0, 10), // Limit to 10 alerts
-    pending_orders: 0, // TODO: Implement when orders feature is available
-    pending_invoices: 0, // TODO: Implement when invoices feature is available
+    alerts: unreadAlerts,
+    unread_alert_count: unreadCount,
+    pending_orders: 0, // TODO: Implement when orders feature is available (Epic 6)
+    pending_invoices: 0, // TODO: Implement when invoices feature is available (Epic 7)
   };
 }
 

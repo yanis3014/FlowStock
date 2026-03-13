@@ -11,7 +11,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
-import { TrendingUp, Package } from 'lucide-react';
+import { TrendingUp, Package, Download } from 'lucide-react';
 
 // Cast Recharts components for React 18 / Recharts typings compatibility
 const Rc = {
@@ -103,12 +103,39 @@ export default function StatsPage() {
     ventes: g.total_amount ?? 0,
   })).reverse();
 
+  const handleExportCSV = useCallback(() => {
+    const rows: string[][] = [];
+    // Section ventes par jour
+    rows.push(['# Ventes par jour']);
+    rows.push(['Date', 'Quantité vendue', 'Montant (€)']);
+    chartData.forEach((g) => {
+      rows.push([g.date, String(g.quantité), g.ventes != null ? g.ventes.toFixed(2) : '']);
+    });
+    rows.push([]);
+    // Section top produits
+    rows.push(['# Top produits vendus']);
+    rows.push(['Produit', 'Quantité vendue', 'Montant (€)']);
+    topProducts.forEach((g, i) => {
+      const name = productNames[g.key] || `Produit ${i + 1}`;
+      rows.push([name, String(g.quantity_sold), g.total_amount != null ? g.total_amount.toFixed(2) : '']);
+    });
+
+    const csv = rows.map((r) => r.map((c) => `"${c.replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `stats-flowstock-${period}j-${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }, [chartData, topProducts, productNames, period]);
+
   return (
     <div className="min-h-full space-y-6 bg-cream font-body" role="region" aria-label="Statistiques" aria-live="polite">
       <PageHeader
         title="Statistiques"
         actions={
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={() => setPeriod('7')}
@@ -122,6 +149,16 @@ export default function StatsPage() {
               className={`rounded-xl px-3 py-1.5 text-sm font-medium transition-colors ${period === '30' ? 'bg-green-deep text-cream hover:bg-forest-green' : 'bg-cream/50 text-charcoal hover:bg-cream/80'}`}
             >
               30 jours
+            </button>
+            <button
+              type="button"
+              onClick={handleExportCSV}
+              disabled={loading}
+              className="flex items-center gap-1.5 rounded-xl border border-charcoal/15 bg-white px-3 py-1.5 text-sm font-medium text-charcoal transition-colors hover:bg-cream disabled:opacity-40"
+              aria-label="Exporter les statistiques en CSV"
+            >
+              <Download className="h-4 w-4" aria-hidden />
+              <span className="hidden sm:inline">Exporter CSV</span>
             </button>
           </div>
         }
