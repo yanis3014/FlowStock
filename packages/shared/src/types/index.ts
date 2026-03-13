@@ -225,3 +225,88 @@ export interface SaleSummaryFilters {
   location_id?: string;
   group_by?: 'day' | 'product' | 'location';
 }
+
+// === Epic 5 — Scan-to-Recipe (fiches techniques IA) ===
+
+export interface RecipeIngredient {
+  id: string;
+  recipe_id: string;
+  tenant_id: string;
+  product_id: string | null;
+  ingredient_name: string;
+  quantity: number;
+  unit: string;
+  sort_order: number;
+  created_at: string;
+}
+
+export interface Recipe {
+  id: string;
+  tenant_id: string;
+  name: string;
+  category: string | null;
+  source: 'manual' | 'scan_ia';
+  confidence: 'high' | 'medium' | 'low' | null;
+  ai_note: string | null;
+  is_active: boolean;
+  ingredients: RecipeIngredient[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface RecipeIngredientInput {
+  product_id?: string | null;
+  ingredient_name: string;
+  quantity: number;
+  unit: string;
+  sort_order?: number;
+}
+
+export interface RecipeCreateInput {
+  name: string;
+  category?: string;
+  source?: 'manual' | 'scan_ia';
+  confidence?: 'high' | 'medium' | 'low';
+  ai_note?: string;
+  ingredients: RecipeIngredientInput[];
+}
+
+export interface RecipeUpdateInput {
+  name?: string;
+  category?: string;
+  ai_note?: string;
+  ingredients?: RecipeIngredientInput[];
+}
+
+export interface ExtractedIngredient {
+  nom: string;
+  quantite: number;
+  unite: string;
+}
+
+export interface ExtractedDish {
+  nom: string;
+  categorie?: string;
+  ingredients: ExtractedIngredient[];
+  confiance: 'high' | 'medium' | 'low';
+  note?: string;
+}
+
+export interface MenuExtractionResult {
+  plats: ExtractedDish[];
+}
+
+export interface ExtractionFeedback {
+  id: string;
+  tenant_id: string;
+  plat_nom: string;
+  extraction_ia: ExtractedDish;
+  correction_humaine: ExtractedDish;
+  created_at: string;
+}
+
+export interface ExtractionFeedbackCreateInput {
+  plat_nom: string;
+  extraction_ia: ExtractedDish;
+  correction_humaine: ExtractedDish;
+}
