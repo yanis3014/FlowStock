@@ -32,6 +32,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { href: '/stats', label: 'Stats', icon: 'BarChart2' },
       { href: '/forecast', label: 'Prévisions', icon: 'TrendingUp' },
       { href: '/movements', label: 'Mouvements', icon: 'ArrowLeftRight' },
+      { href: '/pertes', label: 'Pertes & Écarts', icon: 'TrendingDown' },
     ],
   },
   {

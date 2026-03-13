@@ -9,6 +9,7 @@ import { DashboardSkeleton } from '@/components/dashboard/DashboardSkeleton';
 import { OnboardingBanner } from '@/components/onboarding/OnboardingBanner';
 import { useOnboardingStatus } from '@/hooks/useOnboardingStatus';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { LossDeclarationModal } from '@/components/stocks/LossDeclarationModal';
 
 interface SalesYesterday {
   total_amount?: number;
@@ -78,6 +79,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [actionStates, setActionStates] = useState<Record<string, 'idle' | 'loading' | 'confirmed'>>({});
+  const [lossModalOpen, setLossModalOpen] = useState(false);
 
   useEffect(() => {
     if (!token) return;
@@ -212,18 +214,28 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* Message d'accueil + CTA Rush */}
+        {/* Message d'accueil + CTAs */}
         <PageHeader
           title={`Bonjour${prenom ? ` ${prenom}` : ''} — Service midi dans 2h`}
           subtitle="Votre vue d'ensemble du jour"
           actions={
-            <Link
-              href="/rush"
-              className="inline-flex items-center justify-center gap-2 rounded-lg bg-green-deep px-5 py-2.5 font-display text-sm font-bold text-cream shadow-sm transition-colors hover:bg-forest-green"
-            >
-              <Zap className="h-4 w-4" />
-              Mode Rush
-            </Link>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setLossModalOpen(true)}
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-terracotta px-5 py-2.5 font-display text-sm font-bold text-white shadow-sm"
+              >
+                <AlertTriangle className="h-4 w-4" />
+                Déclarer une perte
+              </button>
+              <Link
+                href="/rush"
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-green-deep px-5 py-2.5 font-display text-sm font-bold text-cream shadow-sm transition-colors hover:bg-forest-green"
+              >
+                <Zap className="h-4 w-4" />
+                Mode Rush
+              </Link>
+            </div>
           }
         />
 
@@ -315,6 +327,14 @@ export default function DashboardPage() {
         </section>
 
         {/* TODO Sprint 3 Tâche 16 : connecter au vrai endpoint /suggestions */}
+
+        {/* Modal déclaration perte */}
+        <LossDeclarationModal
+          open={lossModalOpen}
+          onClose={() => setLossModalOpen(false)}
+          onSuccess={() => {}}
+          preselectedProduct={null}
+        />
       </div>
     </div>
   );
