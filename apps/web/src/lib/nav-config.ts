@@ -23,6 +23,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { href: '/rush', label: 'Mode Rush', icon: 'Zap' },
       { href: '/dashboard', label: 'Dashboard', icon: 'LayoutDashboard' },
       { href: '/stocks', label: 'Stocks', icon: 'Package' },
+      { href: '/livraisons/nouvelle', label: 'Livraisons', icon: 'Receipt' },
       { href: '/sales', label: 'Ventes', icon: 'ShoppingCart' },
     ],
   },
