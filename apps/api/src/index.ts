@@ -28,6 +28,8 @@ import adminRoutes from './routes/admin.routes';
 import lossesRoutes from './routes/losses.routes';
 import discrepancyRoutes from './routes/discrepancy.routes';
 import invoiceRoutes from './routes/invoice.routes';
+import recipeRoutes from './routes/recipe.routes';
+import extractionFeedbackRoutes from './routes/extraction-feedback.routes';
 import { runPeriodicEvaluation } from './services/pos-sync-status.service';
 import { openApiDocument } from './openapi/spec';
 import type { HealthResponse } from '@bmad/shared';
@@ -127,6 +129,8 @@ app.use('/dashboard', dashboardRoutes);
 app.use('/losses', lossesRoutes);
 app.use('/discrepancies', discrepancyRoutes);
 app.use('/invoices', invoiceRoutes);
+app.use('/recipes', recipeRoutes);
+app.use('/extraction-feedback', extractionFeedbackRoutes);
 app.use('/api/admin', adminRoutes);
 
 // Story 2.2: Import stocks page
