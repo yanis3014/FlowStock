@@ -49,14 +49,14 @@ export async function computeDailySnapshots(
           AND s.sale_date = $2::date
       ), 0) AS sales_qty,
       COALESCE((
-        SELECT SUM(ABS(sm.quantity_change))
+        SELECT SUM(ABS(COALESCE(sm.quantity_before, 0) - COALESCE(sm.quantity_after, 0)))
         FROM stock_movements sm
         WHERE sm.product_id = p.id
           AND sm.movement_type = 'perte'
           AND sm.created_at::date = $2::date
       ), 0) AS losses_qty,
       COALESCE((
-        SELECT SUM(sm.quantity_change)
+        SELECT SUM(COALESCE(sm.quantity_after, 0) - COALESCE(sm.quantity_before, 0))
         FROM stock_movements sm
         WHERE sm.product_id = p.id
           AND sm.movement_type IN ('livraison', 'commande_en_cours')

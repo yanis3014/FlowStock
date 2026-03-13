@@ -181,13 +181,21 @@ export async function validateRecommendation(
     let movementsCreated = 0;
     for (const item of items) {
       if (item.quantite_suggeree <= 0) continue;
+      // Fetch current stock to compute quantity_after
+      const stockRes = await client.query<{ quantity: string }>(
+        `SELECT quantity FROM products WHERE id = $1`,
+        [item.product_id]
+      );
+      const currentStock = parseFloat(stockRes.rows[0]?.quantity ?? '0');
+      const quantityAfter = currentStock + item.quantite_suggeree;
       await client.query(
-        `INSERT INTO stock_movements (tenant_id, product_id, movement_type, quantity_change, notes, created_by)
-         VALUES ($1, $2, 'commande_en_cours', $3, $4, $5)`,
+        `INSERT INTO stock_movements (tenant_id, product_id, movement_type, quantity_before, quantity_after, reason, user_id)
+         VALUES ($1, $2, 'commande_en_cours', $3, $4, $5, $6)`,
         [
           tenantId,
           item.product_id,
-          item.quantite_suggeree,
+          currentStock,
+          quantityAfter,
           `Commande IA — ${item.justification}`,
           userId,
         ]
