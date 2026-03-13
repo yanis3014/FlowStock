@@ -70,12 +70,12 @@ development_status:
   3-10-calculs-basiques-temps-stock-sans-ia: done
   epic-3-retrospective: optional
 
-  epic-4: in-progress
+  epic-4: done
   4-1-chat-ia-conversationnel-avec-memoire-contextuelle: done
-  4-2-dashboard-principal-avec-vue-d-ensemble: in-progress
+  4-2-dashboard-principal-avec-vue-d-ensemble: done
   4-3-visualisation-interactive-des-courbes-de-prevision: done
-  4-4-alertes-visuelles: in-progress
-  4-5-statistiques-essentielles: in-progress
+  4-4-alertes-visuelles: done
+  4-5-statistiques-essentielles: done
   epic-4-retrospective: optional
 
   epic-5: backlog

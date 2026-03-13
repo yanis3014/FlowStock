@@ -1,6 +1,6 @@
 # Story 4.2: Dashboard Principal avec Vue d'Ensemble
 
-**Status:** in-progress
+**Status:** Done
 
 ## Story
 
@@ -21,16 +21,16 @@
 
 - [x] Task 1 — 4 KPIs et alertes (déjà implémenté dans story 9.3)
 - [x] Task 2 — Widget alertes stock bas avec lien vers /stocks
-- [ ] Task 3 — Widget "5 derniers mouvements"
-  - [ ] Ajouter endpoint GET /dashboard/recent-movements dans dashboard.routes.ts
-  - [ ] Ajouter fonction getRecentMovements dans dashboard.service.ts
-  - [ ] Afficher widget dans dashboard/page.tsx
-- [ ] Task 4 — Widget "météo stock" (consommation 7j)
-  - [ ] Appeler GET /sales/summary?group_by=day pour les 7 derniers jours
-  - [ ] Afficher micro-graphe barres (Recharts) dans dashboard/page.tsx
-- [ ] Task 5 — Bouton flottant ChatIA
-  - [ ] Créer composant ChatFAB (Floating Action Button) pointant vers /chat
-  - [ ] Intégrer dans dashboard/page.tsx
+- [x] Task 3 — Widget "5 derniers mouvements"
+  - [x] Ajouter endpoint GET /dashboard/recent-movements dans dashboard.routes.ts
+  - [x] Ajouter fonction getRecentMovements dans dashboard.service.ts
+  - [x] Afficher widget dans dashboard/page.tsx
+- [x] Task 4 — Widget "météo stock" (consommation 7j)
+  - [x] Appeler GET /dashboard/daily-consumption pour les 7 derniers jours
+  - [x] Afficher micro-graphe barres (Recharts) dans dashboard/page.tsx
+- [x] Task 5 — Bouton flottant ChatIA
+  - [x] ChatFAB intégré directement dans dashboard/page.tsx
+  - [x] Positionnement fixe bottom-right responsive
 
 ## Dev Notes
 
@@ -46,11 +46,19 @@ Claude Sonnet 4.6 (Cursor Cloud)
 
 ### Completion Notes List
 
-*(À remplir lors de l'implémentation)*
+- Widget "Derniers mouvements" : endpoint GET /dashboard/recent-movements + affichage dans dashboard/page.tsx avec delta quantité coloré
+- Widget "Météo stock" : endpoint GET /dashboard/daily-consumption + BarChart Recharts 7 jours
+- ChatFAB : bouton fixe bottom-right avec icône MessageSquare + lien /chat, responsive (label masqué sur mobile)
+- AlertBanner utilisé pour afficher les alertes avec mark-as-read optimistic update
+- Mise à jour optimiste des alertes après mark-as-read (setSummary local)
 
 ### File List
 
-*(À remplir lors de l'implémentation)*
+| Fichier | Rôle |
+|---------|------|
+| `apps/api/src/services/dashboard.service.ts` | Ajout getRecentMovements, getDailyConsumption, markAlertAsRead |
+| `apps/api/src/routes/dashboard.routes.ts` | Ajout GET /recent-movements, /daily-consumption, POST /alerts/read |
+| `apps/web/src/app/(app)/dashboard/page.tsx` | Dashboard enrichi : 2 nouveaux widgets + ChatFAB + AlertBanner |
 
 ## Change Log
 

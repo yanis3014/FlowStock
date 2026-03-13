@@ -240,6 +240,12 @@ export default function DashboardPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ alert_ids: alertIds }),
       }).catch(() => {});
+      // Optimistic local update: remove marked alerts from summary
+      setSummary((prev) => {
+        if (!prev) return prev;
+        const filtered = (prev.alerts ?? []).filter((a) => !alertIds.includes(a.id));
+        return { ...prev, alerts: filtered, unread_alert_count: filtered.length };
+      });
     },
     [fetchApi]
   );

@@ -150,17 +150,16 @@ export default function StatsPage() {
             >
               30 jours
             </button>
-            {!loading && (chartData.length > 0 || topProducts.length > 0) && (
-              <button
-                type="button"
-                onClick={handleExportCSV}
-                className="flex items-center gap-1.5 rounded-xl border border-charcoal/15 bg-white px-3 py-1.5 text-sm font-medium text-charcoal transition-colors hover:bg-cream"
-                aria-label="Exporter les statistiques en CSV"
-              >
-                <Download className="h-4 w-4" aria-hidden />
-                <span className="hidden sm:inline">Exporter CSV</span>
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={handleExportCSV}
+              disabled={loading}
+              className="flex items-center gap-1.5 rounded-xl border border-charcoal/15 bg-white px-3 py-1.5 text-sm font-medium text-charcoal transition-colors hover:bg-cream disabled:opacity-40"
+              aria-label="Exporter les statistiques en CSV"
+            >
+              <Download className="h-4 w-4" aria-hidden />
+              <span className="hidden sm:inline">Exporter CSV</span>
+            </button>
           </div>
         }
       />
