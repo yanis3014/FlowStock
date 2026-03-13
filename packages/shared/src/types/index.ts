@@ -136,7 +136,15 @@ export interface SupplierUpdateInput {
 }
 
 // Story 2.4: Stock movement history
-export type MovementType = 'creation' | 'quantity_update' | 'deletion' | 'import' | 'pos_sale';
+export type MovementType =
+  | 'creation'
+  | 'quantity_update'
+  | 'deletion'
+  | 'import'
+  | 'pos_sale'
+  | 'perte'
+  | 'livraison'
+  | 'commande_en_cours';
 
 export interface StockMovement {
   id: string;
