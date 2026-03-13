@@ -136,8 +136,18 @@ export interface SupplierUpdateInput {
 }
 
 // Story 2.4: Stock movement history
-// Epic 7 + 8: combined movement types
-export type MovementType = 'creation' | 'quantity_update' | 'deletion' | 'import' | 'pos_sale' | 'loss' | 'entree_livraison';
+// Epics 6+7+8: combined movement types (canonical set)
+export type MovementType =
+  | 'creation'
+  | 'quantity_update'
+  | 'deletion'
+  | 'import'
+  | 'pos_sale'
+  | 'loss'
+  | 'perte'
+  | 'entree_livraison'
+  | 'livraison'
+  | 'commande_en_cours';
 
 // Epic 8.1: Loss declaration
 export type LossReason = 'expired' | 'broken' | 'theft' | 'prep_error' | 'other';

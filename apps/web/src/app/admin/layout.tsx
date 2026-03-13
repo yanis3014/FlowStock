@@ -14,6 +14,7 @@ import {
   ChevronRight,
   Menu,
   X,
+  Brain,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
@@ -23,6 +24,7 @@ const ADMIN_NAV = [
   { href: '/admin/users', label: 'Utilisateurs', icon: Users, exact: false },
   { href: '/admin/restaurants', label: 'Restaurants', icon: Store, exact: false },
   { href: '/admin/subscriptions', label: 'Abonnements', icon: CreditCard, exact: false },
+  { href: '/admin/ml-predictions', label: 'Monitoring IA', icon: Brain, exact: false },
   { href: '/admin/system', label: 'Système', icon: Activity, exact: false },
 ];
 

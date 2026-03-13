@@ -47,7 +47,10 @@ const MOVEMENT_TYPE_LABELS: Record<MovementType, string> = {
   import: 'Import',
   pos_sale: 'Vente POS',
   loss: 'Perte',
+  perte: 'Perte',
   entree_livraison: 'Livraison',
+  livraison: 'Livraison',
+  commande_en_cours: 'Commande en cours',
 };
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;

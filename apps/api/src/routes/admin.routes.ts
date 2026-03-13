@@ -850,6 +850,85 @@ router.patch(
   }
 );
 
+/**
+ * GET /api/admin/ml-monitoring
+ * Global ML prediction accuracy overview (Story 6-5).
+ */
+router.get('/ml-monitoring', async (_req: Request, res: Response) => {
+  try {
+    const db = getDatabase();
+
+    const [tenantsResult, globalAccuracy, lowAccuracyAlerts, totalPredictions] =
+      await Promise.all([
+        db.query<{ id: string; company_name: string }>(
+          `SELECT id, company_name FROM tenants WHERE is_active = true ORDER BY company_name`
+        ),
+        db.query<{ avg_accuracy: string; sample_count: string }>(
+          `SELECT
+             AVG(accuracy_score)::text AS avg_accuracy,
+             COUNT(*)::text AS sample_count
+           FROM prediction_accuracy
+           WHERE evaluation_date >= CURRENT_DATE - 30`
+        ),
+        db.query<{ count: string }>(
+          `SELECT COUNT(DISTINCT product_id)::text AS count
+           FROM (
+             SELECT product_id, AVG(accuracy_score) AS avg_acc
+             FROM prediction_accuracy
+             WHERE evaluation_date >= CURRENT_DATE - 30
+             GROUP BY product_id
+             HAVING AVG(accuracy_score) < 0.7
+           ) low`
+        ),
+        db.query<{ count: string }>(
+          `SELECT COUNT(*)::text AS count FROM stock_predictions`
+        ),
+      ]);
+
+    const tenantAccuracyRows = await db.query<{
+      tenant_id: string;
+      company_name: string;
+      avg_accuracy: string;
+      sample_count: string;
+      low_accuracy_products: string;
+    }>(
+      `SELECT
+         pa.tenant_id,
+         t.company_name,
+         AVG(pa.accuracy_score)::text AS avg_accuracy,
+         COUNT(*)::text AS sample_count,
+         COUNT(CASE WHEN pa.accuracy_score < 0.7 THEN 1 END)::text AS low_accuracy_products
+       FROM prediction_accuracy pa
+       JOIN tenants t ON t.id = pa.tenant_id
+       WHERE pa.evaluation_date >= CURRENT_DATE - 30
+       GROUP BY pa.tenant_id, t.company_name
+       ORDER BY AVG(pa.accuracy_score) ASC`
+    );
+
+    res.json({
+      success: true,
+      data: {
+        global: {
+          avg_accuracy: parseFloat(globalAccuracy.rows[0]?.avg_accuracy ?? '0') || 0,
+          sample_count: parseInt(globalAccuracy.rows[0]?.sample_count ?? '0', 10),
+          low_accuracy_alerts: parseInt(lowAccuracyAlerts.rows[0]?.count ?? '0', 10),
+          total_predictions: parseInt(totalPredictions.rows[0]?.count ?? '0', 10),
+          active_tenants: tenantsResult.rows.length,
+        },
+        by_tenant: tenantAccuracyRows.rows.map((r) => ({
+          tenant_id: r.tenant_id,
+          company_name: r.company_name,
+          avg_accuracy: parseFloat(r.avg_accuracy) || 0,
+          sample_count: parseInt(r.sample_count, 10),
+          low_accuracy_products: parseInt(r.low_accuracy_products, 10),
+        })),
+      },
+    });
+  } catch {
+    res.status(500).json({ success: false, error: 'Erreur serveur' });
+  }
+});
+
 router.get('/system', async (_req: Request, res: Response) => {
   try {
     const db = getDatabase();

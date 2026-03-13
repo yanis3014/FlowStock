@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useApi } from '@/hooks/useApi';
-import { Download, Link2, Loader2 } from 'lucide-react';
+import { Download, Link2, Loader2, Brain, Lock } from 'lucide-react';
 import { toast } from 'sonner';
 import { PageHeader } from '@/components/ui/PageHeader';
 
@@ -21,6 +21,11 @@ interface LocalPrefs {
   email?: boolean;
   langue?: string;
   fuseau?: string;
+}
+
+interface AiSettings {
+  ai_autonomy_level: number;
+  ai_auto_order_threshold: number;
 }
 
 const defaultPrefs: LocalPrefs = {
@@ -65,6 +70,9 @@ export default function ParametresPage() {
   const [posStatus, setPosStatus] = useState<{ connecte: boolean; type: string; lastSync: string } | null>(null);
   const [thresholdPercent, setThresholdPercent] = useState<number | null>(null);
   const [form, setForm] = useState<LocalPrefs>(defaultPrefs);
+  const [aiSettings, setAiSettings] = useState<AiSettings>({ ai_autonomy_level: 1, ai_auto_order_threshold: 0 });
+  const [aiSaving, setAiSaving] = useState(false);
+  const [subscription, setSubscription] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     if (!token) return;
@@ -73,9 +81,11 @@ export default function ParametresPage() {
     setForm(prefs);
 
     try {
-      const [thresholdRes, posRes] = await Promise.all([
+      const [thresholdRes, posRes, aiRes, subRes] = await Promise.all([
         fetchApi('/dashboard/alert-threshold'),
         fetchApi('/dashboard/pos-sync-status'),
+        fetchApi('/recommendations/settings'),
+        fetchApi('/subscriptions'),
       ]);
 
       if (thresholdRes.ok) {
@@ -96,6 +106,16 @@ export default function ParametresPage() {
             lastSync: d.last_event_at ? 'Il y a quelques min' : 'Jamais',
           });
         }
+      }
+
+      if (aiRes.ok) {
+        const j = await aiRes.json();
+        if (j?.success && j?.data) setAiSettings(j.data);
+      }
+
+      if (subRes.ok) {
+        const j = await subRes.json();
+        if (j?.success && j?.data) setSubscription(j.data.tier ?? null);
       }
     } catch {
       toast.error('Erreur lors du chargement.');
@@ -157,6 +177,23 @@ export default function ParametresPage() {
     saveLocalPrefs(prefs);
     setForm(prefs);
     toast.success('Préférences notifications sauvegardées.');
+  };
+
+  const handleSaveAiSettings = async () => {
+    setAiSaving(true);
+    try {
+      const res = await fetchApi('/recommendations/settings', {
+        method: 'PUT',
+        body: JSON.stringify(aiSettings),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(j?.error ?? 'Erreur');
+      toast.success('Paramètres IA sauvegardés.');
+    } catch {
+      toast.error('Impossible de sauvegarder les paramètres IA.');
+    } finally {
+      setAiSaving(false);
+    }
   };
 
   const handleSaveLangue = () => {
@@ -411,6 +448,93 @@ export default function ParametresPage() {
             onClick={handleSaveLangue}
             className="mt-4 rounded-xl bg-green-deep px-4 py-2.5 font-display text-sm font-bold text-cream hover:bg-forest-green transition-colors"
           >
+            Enregistrer
+          </button>
+        </section>
+
+        {/* Autonomie IA — Story 6-8 / 6-9 */}
+        <section className="rounded-xl border border-charcoal/8 bg-white p-6 shadow-sm">
+          <div className="flex items-center gap-2">
+            <Brain className="h-5 w-5 text-green-deep" />
+            <h2 className="font-display text-lg font-bold text-charcoal">Autonomie IA</h2>
+          </div>
+          <p className="mt-1 text-sm text-charcoal/50">
+            Configurez comment l&apos;IA gère les commandes automatiques.
+          </p>
+          <div className="mt-4 space-y-4">
+            <div>
+              <label className="block text-xs font-medium text-charcoal/60 mb-2">
+                Niveau d&apos;autonomie
+              </label>
+              <div className="space-y-2">
+                {[
+                  { level: 1, label: 'Niveau 1 — Suggestions uniquement', desc: "L'IA suggère, vous validez toujours.", free: true },
+                  { level: 2, label: 'Niveau 2 — Commande automatique sous seuil', desc: "L'IA commande automatiquement en dessous du seuil défini.", free: false },
+                  { level: 3, label: 'Niveau 3 — Pleine autonomie + rapport hebdo', desc: "Commandes automatiques avec rapport hebdomadaire.", free: false },
+                ].map(({ level, label, desc, free }) => {
+                  const isPremium = !free && subscription !== 'premium' && subscription !== 'premium_plus';
+                  return (
+                    <label
+                      key={level}
+                      className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors ${
+                        aiSettings.ai_autonomy_level === level
+                          ? 'border-green-deep/30 bg-green-deep/5'
+                          : 'border-charcoal/8 hover:bg-cream/50'
+                      } ${isPremium ? 'opacity-60 cursor-not-allowed' : ''}`}
+                    >
+                      <input
+                        type="radio"
+                        name="ai_autonomy_level"
+                        value={level}
+                        checked={aiSettings.ai_autonomy_level === level}
+                        disabled={isPremium}
+                        onChange={() => !isPremium && setAiSettings((s) => ({ ...s, ai_autonomy_level: level }))}
+                        className="mt-0.5 h-4 w-4 text-green-deep focus:ring-green-deep"
+                      />
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium text-charcoal">{label}</span>
+                          {isPremium && (
+                            <span className="flex items-center gap-1 rounded-full bg-gold/15 px-2 py-0.5 text-xs font-medium text-gold">
+                              <Lock className="h-3 w-3" />
+                              Premium
+                            </span>
+                          )}
+                        </div>
+                        <p className="mt-0.5 text-xs text-charcoal/50">{desc}</p>
+                      </div>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+            {aiSettings.ai_autonomy_level >= 2 && (
+              <div>
+                <label htmlFor="ai-threshold" className="block text-xs font-medium text-charcoal/60 mb-1.5">
+                  Seuil de commande automatique (€)
+                </label>
+                <input
+                  id="ai-threshold"
+                  type="number"
+                  min={0}
+                  step={0.01}
+                  value={aiSettings.ai_auto_order_threshold}
+                  onChange={(e) => setAiSettings((s) => ({ ...s, ai_auto_order_threshold: parseFloat(e.target.value) || 0 }))}
+                  className="w-40 rounded-lg border border-charcoal/15 bg-white px-3 py-2 text-sm focus:outline-none focus:border-green-deep focus:ring-1 focus:ring-green-deep/20 transition-colors"
+                />
+                <p className="mt-1 text-xs text-charcoal/50">
+                  L&apos;IA commande automatiquement si le montant total est en dessous de ce seuil.
+                </p>
+              </div>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={handleSaveAiSettings}
+            disabled={aiSaving}
+            className="mt-4 inline-flex items-center gap-2 rounded-xl bg-green-deep px-4 py-2.5 font-display text-sm font-bold text-cream hover:bg-forest-green transition-colors disabled:opacity-70"
+          >
+            {aiSaving && <Loader2 className="h-4 w-4 animate-spin" />}
             Enregistrer
           </button>
         </section>

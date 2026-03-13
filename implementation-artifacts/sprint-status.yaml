@@ -84,17 +84,17 @@ development_status:
   5-3-feedback-loop-et-amelioration-du-modele: done
   epic-5-retrospective: optional
 
-  epic-6: backlog
-  6-1-infrastructure-ml-modeles-de-base: backlog
-  6-2-analyse-tendances-apprentissage-progressif: backlog
-  6-3-prediction-ruptures-stocks: backlog
-  6-4-reentrainement-automatique-quotidien: backlog
-  6-5-monitoring-performance-ia: backlog
-  6-6-generation-recommandations-commande: backlog
-  6-7-validation-commande-un-clic: backlog
-  6-8-gestion-autonomie-ia-limites-defaut: backlog
-  6-9-progression-autonomie-graduelle-premium-plus: backlog
-  6-10-integration-chat-ia-avec-generation-commandes: backlog
+  epic-6: done
+  6-1-infrastructure-ml-modeles-de-base: done
+  6-2-analyse-tendances-apprentissage-progressif: done
+  6-3-prediction-ruptures-stocks: done
+  6-4-reentrainement-automatique-quotidien: done
+  6-5-monitoring-performance-ia: done
+  6-6-generation-recommandations-commande: done
+  6-7-validation-commande-un-clic: done
+  6-8-gestion-autonomie-ia-limites-defaut: done
+  6-9-progression-autonomie-graduelle-premium-plus: done
+  6-10-integration-chat-ia-avec-generation-commandes: done
   epic-6-retrospective: optional
 
   epic-7: done

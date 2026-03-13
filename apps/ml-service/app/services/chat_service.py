@@ -91,6 +91,21 @@ class ChatService:
         context = await self._load_context(tenant_id, conversation_id)
         history = await self._get_conversation_history(tenant_id, conversation_id, limit=10)
         
+        # Story 6-10: detect order intent before calling LLM
+        if self._detect_order_intent(message):
+            ai_response = await self._handle_order_intent(tenant_id, message, access_token)
+            await self._save_message(tenant_id, conversation_id, "assistant", ai_response, {"intent": "order"})
+            await self._save_context(tenant_id, conversation_id, {
+                "last_query": message,
+                "intent": "order",
+                "updated_at": datetime.now().isoformat()
+            })
+            return ChatResponse(
+                conversation_id=conversation_id,
+                response=ai_response,
+                context_used=context is not None
+            )
+
         # Get stock information (uses user's JWT to call API)
         stock_info = await self._get_stock_info(tenant_id, message, access_token)
         
@@ -286,6 +301,67 @@ class ChatService:
             print(f"Error fetching stock info: {e}")
             return {"products": [], "estimates": []}
     
+    def _detect_order_intent(self, message: str) -> bool:
+        """Detect if the user message is an order/reorder intent (Story 6-10)."""
+        order_keywords = [
+            "commande", "commander", "réapprovisionne", "réapprovisionner",
+            "passe commande", "passer commande", "achète", "acheter",
+            "order", "reorder", "besoin de", "manque de", "stock bas",
+            "génère une commande", "générer une commande",
+        ]
+        msg_lower = message.lower()
+        return any(kw in msg_lower for kw in order_keywords)
+
+    async def _handle_order_intent(
+        self,
+        tenant_id: str,
+        message: str,
+        access_token: str,
+    ) -> str:
+        """Trigger order recommendation generation via API and return a summary (Story 6-10)."""
+        token = access_token or os.getenv("INTERNAL_API_TOKEN", "")
+        if not token:
+            return "Je ne peux pas générer de commande sans authentification. Veuillez vous reconnecter."
+
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                headers = {"Authorization": f"Bearer {token}"}
+                # First run predictions/compute to refresh predictions
+                await client.post(
+                    f"{self.stocks_service_url}/predictions/compute",
+                    headers=headers,
+                )
+                # Then generate recommendations
+                rec_response = await client.post(
+                    f"{self.stocks_service_url}/recommendations/generate",
+                    headers=headers,
+                )
+                if rec_response.status_code in (200, 201):
+                    data = rec_response.json()
+                    rec = data.get("data", {})
+                    items = rec.get("recommendations", [])
+                    if not items:
+                        return (
+                            "✅ J'ai analysé vos stocks — aucun réapprovisionnement urgent "
+                            "n'est nécessaire pour le moment."
+                        )
+                    lines = [
+                        f"• **{it['produit']}** ({it['fournisseur']}) : "
+                        f"{it['quantite_suggeree']} {it['unit']} — {it['justification']}"
+                        for it in items[:5]
+                    ]
+                    summary = "\n".join(lines)
+                    total = rec.get("total_estimated_cost")
+                    cost_str = f"\n\n💰 Coût estimé total : **{total:.2f} €**" if total else ""
+                    return (
+                        f"📦 J'ai généré une recommandation de commande pour {len(items)} "
+                        f"produit(s) :\n\n{summary}{cost_str}\n\n"
+                        "Rendez-vous dans **Suggestions IA** pour valider ou ajuster les quantités."
+                    )
+                return "Impossible de générer les recommandations. Vérifiez que vos données de stock sont à jour."
+        except Exception as exc:
+            return f"Erreur lors de la génération de la commande : {exc}"
+
     def _build_llm_prompt(
         self,
         history: List[ChatMessage],
@@ -294,13 +370,15 @@ class ChatService:
         tenant_id: str
     ) -> str:
         """Build prompt for LLM"""
-        system_prompt = """Tu es un assistant IA pour la gestion de stocks. Tu aides les gérants de PME à obtenir rapidement des informations sur leurs stocks via conversation naturelle.
+        system_prompt = """Tu es un assistant IA pour la gestion de stocks de restaurant (FlowStock). \
+Tu aides les gérants à obtenir des informations sur leurs stocks et à gérer leurs commandes.
 
-Règles importantes:
+Règles importantes :
 - Réponds de manière concise et claire (< 200 mots pour réponses simples)
-- Si l'utilisateur fait référence à quelque chose de précédent (ex: "leurs prix"), utilise le contexte de la conversation
-- Pour les analyses complexes, redirige vers le Dashboard
+- Si l'utilisateur fait référence à quelque chose de précédent, utilise le contexte de la conversation
+- Pour les analyses complexes, redirige vers le Dashboard ou la page Prévisions
 - Sois précis avec les données de stocks fournies
+- Pour les demandes de commande, indique que tu peux générer une recommandation automatique
 """
         
         # Add context if available
