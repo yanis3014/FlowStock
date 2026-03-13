@@ -3,7 +3,6 @@
  * Declares a stock loss: decrements product quantity atomically and logs a 'loss' movement.
  */
 import { getDatabase } from '../database/connection';
-import { logMovement } from './stockMovement.service';
 import type { LossDeclaration, LossDeclarationInput, LossReason } from '@bmad/shared';
 
 export const VALID_LOSS_REASONS: LossReason[] = ['expired', 'broken', 'theft', 'prep_error', 'other'];
@@ -37,72 +36,61 @@ export async function declareLoss(
 ): Promise<LossDeclaration> {
   const db = getDatabase();
 
-  const productResult = await db.queryWithTenant<ProductRow>(
-    tenantId,
-    `SELECT id, name, sku, quantity::text, unit
-     FROM products
-     WHERE id = $1 AND tenant_id = $2 AND is_active = true`,
-    [input.product_id, tenantId]
-  );
-
-  if (productResult.rows.length === 0) {
-    throw new Error('Produit introuvable ou inactif.');
-  }
-
-  const product = productResult.rows[0];
-  const quantityBefore = parseFloat(product.quantity);
-
   if (input.quantity <= 0) {
     throw new Error('La quantité de perte doit être supérieure à 0.');
   }
 
-  const quantityAfter = Math.max(0, quantityBefore - input.quantity);
   const reasonLabel = LOSS_REASON_LABELS[input.reason] ?? input.reason;
   const movementReason = input.notes
     ? `Perte — ${reasonLabel} : ${input.notes}`
     : `Perte — ${reasonLabel}`;
 
-  await db.queryWithTenant(
-    tenantId,
-    `UPDATE products
-     SET quantity = $1, updated_at = NOW()
-     WHERE id = $2 AND tenant_id = $3`,
-    [quantityAfter, input.product_id, tenantId]
-  );
+  return db.transactionWithTenant(tenantId, async (client) => {
+    const productResult = await client.query<ProductRow>(
+      `SELECT id, name, sku, quantity::text, unit
+       FROM products
+       WHERE id = $1 AND tenant_id = $2 AND is_active = true
+       FOR UPDATE`,
+      [input.product_id, tenantId]
+    );
 
-  await logMovement(
-    tenantId,
-    input.product_id,
-    'loss',
-    quantityBefore,
-    quantityAfter,
-    userId ?? null,
-    movementReason
-  );
+    if (productResult.rows.length === 0) {
+      throw new Error('Produit introuvable ou inactif.');
+    }
 
-  const movementResult = await db.queryWithTenant<{ id: string; created_at: Date }>(
-    tenantId,
-    `SELECT id, created_at
-     FROM stock_movements
-     WHERE tenant_id = $1 AND product_id = $2 AND movement_type = 'loss'
-     ORDER BY created_at DESC
-     LIMIT 1`,
-    [tenantId, input.product_id]
-  );
+    const product = productResult.rows[0];
+    const quantityBefore = parseFloat(product.quantity);
+    const quantityAfter = Math.max(0, quantityBefore - input.quantity);
 
-  const row = movementResult.rows[0];
+    await client.query(
+      `UPDATE products
+       SET quantity = $1, updated_at = NOW()
+       WHERE id = $2 AND tenant_id = $3`,
+      [quantityAfter, input.product_id, tenantId]
+    );
 
-  return {
-    id: row?.id ?? '',
-    product_id: input.product_id,
-    product_name: product.name,
-    product_sku: product.sku,
-    quantity: input.quantity,
-    quantity_before: quantityBefore,
-    quantity_after: quantityAfter,
-    reason: input.reason,
-    notes: input.notes ?? null,
-    user_id: userId ?? null,
-    created_at: row?.created_at?.toISOString() ?? new Date().toISOString(),
-  };
+    const movementResult = await client.query<{ id: string; created_at: Date }>(
+      `INSERT INTO stock_movements
+         (tenant_id, product_id, movement_type, quantity_before, quantity_after, user_id, reason)
+       VALUES ($1, $2, 'loss', $3, $4, $5, $6)
+       RETURNING id, created_at`,
+      [tenantId, input.product_id, quantityBefore, quantityAfter, userId ?? null, movementReason]
+    );
+
+    const row = movementResult.rows[0];
+
+    return {
+      id: row?.id ?? '',
+      product_id: input.product_id,
+      product_name: product.name,
+      product_sku: product.sku,
+      quantity: input.quantity,
+      quantity_before: quantityBefore,
+      quantity_after: quantityAfter,
+      reason: input.reason,
+      notes: input.notes ?? null,
+      user_id: userId ?? null,
+      created_at: row?.created_at?.toISOString() ?? new Date().toISOString(),
+    };
+  });
 }

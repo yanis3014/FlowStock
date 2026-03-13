@@ -51,6 +51,19 @@ export function LossDeclarationModal({
 
   const firstInputRef = useRef<HTMLInputElement>(null);
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setDropdownOpen(false);
+      }
+    }
+    if (dropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [dropdownOpen]);
 
   const loadProducts = useCallback(
     (q: string) => {
@@ -195,7 +208,7 @@ export function LossDeclarationModal({
 
         <div className="space-y-4 p-6">
           {/* Produit */}
-          <div className="relative">
+          <div className="relative" ref={dropdownRef}>
             <label className="block text-xs font-semibold text-gray-warm" htmlFor="loss-product">
               Produit *
             </label>
