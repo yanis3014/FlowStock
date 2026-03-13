@@ -5,8 +5,39 @@ import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { useApi } from '@/hooks/useApi';
 import { useCrudModal } from '@/hooks/useCrudModal';
-import { Plus, Search, Package, Pencil, Trash2, Loader2, History } from 'lucide-react';
+import { Plus, Search, Package, Pencil, Trash2, Loader2, History, Info } from 'lucide-react';
 import type { Product, ProductUnit, StockStatus, LocationRef, SupplierRef } from '@bmad/shared';
+
+type ConfidenceLevel = 'high' | 'medium' | 'low' | 'insufficient';
+
+interface StockEstimate {
+  product_id: string;
+  product_name: string;
+  sku: string;
+  current_stock: number;
+  unit: string;
+  avg_daily_consumption: number | null;
+  days_remaining: number | null;
+  estimated_stockout_date: string | null;
+  confidence_level: ConfidenceLevel;
+  sales_days_count: number;
+  period_days: number;
+}
+
+const ESTIMATE_BASIC_MESSAGE =
+  'Estimation basique à partir des ventes des 30 derniers jours. La précision s\'améliorera avec les prédictions IA (niveau Premium).';
+
+function confidenceLabel(level: ConfidenceLevel): string {
+  if (level === 'insufficient') return 'Pas assez de données de ventes';
+  if (level === 'low') return 'Estimation peu fiable';
+  return '';
+}
+
+function confidenceBadgeClass(level: ConfidenceLevel): string {
+  if (level === 'insufficient') return 'bg-red-alert/15 text-red-alert border-red-alert/30';
+  if (level === 'low') return 'bg-orange-warn/15 text-orange-warn border-orange-warn/30';
+  return '';
+}
 
 const UNITS: { value: ProductUnit; label: string }[] = [
   { value: 'piece', label: 'Pièce' },
@@ -54,8 +85,30 @@ export default function StocksPage() {
   const [suppliers, setSuppliers] = useState<SupplierRef[]>([]);
   const [refsLoadError, setRefsLoadError] = useState('');
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
+  const [estimatesByProductId, setEstimatesByProductId] = useState<Record<string, StockEstimate>>({});
+  const [estimatesLoadError, setEstimatesLoadError] = useState(false);
   const modalFirstInputRef = useRef<HTMLInputElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
+
+  const loadEstimates = useCallback(() => {
+    if (!token) return;
+    setEstimatesLoadError(false);
+    fetchApi('/stock-estimates?period_days=30')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((json) => {
+        if (json?.success && Array.isArray(json?.data)) {
+          const map: Record<string, StockEstimate> = {};
+          json.data.forEach((e: StockEstimate) => {
+            map[e.product_id] = e;
+          });
+          setEstimatesByProductId(map);
+        } else setEstimatesByProductId({});
+      })
+      .catch(() => {
+        setEstimatesByProductId({});
+        setEstimatesLoadError(true);
+      });
+  }, [token, fetchApi]);
 
   const loadProducts = useCallback(() => {
     if (!token) return;
@@ -96,6 +149,10 @@ export default function StocksPage() {
   }, [token, loadProducts]);
 
   useEffect(() => {
+    if (token) loadEstimates();
+  }, [token, loadEstimates]);
+
+  useEffect(() => {
     if (!token) return;
     setRefsLoadError('');
     fetchApi('/locations')
@@ -131,8 +188,9 @@ export default function StocksPage() {
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json?.error ?? 'Erreur lors de la création.');
       loadProducts();
+      loadEstimates();
     },
-    [fetchApi, loadProducts]
+    [fetchApi, loadProducts, loadEstimates]
   );
 
   const handleUpdate = useCallback(
@@ -154,8 +212,9 @@ export default function StocksPage() {
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json?.error ?? 'Erreur lors de la modification.');
       loadProducts();
+      loadEstimates();
     },
-    [fetchApi, loadProducts]
+    [fetchApi, loadProducts, loadEstimates]
   );
 
   const handleDelete = useCallback(
@@ -167,8 +226,9 @@ export default function StocksPage() {
       }
       setProductToDelete(null);
       loadProducts();
+      loadEstimates();
     },
-    [fetchApi, loadProducts]
+    [fetchApi, loadProducts, loadEstimates]
   );
 
   const validateForm = useCallback((formData: ProductForm): string | null => {
@@ -259,6 +319,14 @@ export default function StocksPage() {
         {refsLoadError && (
           <div className="rounded-xl border border-orange-warn/30 bg-orange-warn/10 px-4 py-3 text-sm text-orange-warn">
             {refsLoadError}
+          </div>
+        )}
+        {estimatesLoadError && (
+          <div className="rounded-xl border border-orange-warn/30 bg-orange-warn/10 px-4 py-3 text-sm text-orange-warn">
+            Impossible de charger les estimations de stock. Les colonnes « Jours restant » sont indisponibles.{' '}
+            <button type="button" onClick={loadEstimates} className="underline hover:no-underline">
+              Réessayer
+            </button>
           </div>
         )}
 
@@ -359,6 +427,9 @@ export default function StocksPage() {
                   <th className="px-4 py-3 text-left font-display text-xs font-bold uppercase tracking-wider text-gray-warm">
                     Statut
                   </th>
+                  <th className="px-4 py-3 text-left font-display text-xs font-bold uppercase tracking-wider text-gray-warm">
+                    Jours restant (est.)
+                  </th>
                   <th className="px-4 py-3 text-right font-display text-xs font-bold uppercase tracking-wider text-gray-warm">
                     Actions
                   </th>
@@ -367,7 +438,7 @@ export default function StocksPage() {
               <tbody>
                 {filteredList.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-4 py-8 text-center text-sm text-gray-warm">
+                    <td colSpan={8} className="px-4 py-8 text-center text-sm text-gray-warm">
                       Aucun stock. Cliquez sur « Nouveau produit » pour en ajouter.
                     </td>
                   </tr>
@@ -396,6 +467,29 @@ export default function StocksPage() {
                               ? 'Attention'
                               : 'OK'}
                         </span>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-charcoal">
+                        {(() => {
+                          const est = estimatesByProductId[row.id];
+                          if (!est) return '—';
+                          const days = est.days_remaining;
+                          const label = confidenceLabel(est.confidence_level);
+                          const showBadge = est.confidence_level === 'low' || est.confidence_level === 'insufficient';
+                          return (
+                            <span className="inline-flex flex-col gap-0.5">
+                              <span>{days != null ? `${days} j` : '—'}</span>
+                              {showBadge && label && (
+                                <span
+                                  className={`inline-block w-fit rounded-md border px-1.5 py-0.5 text-[10px] font-medium ${confidenceBadgeClass(est.confidence_level)}`}
+                                  title={label}
+                                  aria-label={label}
+                                >
+                                  {label}
+                                </span>
+                              )}
+                            </span>
+                          );
+                        })()}
                       </td>
                       <td className="px-4 py-3 text-right">
                         <Link
@@ -437,6 +531,11 @@ export default function StocksPage() {
             </table>
           )}
         </div>
+
+        <p className="flex items-start gap-2 text-xs text-gray-warm" role="note" aria-label={ESTIMATE_BASIC_MESSAGE}>
+          <Info className="h-4 w-4 shrink-0 mt-0.5" aria-hidden />
+          <span>{ESTIMATE_BASIC_MESSAGE}</span>
+        </p>
 
         {pagination.total_pages > 1 && (
           <div className="flex items-center justify-center gap-2 text-sm">

@@ -14,19 +14,31 @@ describe('formula.service', () => {
   });
 
   describe('listPredefinedFormulas', () => {
-    it('should return array of predefined formulas', async () => {
+    it('should return array of 8 predefined formulas when seeded', async () => {
       const result = await listPredefinedFormulas(tenantId);
       expect(Array.isArray(result)).toBe(true);
-      expect(result.length).toBeGreaterThanOrEqual(0);
-      if (result.length > 0) {
-        expect(result[0]).toMatchObject({
-          id: expect.any(String),
-          name: expect.any(String),
-          description: expect.anything(),
-          formula_expression: expect.any(String),
-          formula_type: 'predefined',
-        });
+      expect(result.length).toBeGreaterThan(0);
+      expect(result.length).toBe(8);
+      const expectedNames = [
+        'consommation_moyenne',
+        'stock_securite',
+        'point_commande',
+        'taux_rotation',
+        'jours_stock_restant',
+        'cout_stock_moyen',
+        'valeur_stock',
+        'marge_beneficiaire',
+      ];
+      const names = result.map((f) => f.name);
+      for (const n of expectedNames) {
+        expect(names).toContain(n);
       }
+      expect(result[0]).toMatchObject({
+        id: expect.any(String),
+        name: expect.any(String),
+        formula_expression: expect.any(String),
+        formula_type: 'predefined',
+      });
     });
   });
 

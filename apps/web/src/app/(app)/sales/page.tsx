@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
-import { Plus, Trash2, Pencil, Loader2 } from 'lucide-react';
+import { Plus, Trash2, Pencil, Loader2, Upload, Download } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useApi } from '@/hooks/useApi';
 import { DataTable, type DataTableColumn, type PaginationState } from '@/components/ui/DataTable';
@@ -53,9 +53,26 @@ export default function SalesPage() {
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [saleToDelete, setSaleToDelete] = useState<Sale | null>(null);
   const [editLoadingId, setEditLoadingId] = useState<string | null>(null);
+  const [importModalOpen, setImportModalOpen] = useState(false);
+  const [importStep, setImportStep] = useState<1 | 2 | 3>(1);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importPreview, setImportPreview] = useState<{
+    columns: string[];
+    sampleRows: Record<string, string>[];
+    suggestedMapping: Record<string, string>;
+  } | null>(null);
+  const [importMapping, setImportMapping] = useState<Record<string, string>>({});
+  const [importResult, setImportResult] = useState<{
+    imported: number;
+    errors: { row: number; value?: string; message: string }[];
+    totalRows: number;
+  } | null>(null);
+  const [importLoading, setImportLoading] = useState(false);
+  const [importPreviewError, setImportPreviewError] = useState('');
   const modalFirstInputRef = useRef<HTMLInputElement>(null);
   const modalContentRef = useRef<HTMLDivElement>(null);
   const modalDeleteRef = useRef<HTMLDivElement>(null);
+  const importModalContentRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
 
   const FOCUSABLE_SELECTOR = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
@@ -68,12 +85,12 @@ export default function SalesPage() {
       const params = new URLSearchParams();
       params.set('page', String(pageOverride ?? page));
       params.set('limit', String(PAGE_SIZE));
-    if (dateFrom) params.set('date_from', dateFrom);
-    if (dateTo) params.set('date_to', dateTo);
-    if (productId) params.set('product_id', productId);
-    if (locationId) params.set('location_id', locationId);
-    params.set('sort', sortKey);
-    params.set('order', sortOrder);
+      if (dateFrom) params.set('date_from', dateFrom);
+      if (dateTo) params.set('date_to', dateTo);
+      if (productId) params.set('product_id', productId);
+      if (locationId) params.set('location_id', locationId);
+      params.set('sort', sortKey);
+      params.set('order', sortOrder);
 
     fetchApi(`/sales?${params.toString()}`)
       .then((res) => {
@@ -279,6 +296,12 @@ export default function SalesPage() {
     }
   }, [saleToDelete]);
 
+  useEffect(() => {
+    if (importModalOpen && importModalContentRef.current) {
+      return setupFocusTrap(importModalContentRef.current);
+    }
+  }, [importModalOpen]);
+
   const openDeleteConfirm = (sale: Sale) => setSaleToDelete(sale);
 
   const confirmDelete = () => {
@@ -326,8 +349,140 @@ export default function SalesPage() {
     n != null ? new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', minimumFractionDigits: 2 }).format(n) : '—';
 
   const formatSource = (s: string) => {
-    const map: Record<string, string> = { manual: 'Manuelle', csv_import: 'Import CSV', pos_terminal: 'POS', api: 'API' };
+    const map: Record<string, string> = { manual: 'Manuelle', csv: 'Import CSV', csv_import: 'Import CSV', pos_terminal: 'POS', api: 'API' };
     return map[s] ?? s;
+  };
+
+  const SALE_MAPPING_FIELDS = [
+    { value: '', label: '—' },
+    { value: 'sale_date', label: 'Date vente' },
+    { value: 'product_sku', label: 'Produit (SKU)' },
+    { value: 'quantity_sold', label: 'Quantité' },
+    { value: 'unit_price', label: 'Prix unitaire' },
+    { value: 'location_name', label: 'Emplacement' },
+  ] as const;
+
+  const downloadTemplate = useCallback(() => {
+    if (!token) return;
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || '';
+    fetch(`${apiUrl}/sales/import/template`, { credentials: 'include', headers: { Authorization: `Bearer ${token}` } })
+      .then((r) => {
+        if (!r.ok) throw new Error('Téléchargement impossible');
+        return r.blob();
+      })
+      .then((blob) => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'sales-import-template.csv';
+        a.click();
+        URL.revokeObjectURL(url);
+      })
+      .catch(() => toast.error('Erreur lors du téléchargement du template'));
+  }, [token]);
+
+  const openImportModal = () => {
+    setImportModalOpen(true);
+    setImportStep(1);
+    setImportFile(null);
+    setImportPreview(null);
+    setImportMapping({});
+    setImportResult(null);
+    setImportPreviewError('');
+  };
+
+  const closeImportModal = () => {
+    setImportModalOpen(false);
+    setImportStep(1);
+    setImportFile(null);
+    setImportPreview(null);
+    setImportMapping({});
+    setImportResult(null);
+    setImportPreviewError('');
+  };
+
+  const handleImportFileSelect = useCallback(
+    async (file: File) => {
+      if (!file.name.toLowerCase().endsWith('.csv')) {
+        setImportPreviewError('Seuls les fichiers CSV sont acceptés.');
+        return;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        setImportPreviewError('Fichier trop volumineux (max 5 Mo).');
+        return;
+      }
+      setImportPreviewError('');
+      setImportFile(file);
+      setImportLoading(true);
+      const form = new FormData();
+      form.append('file', file);
+      try {
+        const res = await fetchApi('/sales/import/preview', { method: 'POST', body: form });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          setImportPreviewError(json?.error ?? 'Impossible de lire le fichier.');
+          return;
+        }
+        if (json?.success && json?.data) {
+          const { columns, sampleRows, suggestedMapping } = json.data;
+          setImportPreview({ columns, sampleRows: sampleRows || [], suggestedMapping: suggestedMapping || {} });
+          setImportMapping(suggestedMapping || {});
+          setImportStep(2);
+        } else {
+          setImportPreviewError('Réponse invalide.');
+        }
+      } catch {
+        setImportPreviewError('Erreur réseau.');
+      } finally {
+        setImportLoading(false);
+      }
+    },
+    [fetchApi]
+  );
+
+  const handleLaunchImport = useCallback(async () => {
+    if (!importFile) return;
+    setImportLoading(true);
+    const form = new FormData();
+    form.append('file', importFile);
+    form.append('mapping', JSON.stringify(importMapping));
+    try {
+      const res = await fetchApi('/sales/import', { method: 'POST', body: form });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(json?.error ?? 'Import échoué.');
+        return;
+      }
+      if (json?.success && json?.data) {
+        setImportResult({
+          imported: json.data.imported ?? 0,
+          errors: json.data.errors ?? [],
+          totalRows: json.data.totalRows ?? 0,
+        });
+        setImportStep(3);
+      } else {
+        toast.error('Réponse invalide.');
+      }
+    } catch {
+      toast.error('Erreur réseau.');
+    } finally {
+      setImportLoading(false);
+    }
+  }, [importFile, importMapping, fetchApi]);
+
+  const hasProductSkuMapping = Object.values(importMapping).includes('product_sku');
+
+  const handleImportCloseAndRefresh = () => {
+    const imported = importResult?.imported ?? 0;
+    const errorsCount = importResult?.errors?.length ?? 0;
+    closeImportModal();
+    setPage(1);
+    loadSales(1);
+    if (imported > 0) {
+      toast.success(errorsCount > 0 ? `${imported} ventes importées. ${errorsCount} erreur(s) signalées.` : `${imported} ventes importées avec succès.`);
+    } else if (errorsCount > 0) {
+      toast.error(`Aucune vente importée. ${errorsCount} erreur(s) rencontrées.`);
+    }
   };
 
   const columns: DataTableColumn<Sale>[] = [
@@ -349,16 +504,26 @@ export default function SalesPage() {
 
         <PageHeader
           title="Ventes"
-          subtitle="Saisie manuelle · Liste et historique des ventes"
+          subtitle="Saisie manuelle · Import CSV · Liste et historique des ventes"
           actions={
-            <button
-              type="button"
-              onClick={openCreate}
-              className="inline-flex items-center gap-2 bg-green-deep text-cream px-4 py-2 rounded-lg text-sm font-medium hover:bg-forest-green transition-colors"
-            >
-              <Plus className="h-4 w-4" />
-              Nouvelle vente
-            </button>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={openImportModal}
+                className="inline-flex items-center gap-2 border border-green-deep text-green-deep bg-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-deep/5 transition-colors"
+              >
+                <Upload className="h-4 w-4" />
+                Importer CSV
+              </button>
+              <button
+                type="button"
+                onClick={openCreate}
+                className="inline-flex items-center gap-2 bg-green-deep text-cream px-4 py-2 rounded-lg text-sm font-medium hover:bg-forest-green transition-colors"
+              >
+                <Plus className="h-4 w-4" />
+                Nouvelle vente
+              </button>
+            </div>
           }
         />
 
@@ -622,6 +787,198 @@ export default function SalesPage() {
                 >
                   {deleteConfirmId === saleToDelete.id ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
                   Supprimer
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal Import CSV */}
+        {importModalOpen && (
+          <div
+            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={(e) => e.target === e.currentTarget && closeImportModal()}
+            onKeyDown={(e) => e.key === 'Escape' && closeImportModal()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="import-modal-title"
+          >
+            <div ref={importModalContentRef} className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl border border-charcoal/8">
+              <h2 id="import-modal-title" className="text-lg font-display font-bold text-charcoal">
+                Import CSV ventes
+              </h2>
+
+              {importStep === 1 && (
+                <>
+                  <p className="mt-2 text-sm text-charcoal/80">
+                    Étape 1 : Choisissez un fichier CSV (max 5 Mo). Les colonnes seront détectées automatiquement.
+                  </p>
+                  <div className="mt-4">
+                    <label className="block border-2 border-dashed border-charcoal/20 rounded-xl p-6 text-center cursor-pointer hover:border-green-deep/40 hover:bg-green-deep/5 transition-colors">
+                      <input
+                        type="file"
+                        accept=".csv"
+                        className="sr-only"
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          if (f) handleImportFileSelect(f);
+                        }}
+                        disabled={importLoading}
+                      />
+                      {importLoading ? (
+                        <span className="inline-flex items-center gap-2 text-charcoal/70">
+                          <Loader2 className="h-5 w-5 animate-spin" />
+                          Analyse du fichier…
+                        </span>
+                      ) : (
+                        <span className="text-charcoal/80">
+                          Glissez-déposez un fichier ici ou <span className="text-green-deep font-medium">cliquez pour parcourir</span>
+                        </span>
+                      )}
+                    </label>
+                  </div>
+                  {importPreviewError && (
+                    <div className="mt-3 rounded-xl border border-terracotta/30 bg-terracotta/10 px-4 py-3 text-sm text-terracotta" role="alert">
+                      {importPreviewError}
+                    </div>
+                  )}
+                </>
+              )}
+
+              {importStep === 2 && importPreview && (
+                <>
+                  <p className="mt-2 text-sm text-charcoal/80">
+                    Étape 2 : Vérifiez le mapping des colonnes puis lancez l&apos;import.
+                  </p>
+                  <div className="mt-4 space-y-3">
+                    {importPreview.columns.map((col) => (
+                      <div key={col} className="flex items-center gap-3">
+                        <span className="text-sm font-medium text-charcoal min-w-[140px] truncate" title={col}>
+                          {col}
+                        </span>
+                        <span className="text-charcoal/50">→</span>
+                        <select
+                          value={importMapping[col] ?? ''}
+                          onChange={(e) => setImportMapping((m) => ({ ...m, [col]: e.target.value }))}
+                          className="flex-1 rounded-lg border border-charcoal/15 bg-white px-3 py-2 text-sm text-charcoal focus:outline-none focus:border-green-deep focus:ring-1 focus:ring-green-deep/20"
+                        >
+                          {SALE_MAPPING_FIELDS.map((opt) => (
+                            <option key={opt.value} value={opt.value}>
+                              {opt.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    ))}
+                  </div>
+                  {importPreview.sampleRows.length > 0 && (
+                    <div className="mt-4 overflow-x-auto rounded-xl border border-charcoal/10">
+                      <p className="text-xs font-medium text-charcoal/60 px-3 py-2 border-b border-charcoal/10">Aperçu (5 premières lignes)</p>
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="bg-charcoal/5">
+                            {importPreview.columns.map((c) => (
+                              <th key={c} className="text-left px-3 py-2 font-medium text-charcoal/80 truncate max-w-[120px]">
+                                {c}
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {importPreview.sampleRows.slice(0, 5).map((row, i) => (
+                            <tr key={i} className="border-t border-charcoal/8">
+                              {importPreview!.columns.map((c) => (
+                                <td key={c} className="px-3 py-1.5 text-charcoal/90 truncate max-w-[120px]">
+                                  {row[c] ?? '—'}
+                                </td>
+                              ))}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                  {!hasProductSkuMapping && (
+                    <p className="mt-2 text-sm text-terracotta" role="alert">
+                      Mappez au moins une colonne au champ « Produit (SKU) » pour lancer l&apos;import.
+                    </p>
+                  )}
+                  <div className="mt-4 flex justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => { setImportStep(1); setImportPreviewError(''); }}
+                      className="border border-charcoal/20 text-charcoal px-4 py-2 rounded-lg text-sm font-medium hover:bg-charcoal/5 transition-colors"
+                    >
+                      Retour
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleLaunchImport}
+                      disabled={importLoading || !hasProductSkuMapping}
+                      title={!hasProductSkuMapping ? 'Veuillez mapper au moins une colonne au champ Produit (SKU)' : undefined}
+                      className="inline-flex items-center gap-2 bg-green-deep text-cream px-4 py-2 rounded-lg text-sm font-medium hover:bg-forest-green disabled:opacity-50 transition-colors"
+                    >
+                      {importLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+                      Lancer l&apos;import
+                    </button>
+                  </div>
+                </>
+              )}
+
+              {importStep === 3 && importResult && (
+                <>
+                  <p className="mt-2 text-sm text-charcoal/80">Résultat de l&apos;import</p>
+                  <div className="mt-4 rounded-xl border border-charcoal/10 bg-charcoal/[0.02] p-4 space-y-2" role="status" aria-live="polite">
+                    <p className="text-sm text-charcoal">
+                      <strong>{importResult.imported}</strong> vente(s) importée(s) sur <strong>{importResult.totalRows}</strong> ligne(s).
+                    </p>
+                    {importResult.errors.length > 0 && (
+                      <div className="mt-2">
+                        <p className="text-xs font-medium text-terracotta mb-1">{importResult.errors.length} erreur(s) :</p>
+                        <ul className="text-xs text-charcoal/90 list-disc list-inside max-h-32 overflow-y-auto">
+                          {importResult.errors.slice(0, 20).map((err, i) => (
+                            <li key={i}>
+                              Ligne {err.row} : {err.message}
+                              {err.value != null ? ` (${String(err.value).slice(0, 30)}…)` : ''}
+                            </li>
+                          ))}
+                          {importResult.errors.length > 20 && (
+                            <li>… et {importResult.errors.length - 20} autre(s) erreur(s)</li>
+                          )}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                  <div className="mt-4 flex justify-end">
+                    <button
+                      type="button"
+                      onClick={handleImportCloseAndRefresh}
+                      className="inline-flex items-center gap-2 bg-green-deep text-cream px-4 py-2 rounded-lg text-sm font-medium hover:bg-forest-green transition-colors"
+                    >
+                      Fermer
+                    </button>
+                  </div>
+                </>
+              )}
+
+              <div className="mt-6 pt-4 border-t border-charcoal/10">
+                <button
+                  type="button"
+                  onClick={downloadTemplate}
+                  className="inline-flex items-center gap-2 text-sm text-green-deep hover:underline focus:outline-none focus:ring-2 focus:ring-green-deep/30 rounded"
+                >
+                  <Download className="h-4 w-4" />
+                  Télécharger le template CSV
+                </button>
+              </div>
+
+              <div className="mt-3 flex justify-end">
+                <button
+                  type="button"
+                  onClick={closeImportModal}
+                  className="text-sm text-charcoal/60 hover:text-charcoal transition-colors"
+                >
+                  Annuler
                 </button>
               </div>
             </div>

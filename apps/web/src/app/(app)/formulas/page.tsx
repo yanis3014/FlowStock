@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { StandardFormulasContent } from './_components/StandardFormulasContent';
 import { CustomFormulasContent } from './_components/CustomFormulasContent';
@@ -10,8 +10,12 @@ type Tab = 'standard' | 'custom';
 
 export default function FormulasPage() {
   const searchParams = useSearchParams();
-  const initialTab = (searchParams.get('tab') as Tab) || 'standard';
-  const [activeTab, setActiveTab] = useState<Tab>(initialTab);
+  const [activeTab, setActiveTab] = useState<Tab>(() => (searchParams.get('tab') as Tab) || 'standard');
+
+  useEffect(() => {
+    const tab = (searchParams.get('tab') as Tab) || 'standard';
+    setActiveTab(tab);
+  }, [searchParams]);
 
   const tabs: { id: Tab; label: string }[] = [
     { id: 'standard', label: 'Formules standard' },

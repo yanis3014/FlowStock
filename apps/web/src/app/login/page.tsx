@@ -18,7 +18,9 @@ function LoginForm() {
 
   const handleDemo = () => {
     setToken('demo');
-    router.push(returnUrl);
+    const decoded = returnUrl.startsWith('/') ? returnUrl : `/${returnUrl}`;
+    router.replace(decoded);
+    router.refresh();
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -29,7 +31,9 @@ function LoginForm() {
     const result = await login(email.trim(), password);
 
     if (result.success) {
-      router.push(returnUrl);
+      const decoded = returnUrl.startsWith('/') ? returnUrl : `/${returnUrl}`;
+      router.replace(decoded);
+      router.refresh();
       return;
     }
 

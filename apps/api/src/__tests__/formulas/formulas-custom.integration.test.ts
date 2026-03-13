@@ -78,16 +78,52 @@ describe('Custom Formulas Integration Tests', () => {
   });
 
   afterAll(async () => {
-    await pool.query("DELETE FROM formulas WHERE formula_type = 'custom'");
-    await pool.query('DELETE FROM sales');
-    await pool.query('DELETE FROM stock_movements');
-    await pool.query('DELETE FROM products');
-    await pool.query('DELETE FROM locations');
-    await pool.query('DELETE FROM suppliers');
-    await pool.query('DELETE FROM subscription_changes');
-    await pool.query('DELETE FROM subscriptions');
-    await pool.query('DELETE FROM refresh_tokens');
-    await pool.query('DELETE FROM users');
+    // Scoped cleanup: only delete data belonging to tenants created in this test suite
+    await pool.query(`
+      DELETE FROM formulas
+      WHERE formula_type = 'custom'
+        AND tenant_id IN (SELECT id FROM tenants WHERE slug LIKE 'custom-formula%')
+    `);
+    await pool.query(`
+      DELETE FROM sales
+      WHERE tenant_id IN (SELECT id FROM tenants WHERE slug LIKE 'custom-formula%')
+    `);
+    await pool.query(`
+      DELETE FROM stock_movements
+      WHERE tenant_id IN (SELECT id FROM tenants WHERE slug LIKE 'custom-formula%')
+    `);
+    await pool.query(`
+      DELETE FROM products
+      WHERE tenant_id IN (SELECT id FROM tenants WHERE slug LIKE 'custom-formula%')
+    `);
+    await pool.query(`
+      DELETE FROM locations
+      WHERE tenant_id IN (SELECT id FROM tenants WHERE slug LIKE 'custom-formula%')
+    `);
+    await pool.query(`
+      DELETE FROM suppliers
+      WHERE tenant_id IN (SELECT id FROM tenants WHERE slug LIKE 'custom-formula%')
+    `);
+    await pool.query(`
+      DELETE FROM subscription_changes sc
+      USING subscriptions s
+      WHERE sc.subscription_id = s.id
+        AND s.tenant_id IN (SELECT id FROM tenants WHERE slug LIKE 'custom-formula%')
+    `);
+    await pool.query(`
+      DELETE FROM subscriptions
+      WHERE tenant_id IN (SELECT id FROM tenants WHERE slug LIKE 'custom-formula%')
+    `);
+    await pool.query(`
+      DELETE FROM refresh_tokens rt
+      USING users u
+      WHERE rt.user_id = u.id
+        AND u.tenant_id IN (SELECT id FROM tenants WHERE slug LIKE 'custom-formula%')
+    `);
+    await pool.query(`
+      DELETE FROM users
+      WHERE tenant_id IN (SELECT id FROM tenants WHERE slug LIKE 'custom-formula%')
+    `);
     await pool.query("DELETE FROM tenants WHERE slug LIKE 'custom-formula%'");
     await pool.end();
     await closeDatabase();

@@ -139,6 +139,8 @@ export function extractVariables(expression: string): string[] {
 export interface ValidationResult {
   valid: boolean;
   error?: string;
+  /** Approximate character index of the error in the expression (0-based), if available */
+  error_position?: number;
   variables_detected: string[];
 }
 
@@ -192,12 +194,23 @@ export function validateFormulaSyntax(expression: string): ValidationResult {
       return { valid: false, error: err.message, variables_detected: variables };
     }
     const message = err instanceof Error ? err.message : String(err);
-    // Translate common mathjs errors to French
+    const errorPosition = extractErrorPosition(message);
     const translated = translateMathError(message);
-    return { valid: false, error: translated, variables_detected: variables };
+    return { valid: false, error: translated, error_position: errorPosition, variables_detected: variables };
   }
 
   return { valid: true, variables_detected: variables };
+}
+
+/**
+ * Extracts character position from a mathjs error message.
+ * Returns 0-based character index or undefined if not parseable.
+ */
+function extractErrorPosition(message: string): number | undefined {
+  // mathjs errors often include "char N" or "column N"
+  const charMatch = message.match(/char\s+(\d+)/i) || message.match(/column\s+(\d+)/i);
+  if (charMatch) return Math.max(0, parseInt(charMatch[1]) - 1);
+  return undefined;
 }
 
 function translateMathError(message: string): string {

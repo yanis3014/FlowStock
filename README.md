@@ -73,6 +73,23 @@ bmad-stock-agent/
 - `npm run build` - Builder tous les packages et apps
 - `npm run lint` - Linter le code
 - `npm run test` - Exécuter les tests
+- `npm run create-user` - Créer l'utilisateur démo (demo@flowstock.local / Demo1234!)
+- `npm run promote-admin` - Donner le rôle admin à un utilisateur (par défaut demo@flowstock.local)
+
+### Accès admin
+
+Pour te connecter au back-office admin :
+
+1. **Créer un utilisateur** (si besoin) : `npm run create-user`  
+   → Crée `demo@flowstock.local` / `Demo1234!` et vérifie l’email en dev.
+
+2. **Lui donner le rôle admin** : `npm run promote-admin`  
+   → Par défaut promeut `demo@flowstock.local`. Pour un autre email :  
+   `node scripts/promote-admin.js ton@email.com`
+
+3. **Se connecter** : ouvre **http://localhost:3002/admin/login** et utilise l’email / mot de passe de cet utilisateur.
+
+L’API n’accepte que les utilisateurs avec le rôle `admin` pour les routes `/api/admin/*`.
 
 ### Base de Données
 

@@ -84,11 +84,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         const accessToken = data?.data?.access_token;
+        const userPayload = data?.data?.user;
+        const tenantPayload = data?.data?.tenant;
         if (!accessToken) {
           return { success: false, error: 'Réponse inattendue.' };
         }
 
         setToken(accessToken);
+        // Définir l'utilisateur immédiatement depuis la réponse pour éviter que le layout
+        // (app) ne redirige vers /login avant que /auth/me ne soit appelé
+        if (userPayload && tenantPayload) {
+          setState((prev) => ({
+            ...prev,
+            user: {
+              userId: userPayload.id,
+              tenantId: tenantPayload.id,
+              role: userPayload.role ?? 'user',
+              email: userPayload.email ?? '',
+            },
+          }));
+        }
 
         return { success: true };
       } catch (err) {

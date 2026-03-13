@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { Calculator, Loader2, ChevronDown, ChevronUp } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useApi } from '@/hooks/useApi';
@@ -27,26 +28,33 @@ interface ExecuteResult {
   formula_name?: string;
 }
 
+const PRODUCT_REQUIRED_FORMULAS = new Set([
+  'consommation_moyenne',
+  'stock_securite',
+  'point_commande',
+  'jours_stock_restant',
+]);
+
 const FORMULA_LABELS: Record<string, string> = {
   consommation_moyenne: 'Consommation moyenne',
-  stock_securite: 'Stock de s뿯½curit뿯½',
+  stock_securite: 'Stock de sécurité',
   point_commande: 'Point de commande',
   taux_rotation: 'Taux de rotation',
   jours_stock_restant: 'Jours de stock restant',
-  cout_stock_moyen: 'Co뿯½t stock moyen',
+  cout_stock_moyen: 'Coût stock moyen',
   valeur_stock: 'Valeur stock',
-  marge_beneficiaire: 'Marge b뿯½n뿯½ficiaire',
+  marge_beneficiaire: 'Marge bénéficiaire',
 };
 
 const DOC_ITEMS = [
-  { name: 'Consommation moyenne', desc: 'Moyenne des ventes quotidiennes sur la p뿯½riode. N뿯½cessite un produit.' },
-  { name: 'Stock de s뿯½curit뿯½', desc: 'CONSOMMATION_MOYENNE 뿯½ DELAI_LIVRAISON 뿯½ 1,5. N뿯½cessite un produit.' },
-  { name: 'Point de commande', desc: 'STOCK_SECURITE + (CONSOMMATION_MOYENNE 뿯½ DELAI_LIVRAISON). N뿯½cessite un produit.' },
+  { name: 'Consommation moyenne', desc: 'Moyenne des ventes quotidiennes sur la période. Nécessite un produit.' },
+  { name: 'Stock de sécurité', desc: 'CONSOMMATION_MOYENNE × DELAI_LIVRAISON × 1,5. Nécessite un produit.' },
+  { name: 'Point de commande', desc: 'STOCK_SECURITE + (CONSOMMATION_MOYENNE × DELAI_LIVRAISON). Nécessite un produit.' },
   { name: 'Taux de rotation', desc: 'VENTES_PERIODE / STOCK_MOYEN.' },
-  { name: 'Jours de stock restant', desc: 'STOCK_ACTUEL / CONSOMMATION_QUOTIDIENNE. N뿯½cessite un produit.' },
-  { name: 'Co뿯½t stock moyen', desc: 'SOMME(quantit뿯½ 뿯½ prix_achat) / SOMME(quantit뿯½).' },
-  { name: 'Valeur stock', desc: 'SOMME(quantit뿯½ 뿯½ prix_achat).' },
-  { name: 'Marge b뿯½n뿯½ficiaire', desc: '(prix_vente - prix_achat) / prix_vente 뿯½ 100.' },
+  { name: 'Jours de stock restant', desc: 'STOCK_ACTUEL / CONSOMMATION_QUOTIDIENNE. Nécessite un produit.' },
+  { name: 'Coût stock moyen', desc: 'SOMME(quantité × prix_achat) / SOMME(quantité).' },
+  { name: 'Valeur stock', desc: 'SOMME(quantité × prix_achat).' },
+  { name: 'Marge bénéficiaire', desc: '(prix_vente - prix_achat) / prix_vente × 100.' },
 ];
 
 function formatResult(result: number | Record<string, number> | null, unit?: string): string {
@@ -92,7 +100,7 @@ export function StandardFormulasContent() {
         throw new Error(j?.error || `Erreur ${res.status}`);
       }
       const json = await res.json();
-      if (!json.success || !Array.isArray(json.data)) throw new Error('Donn뿯½es invalides');
+      if (!json.success || !Array.isArray(json.data)) throw new Error('Données invalides');
       setFormulas(json.data);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Erreur chargement formules');
@@ -106,7 +114,7 @@ export function StandardFormulasContent() {
     if (!token) return;
     setLoadingProducts(true);
     try {
-      const res = await fetchApi('/products?limit=100');
+      const res = await fetchApi('/products?limit=500');
       if (!res.ok) throw new Error('Erreur chargement produits');
       const json = await res.json();
       setProducts(Array.isArray(json?.data) ? json.data : []);
@@ -122,8 +130,8 @@ export function StandardFormulasContent() {
   }, [token, loadFormulas]);
 
   useEffect(() => {
-    if (token && selectedFormula) loadProducts();
-  }, [token, selectedFormula, loadProducts]);
+    if (token && selectedFormula && products.length === 0) loadProducts();
+  }, [token, selectedFormula, products.length, loadProducts]);
 
   const handleSelectFormula = useCallback((formula: PredefinedFormula) => {
     setSelectedFormula(formula);
@@ -157,26 +165,27 @@ export function StandardFormulasContent() {
       if (!res.ok) {
         throw new Error(json?.error || `Erreur ${res.status}`);
       }
-      if (!json.success) throw new Error(json?.error || 'Erreur ex뿯½cution');
+      if (!json.success) throw new Error(json?.error || 'Erreur exécution');
       setResult(json.data as ExecuteResult);
     } catch (e) {
-      setResultError(e instanceof Error ? e.message : 'Erreur ex├뿯½cution');
+      setResultError(e instanceof Error ? e.message : 'Erreur exécution');
     } finally {
       setExecuting(false);
     }
   }, [selectedFormula, token, productId, periodDays, scope, fetchApi]);
 
-  const canExecute = selectedFormula && (scope !== 'product' || productId);
+  const requiresProduct = selectedFormula ? PRODUCT_REQUIRED_FORMULAS.has(selectedFormula.name) : false;
+  const canExecute = selectedFormula && (requiresProduct ? !!productId : (scope !== 'product' || productId));
 
   if (!token && isLoading) return null;
   if (!token) return null;
 
   return (
-    <div className="space-y-6" role="region" aria-label="Formules de calcul pr뿯½d뿯½finies">
+    <div className="space-y-6" role="region" aria-label="Formules de calcul prédéfinies">
       <div>
-        <h1 className="text-xl font-medium text-charcoal">Formules de calcul pr뿯½d뿯½finies</h1>
+        <h1 className="text-xl font-medium text-charcoal">Formules de calcul prédéfinies</h1>
         <p className="mt-1 text-sm text-charcoal/60">
-          Utilisez les formules pr├뿯½d├뿯½finies pour des calculs standards (consommation moyenne, stock de s├뿯½curit├뿯½, etc.).
+          Utilisez les formules prédéfinies pour des calculs standards (consommation moyenne, stock de sécurité, etc.).
         </p>
       </div>
 
@@ -239,15 +248,20 @@ export function StandardFormulasContent() {
           aria-labelledby="params-heading"
         >
           <h2 id="params-heading" className="mb-4 text-sm font-medium text-charcoal">
-            Param뿯½tres du calcul
+            Paramètres du calcul
           </h2>
           <p className="mb-4 font-medium text-charcoal/70">
-            Formule s뿯½lectionn뿯½e : {FORMULA_LABELS[selectedFormula.name] ?? selectedFormula.name}
+            Formule sélectionnée : {FORMULA_LABELS[selectedFormula.name] ?? selectedFormula.name}
           </p>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div>
               <label htmlFor="formulas-product" className="block text-sm font-medium text-charcoal/70">
-                Produit {scope === 'product' ? '(requis)' : '(optionnel)'}
+                Produit{' '}
+                {requiresProduct
+                  ? <span className="text-terracotta">(obligatoire pour cette formule)</span>
+                  : scope === 'product'
+                    ? '(requis)'
+                    : '(optionnel)'}
               </label>
               <select
                 id="formulas-product"
@@ -266,7 +280,7 @@ export function StandardFormulasContent() {
             </div>
             <div>
               <label htmlFor="formulas-period" className="block text-sm font-medium text-charcoal/70">
-                P뿯½riode (jours)
+                Période (jours)
               </label>
               <input
                 id="formulas-period"
@@ -274,13 +288,13 @@ export function StandardFormulasContent() {
                 min={1}
                 max={365}
                 value={periodDays}
-                onChange={(e) => setPeriodDays(Number(e.target.value) || 30)}
+                onChange={(e) => setPeriodDays(Math.min(365, Math.max(1, Number(e.target.value) || 30)))}
                 className="mt-1 w-full rounded-md border border-charcoal/15 px-3 py-2 text-sm focus:border-green-deep focus:outline-none focus:ring-1 focus:ring-green-deep/20"
               />
             </div>
             <div>
               <label htmlFor="formulas-scope" className="block text-sm font-medium text-charcoal/70">
-                Port├뿯½e
+                Portée
               </label>
               <select
                 id="formulas-scope"
@@ -289,7 +303,7 @@ export function StandardFormulasContent() {
                 className="mt-1 w-full rounded-md border border-charcoal/15 px-3 py-2 text-sm focus:border-green-deep focus:outline-none focus:ring-1 focus:ring-green-deep/20"
               >
                 <option value="all">Tous les produits</option>
-                <option value="product">Produit s뿯½lectionn뿯½</option>
+                <option value="product">Produit sélectionné</option>
               </select>
             </div>
             <div className="flex items-end gap-2">
@@ -321,16 +335,23 @@ export function StandardFormulasContent() {
 
       {(result !== null || resultError) && selectedFormula && (
         <section className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm" aria-live="polite">
-          <h2 className="mb-3 text-sm font-medium text-charcoal">R뿯½sultat</h2>
+          <h2 className="mb-3 text-sm font-medium text-charcoal">Résultat</h2>
           {resultError ? (
             <div className="rounded-md bg-terracotta/10 px-4 py-3 text-sm text-terracotta" role="alert">
               {resultError}
             </div>
           ) : result ? (
-            <div className="flex items-center gap-3 rounded-md border border-charcoal/8 bg-cream/30 px-4 py-3">
-              <span className="text-lg font-medium text-charcoal">
+            <div className="rounded-md border border-charcoal/8 bg-cream/30 px-4 py-3 space-y-2">
+              <p className="text-lg font-medium text-charcoal">
                 {formatResult(result.result, result.unit)}
-              </span>
+              </p>
+              <p className="text-sm text-charcoal/60">
+                Vous pouvez réutiliser cette valeur dans une{' '}
+                <Link href="/formulas?tab=custom" className="text-green-deep underline hover:no-underline">
+                  formule personnalisée
+                </Link>
+                .
+              </p>
             </div>
           ) : null}
         </section>

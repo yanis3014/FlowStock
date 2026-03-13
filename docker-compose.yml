@@ -31,8 +31,12 @@ services:
         NEXT_PUBLIC_API_URL: http://localhost:3000
     ports:
       - "3002:3002"
+    env_file:
+      - .env
     environment:
       - NODE_ENV=production
+      # Force le port 3002 (évite que PORT=3000 du .env écrase celui du Dockerfile)
+      - PORT=3002
     depends_on:
       api:
         condition: service_healthy

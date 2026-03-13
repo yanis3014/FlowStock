@@ -17,6 +17,7 @@ export interface Formula {
   formula_type: 'predefined' | 'custom';
   is_active: boolean;
   created_by_user_id?: string | null;
+  created_at?: string | null;
 }
 
 export interface FormulaCreateInput {
@@ -40,9 +41,11 @@ export interface FormulaExecuteParams {
 }
 
 export interface FormulaExecuteResult {
-  result: number | Record<string, number> | null;
+  result: number | Record<string, number | null> | null;
   unit?: string;
   formula_name?: string;
+  /** Products where evaluation failed (product name → error message) */
+  errors?: Record<string, string>;
 }
 
 interface FormulaRow {
@@ -54,6 +57,7 @@ interface FormulaRow {
   formula_type: string;
   is_active: boolean;
   created_by_user_id?: string | null;
+  created_at?: string | null;
 }
 
 function rowToFormula(row: FormulaRow): Formula {
@@ -66,6 +70,7 @@ function rowToFormula(row: FormulaRow): Formula {
     formula_type: row.formula_type as 'predefined' | 'custom',
     is_active: row.is_active,
     created_by_user_id: row.created_by_user_id ?? null,
+    created_at: row.created_at ?? null,
   };
 }
 
@@ -445,7 +450,7 @@ export async function listCustomFormulas(tenantId: string): Promise<Formula[]> {
   const db = getDatabase();
   const result = await db.queryWithTenant<FormulaRow>(
     tenantId,
-    `SELECT id, name, description, formula_expression, variables_used, formula_type, is_active, created_by_user_id
+    `SELECT id, name, description, formula_expression, variables_used, formula_type, is_active, created_by_user_id, created_at
      FROM formulas
      WHERE formula_type = 'custom' AND tenant_id = $1 AND is_active = true
      ORDER BY created_at DESC`,
@@ -464,7 +469,7 @@ export async function getCustomFormulaById(
   const db = getDatabase();
   const result = await db.queryWithTenant<FormulaRow>(
     tenantId,
-    `SELECT id, name, description, formula_expression, variables_used, formula_type, is_active, created_by_user_id
+    `SELECT id, name, description, formula_expression, variables_used, formula_type, is_active, created_by_user_id, created_at
      FROM formulas
      WHERE id = $1 AND formula_type = 'custom' AND tenant_id = $2 AND is_active = true`,
     [formulaId, tenantId]
@@ -661,18 +666,22 @@ async function executeCustomFormula(
 
   if (needsProductVars) {
     // Run formula on each product
-    const results: Record<string, number> = {};
+    const results: Record<string, number | null> = {};
+    const errors: Record<string, string> = {};
     for (const product of products) {
       try {
         const resolvedScope = await resolveVariables(tenantId, product.id, variables, periodDays);
-        const result = evaluateExpression(formula.formula_expression, resolvedScope);
-        results[product.name] = result;
-      } catch {
-        // Skip products that cause errors (e.g. missing price)
-        results[product.name] = 0;
+        results[product.name] = evaluateExpression(formula.formula_expression, resolvedScope);
+      } catch (err) {
+        // Report failed products instead of silently returning 0
+        errors[product.name] = err instanceof Error ? err.message : 'Erreur d\'évaluation';
       }
     }
-    return { result: results, formula_name: formula.name };
+    return {
+      result: results,
+      formula_name: formula.name,
+      ...(Object.keys(errors).length > 0 ? { errors } : {}),
+    };
   }
 
   // No product-level variables — evaluate once
@@ -717,17 +726,21 @@ export async function previewFormula(
   );
 
   if (needsProductVars && products.length > 0) {
-    const results: Record<string, number> = {};
+    const results: Record<string, number | null> = {};
+    const errors: Record<string, string> = {};
     for (const product of products) {
       try {
         const resolvedScope = await resolveVariables(tenantId, product.id, variables, periodDays);
-        const result = evaluateExpression(expression, resolvedScope);
-        results[product.name] = result;
-      } catch {
-        results[product.name] = 0;
+        results[product.name] = evaluateExpression(expression, resolvedScope);
+      } catch (err) {
+        errors[product.name] = err instanceof Error ? err.message : 'Erreur d\'évaluation';
       }
     }
-    return { result: results, formula_name: 'preview' };
+    return {
+      result: results,
+      formula_name: 'preview',
+      ...(Object.keys(errors).length > 0 ? { errors } : {}),
+    };
   }
 
   const resolvedScope = await resolveVariables(tenantId, undefined, variables, periodDays);

@@ -63,11 +63,11 @@ development_status:
   3-3-gestion-emplacements: done
   3-4-historique-mouvements-stocks: done
   3-5-gestion-fournisseurs: done
-  3-6-saisie-manuelle-ventes: backlog
-  3-7-import-csv-ventes: backlog
-  3-8-formules-predéfinies: backlog
-  3-9-saisie-manuelle-formules-personnalisees: backlog
-  3-10-calculs-basiques-temps-stock-sans-ia: backlog
+  3-6-saisie-manuelle-ventes: done
+  3-7-import-csv-ventes: done
+  3-8-formules-predéfinies: done
+  3-9-saisie-manuelle-formules-personnalisees: done
+  3-10-calculs-basiques-temps-stock-sans-ia: done
   epic-3-retrospective: optional
 
   epic-4: backlog

@@ -23,6 +23,15 @@
   --orange-warn: #ED8936;
   --font-display: 'Sora', sans-serif;
   --font-body: 'DM Sans', sans-serif;
+  --color-background-secondary: #F0EBE1;
+}
+
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+.skeleton-pulse {
+  animation: skeleton-pulse 1.6s ease-in-out infinite;
 }
 
 @layer base {

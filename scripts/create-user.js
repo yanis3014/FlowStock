@@ -101,7 +101,8 @@ async function createUser() {
     console.log('\n--- Utilisateur créé ---');
     console.log('Email:', USER.email);
     console.log('Mot de passe:', USER.password);
-    console.log('\nConnectez-vous sur http://localhost:3002/login');
+    console.log('\nSi la vérification email a échoué (API en Docker/production), exécutez: npm run verify-demo-email');
+    console.log('Puis connectez-vous sur http://localhost:3002/login');
     return;
   }
 

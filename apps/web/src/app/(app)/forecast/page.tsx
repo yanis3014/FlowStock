@@ -13,10 +13,14 @@ import {
   Legend,
   ReferenceLine,
 } from 'recharts';
+import { Info } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useApi } from '@/hooks/useApi';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { PageHeader } from '@/components/ui/PageHeader';
+
+const ESTIMATE_BASIC_MESSAGE =
+  'Estimation basique à partir des ventes des 30 derniers jours. La précision s\'améliorera avec les prédictions IA (niveau Premium).';
 
 // Cast Recharts components for React 18 / Recharts typings compatibility (class components)
 const Rc = {
@@ -52,6 +56,17 @@ const CONFIDENCE_COLORS: Record<string, string> = {
   insufficient: '#C1440E',
 };
 
+const CONFIDENCE_LABELS: Record<string, string> = {
+  high: 'Fiable',
+  medium: 'Moyen',
+  low: 'Peu fiable',
+  insufficient: 'Pas assez de données',
+};
+
+function confidenceLabel(level: string): string {
+  return CONFIDENCE_LABELS[level] ?? level;
+}
+
 export default function ForecastPage() {
   const { token, isLoading } = useAuth();
   const { fetchApi } = useApi();
@@ -73,11 +88,7 @@ export default function ForecastPage() {
       .then((json) => {
         if (json?.success && json?.data) {
           setEstimates(json.data);
-          setSelectedIds((prev) => {
-            const next = new Set(prev);
-            json.data.slice(0, 3).forEach((e: StockEstimate) => next.add(e.product_id));
-            return next;
-          });
+          setSelectedIds(new Set(json.data.slice(0, 3).map((e: StockEstimate) => e.product_id)));
         } else setError('Données invalides.');
       })
       .catch(() => setError('Erreur réseau.'))
@@ -173,6 +184,10 @@ export default function ForecastPage() {
         </div>
       ) : (
         <>
+          <p className="flex items-start gap-2 text-xs text-charcoal/60" role="note" aria-label={ESTIMATE_BASIC_MESSAGE}>
+            <Info className="h-4 w-4 shrink-0 mt-0.5" aria-hidden />
+            <span>{ESTIMATE_BASIC_MESSAGE}</span>
+          </p>
           <div className="rounded-xl border border-charcoal/8 bg-white p-4 shadow-sm">
             <p className="mb-3 text-sm text-charcoal/60">Sélectionnez les produits à comparer (courbe de stock jusqu’à la date de rupture estimée) :</p>
             <div className="flex flex-wrap gap-2">
@@ -191,8 +206,9 @@ export default function ForecastPage() {
                       backgroundColor: `${CONFIDENCE_COLORS[e.confidence_level] ?? '#6b7280'}20`,
                       color: CONFIDENCE_COLORS[e.confidence_level] ?? '#6b7280',
                     }}
+                    title={e.confidence_level}
                   >
-                    {e.confidence_level}
+                    {confidenceLabel(e.confidence_level)}
                   </span>
                   {e.estimated_stockout_date && (
                     <span className="text-xs text-charcoal/60">
@@ -278,8 +294,9 @@ export default function ForecastPage() {
                             backgroundColor: `${CONFIDENCE_COLORS[e.confidence_level] ?? '#6B7B76'}20`,
                             color: CONFIDENCE_COLORS[e.confidence_level] ?? '#6B7B76',
                           }}
+                          title={e.confidence_level}
                         >
-                          {e.confidence_level}
+                          {confidenceLabel(e.confidence_level)}
                         </span>
                       </td>
                     </tr>

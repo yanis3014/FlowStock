@@ -7,6 +7,7 @@
   "scripts": {
     "dev": "turbo run dev --parallel",
     "create-user": "node scripts/create-user.js",
+    "promote-admin": "node scripts/promote-admin.js",
     "verify-demo-email": "node scripts/verify-demo-email.js",
     "build": "turbo run build",
     "lint": "turbo run lint",

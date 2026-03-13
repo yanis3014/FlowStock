@@ -4,10 +4,41 @@ import { useEffect, useState, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useApi } from '@/hooks/useApi';
-import { History, Download, Loader2 } from 'lucide-react';
+import { History, Download, Loader2, Info } from 'lucide-react';
 import type { Product, StockMovement, MovementType } from '@bmad/shared';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { TableSkeleton } from '@/components/ui/LoadingSkeleton';
+
+type ConfidenceLevel = 'high' | 'medium' | 'low' | 'insufficient';
+
+interface StockEstimate {
+  product_id: string;
+  product_name: string;
+  sku: string;
+  current_stock: number;
+  unit: string;
+  avg_daily_consumption: number | null;
+  days_remaining: number | null;
+  estimated_stockout_date: string | null;
+  confidence_level: ConfidenceLevel;
+  sales_days_count: number;
+  period_days: number;
+}
+
+const ESTIMATE_BASIC_MESSAGE =
+  'Estimation basique à partir des ventes des 30 derniers jours. La précision s\'améliorera avec les prédictions IA (niveau Premium).';
+
+function confidenceLabel(level: ConfidenceLevel): string {
+  if (level === 'insufficient') return 'Pas assez de données de ventes';
+  if (level === 'low') return 'Estimation peu fiable';
+  return '';
+}
+
+function confidenceBadgeClass(level: ConfidenceLevel): string {
+  if (level === 'insufficient') return 'bg-red-alert/15 text-red-alert border-red-alert/30';
+  if (level === 'low') return 'bg-orange-warn/15 text-orange-warn border-orange-warn/30';
+  return '';
+}
 
 const MOVEMENT_TYPE_LABELS: Record<MovementType, string> = {
   creation: 'Création',
@@ -45,6 +76,8 @@ export default function MovementsPage() {
   const [exportLoading, setExportLoading] = useState(false);
   const [error, setError] = useState('');
   const [exportTruncated, setExportTruncated] = useState(false);
+  const [stockEstimate, setStockEstimate] = useState<StockEstimate | null>(null);
+  const [loadingEstimate, setLoadingEstimate] = useState(false);
 
   useEffect(() => {
     if (validProductIdFromUrl && !selectedProductId) setSelectedProductId(validProductIdFromUrl);
@@ -93,6 +126,23 @@ export default function MovementsPage() {
   useEffect(() => {
     if (token) loadProducts();
   }, [token, loadProducts]);
+
+  useEffect(() => {
+    if (!token || !selectedProductId) {
+      setStockEstimate(null);
+      return;
+    }
+    setLoadingEstimate(true);
+    setStockEstimate(null);
+    fetchApi(`/stock-estimates/${selectedProductId}?period_days=30`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((json) => {
+        if (json?.success && json?.data) setStockEstimate(json.data);
+        else setStockEstimate(null);
+      })
+      .catch(() => setStockEstimate(null))
+      .finally(() => setLoadingEstimate(false));
+  }, [token, fetchApi, selectedProductId]);
 
   const loadMovements = useCallback(() => {
     if (!token || !selectedProductId) return;
@@ -252,6 +302,52 @@ export default function MovementsPage() {
 
         {selectedProductId && (
           <>
+            {/* Bloc Estimation temps de stock */}
+            <div className="rounded-xl border border-charcoal/8 bg-white p-4 shadow-sm">
+              <h3 className="mb-3 font-display text-sm font-bold text-charcoal">Estimation temps de stock</h3>
+              {loadingEstimate ? (
+                <div className="flex items-center gap-2 text-sm text-charcoal/50">
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                  <span>Chargement…</span>
+                </div>
+              ) : stockEstimate ? (
+                <div className="space-y-2 text-sm">
+                  <div className="flex flex-wrap gap-4">
+                    <span className="text-charcoal">
+                      <strong>Consommation moy. 30 j :</strong>{' '}
+                      {stockEstimate.avg_daily_consumption != null
+                        ? `${stockEstimate.avg_daily_consumption.toFixed(2)} ${stockEstimate.unit}/jour`
+                        : '—'}
+                    </span>
+                    <span className="text-charcoal">
+                      <strong>Jours restants :</strong>{' '}
+                      {stockEstimate.days_remaining != null ? `${stockEstimate.days_remaining} j` : '—'}
+                    </span>
+                    <span className="text-charcoal">
+                      <strong>Unité :</strong> {stockEstimate.unit}
+                    </span>
+                  </div>
+                  {(stockEstimate.confidence_level === 'low' || stockEstimate.confidence_level === 'insufficient') && (
+                    <p>
+                      <span
+                        className={`inline-block rounded-md border px-2 py-0.5 text-xs font-medium ${confidenceBadgeClass(stockEstimate.confidence_level)}`}
+                        role="status"
+                        aria-label={confidenceLabel(stockEstimate.confidence_level)}
+                      >
+                        {confidenceLabel(stockEstimate.confidence_level)}
+                      </span>
+                    </p>
+                  )}
+                  <p className="flex items-start gap-2 text-xs text-charcoal/60" role="note" aria-label={ESTIMATE_BASIC_MESSAGE}>
+                    <Info className="h-4 w-4 shrink-0 mt-0.5" aria-hidden />
+                    <span>{ESTIMATE_BASIC_MESSAGE}</span>
+                  </p>
+                </div>
+              ) : (
+                <p className="text-sm text-charcoal/50">Aucune estimation disponible pour ce produit.</p>
+              )}
+            </div>
+
             {retentionDays != null && (
               <p className="text-sm text-charcoal/50">
                 Historique affiché : {retentionDays} derniers jours (selon votre abonnement)
