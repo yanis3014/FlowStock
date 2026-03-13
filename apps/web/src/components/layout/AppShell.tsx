@@ -27,14 +27,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   if (!mounted) {
     return (
-      <div className="flex h-screen items-center justify-center bg-gray-50">
+      <div className="flex h-screen items-center justify-center bg-cream">
         <p className="text-gray-600">Chargement...</p>
       </div>
     );
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-gray-50">
+    <div className="flex h-screen overflow-hidden bg-cream">
       <AppSidebar
         collapsed={sidebarCollapsed}
         onToggleCollapsed={() => setSidebarCollapsed((c) => !c)}

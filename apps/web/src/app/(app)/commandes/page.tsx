@@ -187,7 +187,8 @@ export default function CommandesPage() {
   const groups = groupBySupplier(displayItems);
 
   return (
-    <div className="min-h-full space-y-6 bg-cream font-body">
+    <div className="min-h-full bg-cream font-body">
+      <div className="mx-auto max-w-6xl space-y-6 p-4 pb-24 md:pb-6">
       <PageHeader
         title="Commandes IA"
         subtitle="Recommandations de réapprovisionnement générées par l'IA"
@@ -412,6 +413,7 @@ export default function CommandesPage() {
           <RefreshCw className="h-4 w-4" />
           Actualiser
         </button>
+      </div>
       </div>
     </div>
   );

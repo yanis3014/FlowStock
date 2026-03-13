@@ -52,7 +52,7 @@ function formatDateKey(key: string): string {
 }
 
 export default function StatsPage() {
-  const { token, isLoading } = useAuth();
+  const { token } = useAuth();
   const { fetchApi } = useApi();
   const [stats, setStats] = useState<SalesStats | null>(null);
   const [dailyData, setDailyData] = useState<SummaryGroup[]>([]);
@@ -131,7 +131,8 @@ export default function StatsPage() {
   }, [chartData, topProducts, productNames, period]);
 
   return (
-    <div className="min-h-full space-y-6 bg-cream font-body" role="region" aria-label="Statistiques" aria-live="polite">
+    <div className="min-h-full bg-cream font-body" role="region" aria-label="Statistiques" aria-live="polite">
+      <div className="mx-auto max-w-6xl space-y-6 p-4 pb-24 md:pb-6">
       <PageHeader
         title="Statistiques"
         actions={
@@ -277,6 +278,7 @@ export default function StatsPage() {
           </div>
         </>
       )}
+      </div>
     </div>
   );
 }

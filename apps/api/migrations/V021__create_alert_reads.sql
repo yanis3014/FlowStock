@@ -17,5 +17,6 @@ CREATE INDEX IF NOT EXISTS idx_alert_reads_alert_id ON alert_reads(tenant_id, al
 -- RLS: each user can only see their own reads; tenants are isolated
 ALTER TABLE alert_reads ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS alert_reads_tenant_isolation ON alert_reads;
 CREATE POLICY alert_reads_tenant_isolation ON alert_reads
   USING (tenant_id = current_setting('app.current_tenant', true)::UUID);

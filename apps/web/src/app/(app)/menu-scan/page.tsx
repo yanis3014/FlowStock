@@ -49,7 +49,7 @@ function uid(): string {
 
 function confidenceBadgeClass(c: 'high' | 'medium' | 'low'): string {
   if (c === 'high') return 'bg-green-bright/20 text-green-deep border-green-bright/30';
-  if (c === 'medium') return 'bg-gold/15 text-gold-dark border-gold/30';
+  if (c === 'medium') return 'bg-gold/15 text-gold border-gold/30';
   return 'bg-terracotta/10 text-terracotta border-terracotta/30';
 }
 

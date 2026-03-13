@@ -118,7 +118,7 @@ export async function getDiscrepancies(
        p.unit,
        p.quantity::text AS current_qty,
        COALESCE(SUM(
-         CASE WHEN m.movement_type = 'loss'
+         CASE WHEN m.movement_type IN ('loss', 'perte')
               THEN GREATEST(0, (m.quantity_before::numeric - m.quantity_after::numeric))
          END
        ), 0)::text AS total_losses,
@@ -128,7 +128,7 @@ export async function getDiscrepancies(
          END
        ), 0)::text AS total_pos_sales,
        COALESCE(SUM(
-         CASE WHEN m.movement_type IN ('creation', 'import', 'quantity_update')
+         CASE WHEN m.movement_type IN ('creation', 'import', 'quantity_update', 'entree_livraison', 'livraison')
                    AND m.quantity_after::numeric > COALESCE(m.quantity_before::numeric, 0)
               THEN (m.quantity_after::numeric - COALESCE(m.quantity_before::numeric, 0))
          END

@@ -284,7 +284,7 @@ export default function NouvellelivraisonPage() {
   }, [filePreview]);
 
   return (
-    <div className="flex flex-col h-full overflow-hidden">
+    <div className="flex flex-col h-full overflow-hidden bg-cream font-body">
       <div className="flex-1 overflow-y-auto">
         <div className="px-4 sm:px-6 py-6 max-w-4xl mx-auto">
           <PageHeader

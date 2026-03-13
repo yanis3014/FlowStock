@@ -12,6 +12,7 @@ import {
   TrendingDown,
   TrendingUp,
   BarChart2,
+  AlertTriangle,
 } from 'lucide-react';
 import {
   BarChart,
