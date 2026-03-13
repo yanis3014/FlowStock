@@ -5,8 +5,9 @@ import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { useApi } from '@/hooks/useApi';
 import { useCrudModal } from '@/hooks/useCrudModal';
-import { Plus, Search, Package, Pencil, Trash2, Loader2, History, Info } from 'lucide-react';
+import { Plus, Search, Package, Pencil, Trash2, Loader2, History, Info, AlertTriangle } from 'lucide-react';
 import type { Product, ProductUnit, StockStatus, LocationRef, SupplierRef } from '@bmad/shared';
+import { LossDeclarationModal } from '@/components/stocks/LossDeclarationModal';
 
 type ConfidenceLevel = 'high' | 'medium' | 'low' | 'insufficient';
 
@@ -89,6 +90,8 @@ export default function StocksPage() {
   const [estimatesLoadError, setEstimatesLoadError] = useState(false);
   const modalFirstInputRef = useRef<HTMLInputElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
+  const [lossModalOpen, setLossModalOpen] = useState(false);
+  const [lossPreselectedProduct, setLossPreselectedProduct] = useState<Pick<Product, 'id' | 'name' | 'sku' | 'unit' | 'quantity'> | null>(null);
 
   const loadEstimates = useCallback(() => {
     if (!token) return;
@@ -335,7 +338,7 @@ export default function StocksPage() {
             <h1 className="font-display text-2xl font-bold text-green-deep">Stocks</h1>
             <p className="text-sm text-gray-warm">CRUD stocks · Pilotage hors service</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Link
               href="/rush"
               className="inline-flex items-center gap-2 rounded-xl bg-green-mid px-4 py-2.5 font-display text-sm font-bold text-white"
@@ -343,6 +346,17 @@ export default function StocksPage() {
               <Package className="h-4 w-4" />
               Mode Rush
             </Link>
+            <button
+              type="button"
+              onClick={() => {
+                setLossPreselectedProduct(null);
+                setLossModalOpen(true);
+              }}
+              className="inline-flex items-center gap-2 rounded-xl bg-terracotta px-4 py-2.5 font-display text-sm font-bold text-white"
+            >
+              <AlertTriangle className="h-4 w-4" />
+              Déclarer une perte
+            </button>
             <button
               type="button"
               onClick={() => {
@@ -499,6 +513,17 @@ export default function StocksPage() {
                         >
                           <History className="h-4 w-4" />
                         </Link>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setLossPreselectedProduct(row);
+                            setLossModalOpen(true);
+                          }}
+                          className="rounded p-1.5 text-terracotta hover:bg-terracotta/10"
+                          title="Déclarer une perte"
+                        >
+                          <AlertTriangle className="h-4 w-4" />
+                        </button>
                         <button
                           type="button"
                           onClick={() => {
@@ -767,6 +792,17 @@ export default function StocksPage() {
             </div>
           </div>
         )}
+
+        {/* Modal déclaration perte */}
+        <LossDeclarationModal
+          open={lossModalOpen}
+          onClose={() => setLossModalOpen(false)}
+          onSuccess={() => {
+            loadProducts();
+            loadEstimates();
+          }}
+          preselectedProduct={lossPreselectedProduct}
+        />
 
         {/* Modal confirmation suppression */}
         {productToDelete && (

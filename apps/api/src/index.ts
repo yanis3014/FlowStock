@@ -25,6 +25,8 @@ import dashboardRoutes from './routes/dashboard.routes';
 import webhooksPosRoutes from './routes/webhooks.pos.routes';
 import posMappingRoutes from './routes/pos-mapping.routes';
 import adminRoutes from './routes/admin.routes';
+import lossesRoutes from './routes/losses.routes';
+import discrepancyRoutes from './routes/discrepancy.routes';
 import { runPeriodicEvaluation } from './services/pos-sync-status.service';
 import { openApiDocument } from './openapi/spec';
 import type { HealthResponse } from '@bmad/shared';
@@ -121,6 +123,8 @@ app.use('/sales', salesRoutes);
 app.use('/formulas', formulaRoutes);
 app.use('/stock-estimates', stockEstimateRoutes);
 app.use('/dashboard', dashboardRoutes);
+app.use('/losses', lossesRoutes);
+app.use('/discrepancies', discrepancyRoutes);
 app.use('/api/admin', adminRoutes);
 
 // Story 2.2: Import stocks page

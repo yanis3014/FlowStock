@@ -105,7 +105,7 @@ development_status:
   7-5-fallback-saisie-manuelle-facture: backlog
   epic-7-retrospective: optional
 
-  epic-8: backlog
-  8-1-declaration-perte-express-2-clics: backlog
-  8-2-analyse-ecarts-theorique-reel-alertes-anomalies: backlog
+  epic-8: done
+  8-1-declaration-perte-express-2-clics: done
+  8-2-analyse-ecarts-theorique-reel-alertes-anomalies: done
   epic-8-retrospective: optional

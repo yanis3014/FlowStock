@@ -1,6 +1,7 @@
 import { getDatabase } from '../database/connection';
 import { getSalesStats } from './sales.service';
 import { listProducts } from './product.service';
+import { getLossAnomalyAlerts } from './discrepancy.service';
 
 export interface DashboardSummary {
   sales_yesterday: {
@@ -181,6 +182,14 @@ export async function getDashboardSummary(tenantId: string): Promise<DashboardSu
         created_at: new Date().toISOString(),
       });
     }
+  }
+
+  // Epic 8.2: add loss anomaly alerts (products with high loss rates last 7 days)
+  try {
+    const lossAlerts = await getLossAnomalyAlerts(tenantId, 10);
+    alerts.push(...lossAlerts);
+  } catch {
+    // Non-blocking: loss anomaly alerts are best-effort
   }
 
   // Sort alerts by severity (high first) and limit to 10 most recent

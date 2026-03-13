@@ -136,7 +136,59 @@ export interface SupplierUpdateInput {
 }
 
 // Story 2.4: Stock movement history
-export type MovementType = 'creation' | 'quantity_update' | 'deletion' | 'import' | 'pos_sale';
+// Epic 8.1: added 'loss' for loss declarations
+export type MovementType = 'creation' | 'quantity_update' | 'deletion' | 'import' | 'pos_sale' | 'loss';
+
+// Epic 8.1: Loss declaration
+export type LossReason = 'expired' | 'broken' | 'theft' | 'prep_error' | 'other';
+
+export interface LossDeclarationInput {
+  product_id: string;
+  quantity: number;
+  reason: LossReason;
+  notes?: string | null;
+}
+
+export interface LossDeclaration {
+  id: string;
+  product_id: string;
+  product_name: string;
+  product_sku: string;
+  quantity: number;
+  quantity_before: number;
+  quantity_after: number;
+  reason: LossReason;
+  notes: string | null;
+  user_id: string | null;
+  created_at: string;
+}
+
+// Epic 8.2: Stock discrepancy analysis
+export interface StockDiscrepancy {
+  product_id: string;
+  product_name: string;
+  product_sku: string;
+  unit: string;
+  stock_theorique: number;
+  stock_reel: number;
+  ecart: number;
+  ecart_pct: number;
+  is_anomaly: boolean;
+  anomaly_threshold_pct: number;
+  total_entries: number;
+  total_pos_sales: number;
+  total_losses: number;
+  ai_analysis: string | null;
+}
+
+export interface DiscrepancyReport {
+  generated_at: string;
+  period_days: number;
+  anomaly_threshold_pct: number;
+  items: StockDiscrepancy[];
+  anomaly_count: number;
+  ai_summary: string | null;
+}
 
 export interface StockMovement {
   id: string;
