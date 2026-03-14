@@ -2,7 +2,7 @@ import type { ExtractedDish } from '@bmad/shared';
 
 export type OnboardingStep =
   | 'profil' | 'menu' | 'emplacements'
-  | 'stocks' | 'fournisseurs' | 'pos' | 'done';
+  | 'stocks' | 'fournisseurs' | 'pos' | 'analyse-ventes' | 'done';
 
 export type CuisineType =
   | 'Française' | 'Italienne' | 'Japonaise'

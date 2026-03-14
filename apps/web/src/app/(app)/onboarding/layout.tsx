@@ -15,6 +15,7 @@ const STEPS: { id: OnboardingStep; label: string }[] = [
 const STEP_ORDER: OnboardingStep[] = ['profil', 'menu', 'emplacements', 'stocks', 'fournisseurs', 'pos'];
 
 function getStepFromPathname(pathname: string): OnboardingStep {
+  if (pathname?.includes('/stocks/import')) return 'stocks';
   const segment = pathname.split('/').pop() as OnboardingStep;
   return STEP_ORDER.includes(segment) ? segment : 'profil';
 }
@@ -29,7 +30,7 @@ export default function OnboardingLayout({ children }: { children: React.ReactNo
   const currentStep = getStepFromPathname(pathname ?? '');
   const completedSteps = getCompletedSteps(currentStep);
 
-  if (pathname?.endsWith('/done')) {
+  if (pathname?.endsWith('/done') || pathname?.endsWith('/analyse-ventes')) {
     return (
       <div className="min-h-screen bg-cream">
         {children}

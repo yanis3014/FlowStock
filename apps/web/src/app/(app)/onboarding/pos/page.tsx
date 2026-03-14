@@ -20,8 +20,8 @@ export default function PosPage() {
 
   useEffect(() => {
     fetchApi('/onboarding/progress')
-      .then((r) => r.json())
-      .then((res: { data?: { onboarding_data: OnboardingProgressData | null } }) => {
+      .then((r) => (!r.ok ? null : r.json()))
+      .then((res: { data?: { onboarding_data: OnboardingProgressData | null } } | null) => {
         setPrevData(res?.data?.onboarding_data ?? null);
       })
       .catch(() => {});
@@ -42,7 +42,7 @@ export default function PosPage() {
           },
         }),
       });
-      router.push('/onboarding/done');
+      router.push('/onboarding/analyse-ventes');
     } finally {
       setSaving(false);
     }
