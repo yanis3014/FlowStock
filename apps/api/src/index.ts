@@ -32,6 +32,7 @@ import recipeRoutes from './routes/recipe.routes';
 import extractionFeedbackRoutes from './routes/extraction-feedback.routes';
 import predictionsRoutes from './routes/predictions.routes';
 import recommendationsRoutes from './routes/recommendations.routes';
+import onboardingRoutes from './routes/onboarding.routes';
 import { runPeriodicEvaluation } from './services/pos-sync-status.service';
 import { computeAllTenantsSnapshots } from './services/daily-snapshot.service';
 import { openApiDocument } from './openapi/spec';
@@ -136,6 +137,7 @@ app.use('/recipes', recipeRoutes);
 app.use('/extraction-feedback', extractionFeedbackRoutes);
 app.use('/predictions', predictionsRoutes);
 app.use('/recommendations', recommendationsRoutes);
+app.use('/onboarding', onboardingRoutes);
 app.use('/api/admin', adminRoutes);
 
 // Story 2.2: Import stocks page
