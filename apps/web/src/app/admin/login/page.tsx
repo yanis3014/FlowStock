@@ -62,19 +62,19 @@ export default function AdminLoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-charcoal p-4">
+    <div className="flex min-h-screen items-center justify-center bg-green-deep p-4">
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-green-deep">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-cream/10 backdrop-blur">
             <Shield className="h-6 w-6 text-cream" />
           </div>
           <h1 className="font-display text-xl font-bold text-cream">Administration</h1>
-          <p className="mt-1 text-sm text-cream/50">FlowStock — Accès restreint</p>
+          <p className="mt-1 text-sm text-cream/60">FlowStock — Accès restreint</p>
         </div>
 
-        <div className="space-y-4 rounded-2xl border border-cream/10 bg-charcoal/50 p-6">
+        <div className="space-y-4 rounded-2xl border border-cream/15 bg-cream/5 p-6 backdrop-blur">
           <div>
-            <label className="mb-1.5 block text-xs font-medium text-cream/60">
+            <label className="mb-1.5 block text-xs font-medium text-cream/70">
               Email administrateur
             </label>
             <input
@@ -83,12 +83,12 @@ export default function AdminLoginPage() {
               onChange={(e) => setEmail(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
               placeholder="admin@flowstock.io"
-              className="w-full rounded-lg border border-cream/10 bg-cream/5 px-3 py-2.5 text-sm text-cream placeholder:text-cream/30 focus:border-green-deep focus:outline-none focus:ring-1 focus:ring-green-deep"
+              className="w-full rounded-lg border border-cream/20 bg-cream/10 px-3 py-2.5 text-sm text-cream placeholder:text-cream/30 focus:border-cream/60 focus:outline-none focus:ring-1 focus:ring-cream/40"
             />
           </div>
 
           <div>
-            <label className="mb-1.5 block text-xs font-medium text-cream/60">
+            <label className="mb-1.5 block text-xs font-medium text-cream/70">
               Mot de passe
             </label>
             <div className="relative">
@@ -98,12 +98,12 @@ export default function AdminLoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
                 placeholder="••••••••"
-                className="w-full rounded-lg border border-cream/10 bg-cream/5 px-3 py-2.5 pr-10 text-sm text-cream placeholder:text-cream/30 focus:border-green-deep focus:outline-none focus:ring-1 focus:ring-green-deep"
+                className="w-full rounded-lg border border-cream/20 bg-cream/10 px-3 py-2.5 pr-10 text-sm text-cream placeholder:text-cream/30 focus:border-cream/60 focus:outline-none focus:ring-1 focus:ring-cream/40"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword((v) => !v)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-cream/30 transition-colors hover:text-cream/60"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-cream/40 transition-colors hover:text-cream/80"
               >
                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
@@ -113,15 +113,15 @@ export default function AdminLoginPage() {
           <button
             onClick={handleSubmit}
             disabled={loading}
-            className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg bg-green-deep py-2.5 font-semibold text-cream transition-colors hover:bg-forest-green disabled:cursor-not-allowed disabled:opacity-50"
+            className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg bg-cream py-2.5 font-semibold text-green-deep transition-colors hover:bg-cream/90 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {loading && <Loader2 className="h-4 w-4 animate-spin" />}
             {loading ? 'Connexion...' : 'Se connecter'}
           </button>
         </div>
 
-        <p className="mt-6 text-center text-xs text-cream/30">
-          <Link href="/login" className="transition-colors hover:text-cream/60">
+        <p className="mt-6 text-center text-xs text-cream/40">
+          <Link href="/login" className="transition-colors hover:text-cream/70">
             ← Retour au login utilisateur
           </Link>
         </p>

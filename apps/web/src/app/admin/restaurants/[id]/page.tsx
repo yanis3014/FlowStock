@@ -1,11 +1,12 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Store, Users, Package, ShoppingCart } from 'lucide-react';
+import { ArrowLeft, Store, Users, Package, ShoppingCart, Eye, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useApi } from '@/hooks/useApi';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface RestaurantUser {
   id: string;
@@ -36,10 +37,13 @@ interface RestaurantDetail {
 
 export default function AdminRestaurantDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const { fetchApi } = useApi();
+  const { setToken, token } = useAuth();
   const restaurantId = String(params?.id ?? '');
   const [restaurant, setRestaurant] = useState<RestaurantDetail | null>(null);
   const [loading, setLoading] = useState(true);
+  const [impersonating, setImpersonating] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -68,6 +72,33 @@ export default function AdminRestaurantDetailPage() {
     };
   }, [fetchApi, restaurantId]);
 
+  const handleImpersonate = async () => {
+    if (!restaurant) return;
+    setImpersonating(true);
+    try {
+      const r = await fetchApi(`/api/admin/impersonate/${restaurant.id}`, { method: 'POST' });
+      const payload = (await r.json().catch(() => ({}))) as {
+        success?: boolean;
+        data?: { token: string; tenantName: string };
+      };
+      if (!r.ok || !payload.success || !payload.data) {
+        throw new Error('impersonate_failed');
+      }
+      // Sauvegarder le token admin courant
+      if (token) {
+        sessionStorage.setItem('admin_token_backup', token);
+        sessionStorage.setItem('impersonated_tenant_name', payload.data.tenantName);
+      }
+      // Remplacer le token par le token d'impersonnification
+      setToken(payload.data.token);
+      router.push('/dashboard');
+    } catch {
+      toast.error("Impossible d'accéder à ce compte.");
+    } finally {
+      setImpersonating(false);
+    }
+  };
+
   const activeUsers = useMemo(
     () => (restaurant ? restaurant.users.filter((u) => !u.suspended).length : 0),
     [restaurant]
@@ -75,8 +106,9 @@ export default function AdminRestaurantDetailPage() {
 
   if (loading) {
     return (
-      <div className="p-6">
-        <div className="h-56 animate-pulse rounded-xl border border-cream/5 bg-charcoal" />
+      <div className="space-y-4 p-6">
+        <div className="h-8 w-40 animate-pulse rounded-lg bg-charcoal/8" />
+        <div className="h-56 animate-pulse rounded-xl border border-charcoal/8 bg-white" />
       </div>
     );
   }
@@ -87,82 +119,99 @@ export default function AdminRestaurantDetailPage() {
     <div className="space-y-6 p-6">
       <Link
         href="/admin/restaurants"
-        className="inline-flex items-center gap-1 text-sm text-cream/60 transition-colors hover:text-cream"
+        className="inline-flex items-center gap-1 text-sm text-charcoal/50 transition-colors hover:text-charcoal"
       >
         <ArrowLeft className="h-4 w-4" />
         Retour aux restaurants
       </Link>
 
-      <div className="rounded-xl border border-cream/5 bg-charcoal p-5">
-        <div className="flex items-start gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-terracotta/15">
-            <Store className="h-5 w-5 text-terracotta" />
+      <div className="rounded-xl border border-charcoal/8 bg-white p-5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-terracotta/10">
+              <Store className="h-5 w-5 text-terracotta" />
+            </div>
+            <div>
+              <h1 className="font-display text-xl font-bold text-charcoal">
+                {restaurant.company_name}
+              </h1>
+              <p className="text-sm text-charcoal/40">{restaurant.slug}</p>
+              {restaurant.industry && (
+                <p className="mt-1 text-xs text-charcoal/40">{restaurant.industry}</p>
+              )}
+            </div>
           </div>
-          <div>
-            <h1 className="font-display text-xl font-bold text-cream">
-              {restaurant.company_name}
-            </h1>
-            <p className="text-sm text-cream/40">{restaurant.slug}</p>
-            {restaurant.industry && (
-              <p className="mt-1 text-xs text-cream/40">{restaurant.industry}</p>
+          <button
+            onClick={handleImpersonate}
+            disabled={impersonating}
+            className="flex items-center gap-2 rounded-lg border border-terracotta/20 bg-terracotta/5 px-3 py-2 text-sm font-medium text-terracotta transition-colors hover:bg-terracotta/10 disabled:opacity-50"
+          >
+            {impersonating ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Eye className="h-4 w-4" />
             )}
-          </div>
+            Voir en tant que ce restaurant
+          </button>
         </div>
 
         <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="rounded-lg border border-cream/5 bg-[#111816] p-4">
-            <div className="flex items-center gap-2 text-cream/40">
+          <div className="rounded-lg border border-charcoal/8 bg-cream p-4">
+            <div className="flex items-center gap-2 text-charcoal/40">
               <Users className="h-4 w-4" />
               <span className="text-xs">Utilisateurs actifs</span>
             </div>
-            <p className="mt-2 font-display text-lg font-bold text-cream">{activeUsers}</p>
+            <p className="mt-2 font-display text-lg font-bold text-charcoal">{activeUsers}</p>
           </div>
-          <div className="rounded-lg border border-cream/5 bg-[#111816] p-4">
-            <div className="flex items-center gap-2 text-cream/40">
+          <div className="rounded-lg border border-charcoal/8 bg-cream p-4">
+            <div className="flex items-center gap-2 text-charcoal/40">
               <Package className="h-4 w-4" />
               <span className="text-xs">Produits</span>
             </div>
-            <p className="mt-2 font-display text-lg font-bold text-cream">
+            <p className="mt-2 font-display text-lg font-bold text-charcoal">
               {restaurant.productCount}
             </p>
           </div>
-          <div className="rounded-lg border border-cream/5 bg-[#111816] p-4">
-            <div className="flex items-center gap-2 text-cream/40">
+          <div className="rounded-lg border border-charcoal/8 bg-cream p-4">
+            <div className="flex items-center gap-2 text-charcoal/40">
               <ShoppingCart className="h-4 w-4" />
               <span className="text-xs">Ventes</span>
             </div>
-            <p className="mt-2 font-display text-lg font-bold text-cream">
+            <p className="mt-2 font-display text-lg font-bold text-charcoal">
               {restaurant.salesCount}
             </p>
           </div>
-          <div className="rounded-lg border border-cream/5 bg-[#111816] p-4">
-            <p className="text-xs text-cream/40">Abonnement</p>
-            <p className="mt-2 text-sm font-medium text-cream">
-              {restaurant.subscription_tier ?? 'Aucun'} ({restaurant.subscription_status ?? 'n/a'})
+          <div className="rounded-lg border border-charcoal/8 bg-cream p-4">
+            <p className="text-xs text-charcoal/40">Abonnement</p>
+            <p className="mt-2 text-sm font-medium text-charcoal capitalize">
+              {restaurant.subscription_tier ?? 'Aucun'}
+            </p>
+            <p className="text-xs text-charcoal/40">
+              {restaurant.subscription_status ?? 'n/a'}
             </p>
           </div>
         </div>
       </div>
 
-      <div className="rounded-xl border border-cream/5 bg-charcoal p-5">
-        <h2 className="font-display text-sm font-bold text-cream">Utilisateurs du restaurant</h2>
+      <div className="rounded-xl border border-charcoal/8 bg-white p-5">
+        <h2 className="font-display text-sm font-bold text-charcoal">
+          Utilisateurs du restaurant
+        </h2>
         {restaurant.users.length === 0 ? (
-          <p className="mt-4 text-sm text-cream/40">Aucun utilisateur lié.</p>
+          <p className="mt-4 text-sm text-charcoal/40">Aucun utilisateur lié.</p>
         ) : (
-          <div className="mt-4 divide-y divide-cream/5">
+          <div className="mt-4 divide-y divide-charcoal/5">
             {restaurant.users.map((u) => (
               <div key={u.id} className="flex items-center justify-between py-3">
                 <div>
-                  <p className="text-sm font-medium text-cream">{u.name || u.email}</p>
-                  <p className="text-xs text-cream/40">{u.email}</p>
+                  <p className="text-sm font-medium text-charcoal">{u.name || u.email}</p>
+                  <p className="text-xs text-charcoal/40">{u.email}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-xs text-cream/60">{u.role}</p>
-                  <p className="text-xs text-cream/40">
+                  <p className="text-xs capitalize text-charcoal/60">{u.role}</p>
+                  <p className="text-xs text-charcoal/40">
                     {u.last_login_at
-                      ? `Dernière connexion: ${new Date(u.last_login_at).toLocaleDateString(
-                          'fr-FR'
-                        )}`
+                      ? `Dernière connexion : ${new Date(u.last_login_at).toLocaleDateString('fr-FR')}`
                       : 'Jamais connecté'}
                   </p>
                 </div>

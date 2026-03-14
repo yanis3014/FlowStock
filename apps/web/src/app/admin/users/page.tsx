@@ -39,7 +39,7 @@ const TIER_LABELS: Record<string, string> = {
 };
 
 const TIER_COLORS: Record<string, string> = {
-  normal: 'bg-cream/10 text-cream/60',
+  normal: 'bg-charcoal/8 text-charcoal/60',
   premium: 'bg-green-deep/20 text-green-deep',
   premium_plus: 'bg-gold/20 text-gold',
 };
@@ -145,51 +145,51 @@ export default function AdminUsersPage() {
     <div className="space-y-5 p-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="font-display text-xl font-bold text-cream">Utilisateurs</h1>
-          <p className="mt-0.5 text-sm text-cream/40">{pagination.total} comptes au total</p>
+          <h1 className="font-display text-xl font-bold text-charcoal">Utilisateurs</h1>
+          <p className="mt-0.5 text-sm text-charcoal/40">{pagination.total} comptes au total</p>
         </div>
       </div>
 
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-cream/30" />
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-charcoal/30" />
         <input
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Rechercher par nom ou email..."
-          className="w-full rounded-lg border border-cream/10 bg-charcoal py-2.5 pl-9 pr-4 text-sm text-cream placeholder:text-cream/30 focus:border-green-deep focus:outline-none"
+          className="w-full rounded-lg border border-charcoal/8 bg-white py-2.5 pl-9 pr-4 text-sm text-charcoal placeholder:text-charcoal/30 focus:border-green-deep/40 focus:outline-none focus:ring-1 focus:ring-green-deep/20"
         />
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-cream/5 bg-charcoal">
+      <div className="overflow-hidden rounded-xl border border-charcoal/8 bg-white">
         {loading ? (
-          <div className="divide-y divide-cream/5">
+          <div className="divide-y divide-charcoal/5">
             {[...Array(8)].map((_, i) => (
               <div
                 key={i}
                 className="flex animate-pulse items-center gap-4 px-5 py-4"
               >
-                <div className="h-8 w-8 rounded-full bg-cream/5" />
+                <div className="h-8 w-8 rounded-full bg-charcoal/8" />
                 <div className="flex-1 space-y-1.5">
-                  <div className="h-3 w-32 rounded bg-cream/5" />
-                  <div className="h-2.5 w-48 rounded bg-cream/5" />
+                  <div className="h-3 w-32 rounded bg-charcoal/8" />
+                  <div className="h-2.5 w-48 rounded bg-charcoal/8" />
                 </div>
-                <div className="h-5 w-16 rounded-full bg-cream/5" />
+                <div className="h-5 w-16 rounded-full bg-charcoal/8" />
               </div>
             ))}
           </div>
         ) : users.length === 0 ? (
-          <div className="py-16 text-center text-sm text-cream/30">
+          <div className="py-16 text-center text-sm text-charcoal/30">
             Aucun utilisateur trouvé.
           </div>
         ) : (
-          <div className="divide-y divide-cream/5">
+          <div className="divide-y divide-charcoal/5">
             {users.map((user) => (
               <div
                 key={user.id}
-                className="group flex items-center gap-4 px-5 py-4 transition-colors hover:bg-cream/[0.03]"
+                className="group flex items-center gap-4 px-5 py-4 transition-colors hover:bg-cream"
               >
-                <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-green-deep/15">
+                <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-green-deep/10">
                   <span className="text-xs font-bold text-green-deep">
                     {user.name?.charAt(0).toUpperCase() ?? '?'}
                   </span>
@@ -197,26 +197,26 @@ export default function AdminUsersPage() {
 
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <p className="truncate text-sm font-medium text-cream">{user.name}</p>
+                    <p className="truncate text-sm font-medium text-charcoal">{user.name}</p>
                     {user.role === 'admin' && (
-                      <span className="rounded bg-terracotta/15 px-1.5 py-0.5 text-xs font-medium text-terracotta">
+                      <span className="rounded bg-terracotta/10 px-1.5 py-0.5 text-xs font-medium text-terracotta">
                         Admin
                       </span>
                     )}
                     {user.suspended && (
-                      <span className="rounded bg-terracotta/15 px-1.5 py-0.5 text-xs font-medium text-terracotta">
+                      <span className="rounded bg-terracotta/10 px-1.5 py-0.5 text-xs font-medium text-terracotta">
                         Suspendu
                       </span>
                     )}
                   </div>
-                  <p className="truncate text-xs text-cream/40">{user.email}</p>
+                  <p className="truncate text-xs text-charcoal/40">{user.email}</p>
                 </div>
 
                 <span
                   className={`flex-shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
                     user.subscription_tier
                       ? TIER_COLORS[user.subscription_tier]
-                      : 'bg-cream/5 text-cream/30'
+                      : 'bg-charcoal/8 text-charcoal/30'
                   }`}
                 >
                   {user.subscription_tier
@@ -224,14 +224,14 @@ export default function AdminUsersPage() {
                     : 'Aucun'}
                 </span>
 
-                <span className="hidden flex-shrink-0 text-xs text-cream/30 lg:block">
+                <span className="hidden flex-shrink-0 text-xs text-charcoal/30 lg:block">
                   {new Date(user.created_at).toLocaleDateString('fr-FR')}
                 </span>
 
                 <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
                   <button
                     onClick={() => router.push(`/admin/users/${user.id}`)}
-                    className="rounded-lg p-1.5 text-cream/40 transition-colors hover:bg-cream/5 hover:text-cream"
+                    className="rounded-lg p-1.5 text-charcoal/40 transition-colors hover:bg-charcoal/5 hover:text-charcoal"
                     title="Voir le détail"
                   >
                     <MoreVertical className="h-4 w-4" />
@@ -254,7 +254,7 @@ export default function AdminUsersPage() {
                   {user.role !== 'admin' && (
                     <button
                       onClick={() => handleMakeAdmin(user)}
-                      className="rounded-lg p-1.5 text-cream/40 transition-colors hover:bg-gold/10 hover:text-gold"
+                      className="rounded-lg p-1.5 text-charcoal/40 transition-colors hover:bg-gold/10 hover:text-gold"
                       title="Promouvoir admin"
                     >
                       <Shield className="h-4 w-4" />
@@ -269,21 +269,21 @@ export default function AdminUsersPage() {
 
       {pagination.totalPages > 1 && (
         <div className="flex items-center justify-between">
-          <p className="text-xs text-cream/30">
+          <p className="text-xs text-charcoal/30">
             Page {page} / {pagination.totalPages}
           </p>
           <div className="flex gap-2">
             <button
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page === 1}
-              className="rounded-lg border border-cream/10 bg-charcoal p-2 text-cream/50 transition-colors hover:text-cream disabled:cursor-not-allowed disabled:opacity-30"
+              className="rounded-lg border border-charcoal/8 bg-white p-2 text-charcoal/50 transition-colors hover:bg-cream-dark disabled:cursor-not-allowed disabled:opacity-30"
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
             <button
               onClick={() => setPage((p) => Math.min(pagination.totalPages, p + 1))}
               disabled={page === pagination.totalPages}
-              className="rounded-lg border border-cream/10 bg-charcoal p-2 text-cream/50 transition-colors hover:text-cream disabled:cursor-not-allowed disabled:opacity-30"
+              className="rounded-lg border border-charcoal/8 bg-white p-2 text-charcoal/50 transition-colors hover:bg-cream-dark disabled:cursor-not-allowed disabled:opacity-30"
             >
               <ChevronRight className="h-4 w-4" />
             </button>

@@ -22,7 +22,7 @@ const TIERS = [
 ];
 
 const TIER_COLORS: Record<string, string> = {
-  normal: 'bg-cream/10 text-cream/60',
+  normal: 'bg-charcoal/8 text-charcoal/60',
   premium: 'bg-green-deep/20 text-green-deep',
   premium_plus: 'bg-gold/20 text-gold',
 };
@@ -89,8 +89,8 @@ export default function AdminSubscriptionsPage() {
     <div className="space-y-5 p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="font-display text-xl font-bold text-cream">Abonnements</h1>
-          <p className="mt-0.5 text-sm text-cream/40">{subs.length} abonnements</p>
+          <h1 className="font-display text-xl font-bold text-charcoal">Abonnements</h1>
+          <p className="mt-0.5 text-sm text-charcoal/40">{subs.length} abonnements</p>
         </div>
 
         <div className="flex gap-2">
@@ -101,7 +101,7 @@ export default function AdminSubscriptionsPage() {
               className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
                 filter === tier.value
                   ? 'bg-green-deep text-cream'
-                  : 'border border-cream/10 bg-charcoal text-cream/50 hover:text-cream'
+                  : 'border border-charcoal/8 bg-white text-charcoal/50 hover:bg-cream-dark'
               }`}
             >
               {tier.label}
@@ -110,27 +110,27 @@ export default function AdminSubscriptionsPage() {
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-cream/5 bg-charcoal">
+      <div className="overflow-hidden rounded-xl border border-charcoal/8 bg-white">
         {loading ? (
-          <div className="p-8 text-center text-sm text-cream/30">Chargement...</div>
+          <div className="p-8 text-center text-sm text-charcoal/30">Chargement...</div>
         ) : subs.length === 0 ? (
-          <div className="p-12 text-center text-sm text-cream/30">
+          <div className="p-12 text-center text-sm text-charcoal/30">
             Aucun abonnement trouvé.
           </div>
         ) : (
-          <div className="divide-y divide-cream/5">
+          <div className="divide-y divide-charcoal/5">
             {subs.map((sub) => (
-              <div key={sub.id} className="flex items-center gap-4 px-5 py-4">
-                <CreditCard className="h-4 w-4 flex-shrink-0 text-cream/30" />
+              <div key={sub.id} className="flex items-center gap-4 px-5 py-4 hover:bg-cream">
+                <CreditCard className="h-4 w-4 flex-shrink-0 text-charcoal/30" />
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-cream">
+                  <p className="truncate text-sm font-medium text-charcoal">
                     {sub.user_name ?? sub.company_name}
                   </p>
-                  <p className="truncate text-xs text-cream/40">
+                  <p className="truncate text-xs text-charcoal/40">
                     {sub.user_email ?? sub.company_name}
                   </p>
                 </div>
-                <span className="hidden text-xs text-cream/30 md:block">
+                <span className="hidden text-xs text-charcoal/30 md:block">
                   {new Date(sub.created_at).toLocaleDateString('fr-FR')}
                 </span>
                 <select
@@ -141,7 +141,7 @@ export default function AdminSubscriptionsPage() {
                   style={{ backgroundColor: 'transparent' }}
                 >
                   {TIERS.map((t) => (
-                    <option key={t.value} value={t.value} className="bg-charcoal text-cream">
+                    <option key={t.value} value={t.value} className="bg-white text-charcoal">
                       {t.label}
                     </option>
                   ))}

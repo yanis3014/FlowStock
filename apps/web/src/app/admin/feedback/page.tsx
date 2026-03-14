@@ -1,235 +1,231 @@
 'use client';
 
-import { useState } from 'react';
-import Link from 'next/link';
+import { useEffect, useState, useCallback } from 'react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { toast } from 'sonner';
+import { useApi } from '@/hooks/useApi';
 
 type StatutFeedback = 'nouveau' | 'lu' | 'traite';
-type StatutTicket = 'ouvert' | 'en_cours' | 'resolu' | 'ferme';
 
 interface FeedbackRow {
   id: string;
-  client: string;
-  clientId: string;
-  date: string;
+  tenant_id: string;
+  user_id: string | null;
   type: string;
   message: string;
   tags: string[];
-  statut: StatutFeedback;
+  status: StatutFeedback;
+  created_at: string;
+  company_name: string;
+  user_email: string | null;
 }
 
-interface TicketRow {
-  id: string;
-  client: string;
-  clientId: string;
-  sujet: string;
-  date: string;
-  statut: StatutTicket;
+interface Pagination {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
 }
 
-const MOCK_FEEDBACKS: FeedbackRow[] = [
-  {
-    id: '1',
-    client: 'Le Comptoir',
-    clientId: '1',
-    date: '24 fév. 2025',
-    type: 'Suggestion',
-    message: 'Export CSV hebdomadaire serait très utile pour notre compta.',
-    tags: ['export', 'compta'],
-    statut: 'traite',
-  },
-  {
-    id: '2',
-    client: 'Chez Marie',
-    clientId: '3',
-    date: '23 fév. 2025',
-    type: 'Bug',
-    message: 'Les alertes Rush ne se rafraîchissent pas après un ajustement.',
-    tags: ['rush', 'bug'],
-    statut: 'nouveau',
-  },
-  {
-    id: '3',
-    client: 'La Table',
-    clientId: '5',
-    date: '22 fév. 2025',
-    type: 'Amélioration',
-    message: 'Possibilité de dupliquer une fiche technique en un clic.',
-    tags: ['fiches techniques'],
-    statut: 'lu',
-  },
-];
-
-const MOCK_TICKETS: TicketRow[] = [
-  { id: 'T1', client: 'Le Bistrot', clientId: '4', sujet: 'Problème connexion Lightspeed', date: '25 fév. 2025', statut: 'en_cours' },
-  { id: 'T2', client: 'Chez Marie', clientId: '3', sujet: 'Demande formation Mode Rush', date: '20 fév. 2025', statut: 'resolu' },
-  { id: 'T3', client: 'La Terrasse', clientId: '2', sujet: 'Facturation — changement d\'adresse', date: '18 fév. 2025', statut: 'ferme' },
-];
-
-const STATUT_FB_LABELS: Record<StatutFeedback, string> = {
+const STATUT_LABELS: Record<StatutFeedback, string> = {
   nouveau: 'Nouveau',
   lu: 'Lu',
   traite: 'Traité',
 };
 
-const STATUT_FB_CLASSES: Record<StatutFeedback, string> = {
-  nouveau: 'bg-orange-warn/20 text-orange-warn',
-  lu: 'bg-blue-500/20 text-blue-600',
-  traite: 'bg-green-mid/20 text-green-deep',
+const STATUT_CLASSES: Record<StatutFeedback, string> = {
+  nouveau: 'bg-terracotta/10 text-terracotta',
+  lu: 'bg-gold/20 text-gold',
+  traite: 'bg-green-deep/10 text-green-deep',
 };
 
-const STATUT_TICKET_LABELS: Record<StatutTicket, string> = {
-  ouvert: 'Ouvert',
-  en_cours: 'En cours',
-  resolu: 'Résolu',
-  ferme: 'Fermé',
-};
-
-const STATUT_TICKET_CLASSES: Record<StatutTicket, string> = {
-  ouvert: 'bg-orange-warn/20 text-orange-warn',
-  en_cours: 'bg-blue-500/20 text-blue-600',
-  resolu: 'bg-green-mid/20 text-green-deep',
-  ferme: 'bg-gray-warm/20 text-gray-warm',
+const TYPE_LABELS: Record<string, string> = {
+  bug: 'Bug',
+  suggestion: 'Suggestion',
+  amelioration: 'Amélioration',
 };
 
 export default function AdminFeedbackPage() {
-  const [filterStatutFb, setFilterStatutFb] = useState<StatutFeedback | 'all'>('all');
-  const [filterStatutTicket, setFilterStatutTicket] = useState<StatutTicket | 'all'>('all');
+  const { fetchApi } = useApi();
+  const [feedbacks, setFeedbacks] = useState<FeedbackRow[]>([]);
+  const [pagination, setPagination] = useState<Pagination | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [filterStatut, setFilterStatut] = useState<StatutFeedback | 'all'>('all');
+  const [page, setPage] = useState(1);
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
 
-  const feedbacksFiltered =
-    filterStatutFb === 'all'
-      ? MOCK_FEEDBACKS
-      : MOCK_FEEDBACKS.filter((f) => f.statut === filterStatutFb);
+  const fetchFeedbacks = useCallback(() => {
+    setLoading(true);
+    const params = new URLSearchParams({ page: String(page), limit: '20' });
+    if (filterStatut !== 'all') params.set('status', filterStatut);
 
-  const ticketsFiltered =
-    filterStatutTicket === 'all'
-      ? MOCK_TICKETS
-      : MOCK_TICKETS.filter((t) => t.statut === filterStatutTicket);
+    fetchApi(`/api/admin/feedback?${params}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((payload: { success?: boolean; data?: { feedbacks: FeedbackRow[]; pagination: Pagination } } | null) => {
+        if (!payload?.success || !payload.data) return;
+        setFeedbacks(payload.data.feedbacks);
+        setPagination(payload.data.pagination);
+      })
+      .finally(() => setLoading(false));
+  }, [fetchApi, page, filterStatut]);
+
+  useEffect(() => {
+    fetchFeedbacks();
+  }, [fetchFeedbacks]);
+
+  const handleUpdateStatus = useCallback(async (id: string, status: 'lu' | 'traite') => {
+    setUpdatingId(id);
+    try {
+      const r = await fetchApi(`/api/admin/feedback/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status }),
+      });
+      if (!r.ok) throw new Error('update_failed');
+      setFeedbacks((prev) =>
+        prev.map((f) => (f.id === id ? { ...f, status } : f))
+      );
+      toast.success('Statut mis à jour');
+    } catch {
+      toast.error('Erreur lors de la mise à jour');
+    } finally {
+      setUpdatingId(null);
+    }
+  }, [fetchApi]);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 p-6">
       <div>
-        <h2 className="font-display text-2xl font-bold text-green-deep">Feedback & Support</h2>
-        <p className="text-sm text-gray-warm">Feedbacks utilisateurs et tickets support · Données mock</p>
+        <h1 className="font-display text-xl font-bold text-charcoal">Feedback & Support</h1>
+        <p className="mt-0.5 text-sm text-charcoal/40">
+          Retours utilisateurs envoyés par les restaurants
+        </p>
       </div>
 
-      {/* Liste feedbacks */}
-      <section className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
-          <h3 className="font-display text-lg font-bold text-green-deep">Feedbacks</h3>
-          <div className="flex gap-2">
-            {(['all', 'nouveau', 'lu', 'traite'] as const).map((s) => (
-              <button
-                key={s}
-                type="button"
-                onClick={() => setFilterStatutFb(s)}
-                className={`rounded-lg px-3 py-1 text-sm font-medium ${
-                  filterStatutFb === s ? 'bg-green-mid/20 text-green-deep' : 'bg-gray-100 text-gray-warm hover:bg-gray-200'
-                }`}
-              >
-                {s === 'all' ? 'Tous' : STATUT_FB_LABELS[s]}
-              </button>
+      <div className="flex items-center gap-2">
+        {(['all', 'nouveau', 'lu', 'traite'] as const).map((s) => (
+          <button
+            key={s}
+            type="button"
+            onClick={() => { setFilterStatut(s); setPage(1); }}
+            className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
+              filterStatut === s
+                ? s === 'all'
+                  ? 'bg-charcoal text-cream'
+                  : STATUT_CLASSES[s as StatutFeedback]
+                : 'border border-charcoal/8 bg-white text-charcoal/60 hover:bg-cream-dark'
+            }`}
+          >
+            {s === 'all' ? 'Tous' : STATUT_LABELS[s as StatutFeedback]}
+          </button>
+        ))}
+      </div>
+
+      <div className="rounded-xl border border-charcoal/8 bg-white">
+        {loading ? (
+          <div className="space-y-0">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="h-20 animate-pulse border-b border-charcoal/5 last:border-0" />
             ))}
           </div>
-        </div>
-        <ul className="space-y-4">
-          {feedbacksFiltered.map((f) => (
-            <li
-              key={f.id}
-              className="rounded-lg border border-gray-100 p-4 hover:bg-gray-50"
-            >
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <Link
-                      href={`/admin/clients/${f.clientId}`}
-                      className="font-medium text-green-mid hover:underline"
-                    >
-                      {f.client}
-                    </Link>
-                    <span className="text-xs text-gray-warm">{f.date}</span>
-                    <span className="rounded-full px-2 py-0.5 text-xs font-medium text-charcoal bg-gray-100">
-                      {f.type}
-                    </span>
-                  </div>
-                  <p className="mt-1 text-sm text-charcoal">{f.message}</p>
-                  <div className="mt-2 flex flex-wrap gap-1">
-                    {f.tags.map((tag) => (
-                      <span
-                        key={tag}
-                        className="rounded-full bg-green-deep/10 px-2 py-0.5 text-xs text-green-deep"
-                      >
-                        {tag}
+        ) : feedbacks.length === 0 ? (
+          <div className="p-8 text-center text-sm text-charcoal/40">
+            Aucun feedback {filterStatut !== 'all' ? `avec le statut "${STATUT_LABELS[filterStatut as StatutFeedback]}"` : ''}.
+          </div>
+        ) : (
+          <ul className="divide-y divide-charcoal/5">
+            {feedbacks.map((f) => (
+              <li key={f.id} className="p-4 transition-colors hover:bg-cream">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-medium text-charcoal">{f.company_name}</span>
+                      {f.user_email && (
+                        <span className="text-xs text-charcoal/40">{f.user_email}</span>
+                      )}
+                      <span className="text-xs text-charcoal/30">
+                        {new Date(f.created_at).toLocaleDateString('fr-FR', {
+                          day: 'numeric',
+                          month: 'short',
+                          year: 'numeric',
+                        })}
                       </span>
-                    ))}
+                      <span className="rounded-full bg-charcoal/8 px-2 py-0.5 text-xs font-medium text-charcoal/60">
+                        {TYPE_LABELS[f.type] ?? f.type}
+                      </span>
+                    </div>
+                    <p className="mt-2 text-sm text-charcoal">{f.message}</p>
+                    {f.tags.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        {f.tags.map((tag) => (
+                          <span
+                            key={tag}
+                            className="rounded-full bg-green-deep/8 px-2 py-0.5 text-xs text-green-deep"
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${STATUT_CLASSES[f.status]}`}>
+                      {STATUT_LABELS[f.status]}
+                    </span>
+                    {f.status !== 'traite' && (
+                      <div className="flex gap-1">
+                        {f.status === 'nouveau' && (
+                          <button
+                            type="button"
+                            disabled={updatingId === f.id}
+                            onClick={() => handleUpdateStatus(f.id, 'lu')}
+                            className="rounded-lg border border-charcoal/8 px-2 py-1 text-xs text-charcoal/60 transition-colors hover:bg-cream-dark disabled:opacity-40"
+                          >
+                            Marquer lu
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          disabled={updatingId === f.id}
+                          onClick={() => handleUpdateStatus(f.id, 'traite')}
+                          className="rounded-lg border border-green-deep/20 bg-green-deep/5 px-2 py-1 text-xs text-green-deep transition-colors hover:bg-green-deep/10 disabled:opacity-40"
+                        >
+                          Traité
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
-                <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${STATUT_FB_CLASSES[f.statut]}`}>
-                  {STATUT_FB_LABELS[f.statut]}
-                </span>
-              </div>
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      {/* Liste tickets support */}
-      <section className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
-          <h3 className="font-display text-lg font-bold text-green-deep">Tickets support</h3>
-          <div className="flex gap-2">
-            {(['all', 'ouvert', 'en_cours', 'resolu', 'ferme'] as const).map((s) => (
-              <button
-                key={s}
-                type="button"
-                onClick={() => setFilterStatutTicket(s)}
-                className={`rounded-lg px-3 py-1 text-sm font-medium ${
-                  filterStatutTicket === s ? 'bg-green-mid/20 text-green-deep' : 'bg-gray-100 text-gray-warm hover:bg-gray-200'
-                }`}
-              >
-                {s === 'all' ? 'Tous' : STATUT_TICKET_LABELS[s]}
-              </button>
+              </li>
             ))}
+          </ul>
+        )}
+      </div>
+
+      {pagination && pagination.totalPages > 1 && (
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-charcoal/40">
+            {pagination.total} feedbacks · Page {pagination.page}/{pagination.totalPages}
+          </p>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className="flex items-center gap-1 rounded-lg border border-charcoal/8 bg-white px-3 py-1.5 text-sm text-charcoal/60 transition-colors hover:bg-cream-dark disabled:opacity-40"
+            >
+              <ChevronLeft className="h-4 w-4" />
+              Préc.
+            </button>
+            <button
+              onClick={() => setPage((p) => Math.min(pagination.totalPages, p + 1))}
+              disabled={page === pagination.totalPages}
+              className="flex items-center gap-1 rounded-lg border border-charcoal/8 bg-white px-3 py-1.5 text-sm text-charcoal/60 transition-colors hover:bg-cream-dark disabled:opacity-40"
+            >
+              Suiv.
+              <ChevronRight className="h-4 w-4" />
+            </button>
           </div>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[520px] text-left text-sm">
-            <thead>
-              <tr className="border-b border-gray-200 text-gray-warm">
-                <th className="pb-3 font-display font-bold text-green-deep">Ticket</th>
-                <th className="pb-3 font-display font-bold text-green-deep">Client</th>
-                <th className="pb-3 font-display font-bold text-green-deep">Sujet</th>
-                <th className="pb-3 font-display font-bold text-green-deep">Date</th>
-                <th className="pb-3 font-display font-bold text-green-deep">Statut</th>
-                <th className="pb-3" />
-              </tr>
-            </thead>
-            <tbody>
-              {ticketsFiltered.map((t) => (
-                <tr key={t.id} className="border-b border-gray-100 hover:bg-gray-50">
-                  <td className="py-3 font-mono font-medium text-charcoal">{t.id}</td>
-                  <td className="py-3">
-                    <Link href={`/admin/clients/${t.clientId}`} className="text-green-mid hover:underline">
-                      {t.client}
-                    </Link>
-                  </td>
-                  <td className="py-3 text-charcoal">{t.sujet}</td>
-                  <td className="py-3 text-gray-warm">{t.date}</td>
-                  <td className="py-3">
-                    <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${STATUT_TICKET_CLASSES[t.statut]}`}>
-                      {STATUT_TICKET_LABELS[t.statut]}
-                    </span>
-                  </td>
-                  <td className="py-3">
-                    <button type="button" className="text-green-mid hover:underline">
-                      Voir
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
+      )}
     </div>
   );
 }

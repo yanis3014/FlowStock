@@ -19,41 +19,74 @@ router.get('/stats', async (_req: Request, res: Response) => {
   try {
     const db = getDatabase();
 
-    const [totalUsers, totalRestaurants, subscriptionCounts, recentSignups, monthlyRevenue] =
-      await Promise.all([
-        db.query<{ count: string }>(
-          `SELECT COUNT(*)::text AS count
-           FROM users
-           WHERE role IN ('user', 'owner')`
-        ),
-        db.query<{ count: string }>('SELECT COUNT(*)::text AS count FROM tenants'),
-        db.query<SubscriptionCountRow>(
-          `SELECT tier, COUNT(*)::text AS count
-           FROM subscriptions
-           GROUP BY tier`
-        ),
-        db.query<{ count: string }>(
-          `SELECT COUNT(*)::text AS count
-           FROM users
-           WHERE created_at > NOW() - INTERVAL '30 days'`
-        ),
-        db.query<{ amount: string }>(
-          `SELECT COALESCE(SUM(
-             CASE tier
-               WHEN 'normal' THEN 29
-               WHEN 'premium' THEN 89
-               WHEN 'premium_plus' THEN 149
-               ELSE 0
-             END
-           ), 0)::text AS amount
-           FROM subscriptions
-           WHERE status IN ('active', 'trial', 'past_due')`
-        ),
-      ]);
+    const [
+      totalUsers,
+      totalRestaurants,
+      subscriptionCounts,
+      recentSignups,
+      monthlyRevenue,
+      churnRate,
+      avgProducts,
+      activeTenantsLast7d,
+    ] = await Promise.all([
+      db.query<{ count: string }>(
+        `SELECT COUNT(*)::text AS count
+         FROM users
+         WHERE role IN ('user', 'owner')`
+      ),
+      db.query<{ count: string }>('SELECT COUNT(*)::text AS count FROM tenants'),
+      db.query<SubscriptionCountRow>(
+        `SELECT tier, COUNT(*)::text AS count
+         FROM subscriptions
+         GROUP BY tier`
+      ),
+      db.query<{ count: string }>(
+        `SELECT COUNT(*)::text AS count
+         FROM users
+         WHERE created_at > NOW() - INTERVAL '30 days'`
+      ),
+      db.query<{ amount: string }>(
+        `SELECT COALESCE(SUM(
+           CASE tier
+             WHEN 'normal' THEN 29
+             WHEN 'premium' THEN 89
+             WHEN 'premium_plus' THEN 149
+             ELSE 0
+           END
+         ), 0)::text AS amount
+         FROM subscriptions
+         WHERE status IN ('active', 'trial', 'past_due')`
+      ),
+      db.query<{ total: string; cancelled: string }>(
+        `SELECT
+           COUNT(*)::text AS total,
+           COUNT(CASE WHEN status = 'cancelled' AND updated_at > NOW() - INTERVAL '30 days' THEN 1 END)::text AS cancelled
+         FROM subscriptions`
+      ),
+      db.query<{ avg_products: string }>(
+        `SELECT COALESCE(AVG(pc.product_count), 0)::text AS avg_products
+         FROM (
+           SELECT tenant_id, COUNT(*) AS product_count
+           FROM products
+           GROUP BY tenant_id
+         ) pc
+         JOIN tenants t ON t.id = pc.tenant_id
+         WHERE t.is_active = true`
+      ),
+      db.query<{ count: string }>(
+        `SELECT COUNT(DISTINCT tenant_id)::text AS count
+         FROM users
+         WHERE last_login_at > NOW() - INTERVAL '7 days'`
+      ),
+    ]);
 
     const byTier = new Map(
       subscriptionCounts.rows.map((row) => [row.tier, parseInt(row.count, 10)])
     );
+
+    const total = parseInt(churnRate.rows[0]?.total ?? '0', 10);
+    const cancelled = parseInt(churnRate.rows[0]?.cancelled ?? '0', 10);
+    const churnRate30d = total > 0 ? Math.round((cancelled / total) * 100 * 10) / 10 : 0;
 
     res.json({
       success: true,
@@ -67,6 +100,9 @@ router.get('/stats', async (_req: Request, res: Response) => {
           premium: byTier.get('premium') ?? 0,
           premium_plus: byTier.get('premium_plus') ?? 0,
         },
+        churnRate30d,
+        avgProductsPerTenant: Math.round(parseFloat(avgProducts.rows[0]?.avg_products ?? '0') * 10) / 10,
+        activeTenantsLast7d: parseInt(activeTenantsLast7d.rows[0]?.count ?? '0', 10),
       },
     });
   } catch {
@@ -928,6 +964,403 @@ router.get('/ml-monitoring', async (_req: Request, res: Response) => {
     res.status(500).json({ success: false, error: 'Erreur serveur' });
   }
 });
+
+/**
+ * GET /api/admin/feedback?status=nouveau&page=1&limit=20
+ */
+router.get(
+  '/feedback',
+  [
+    query('status').optional().isIn(['nouveau', 'lu', 'traite']),
+    query('page').optional().isInt({ min: 1 }).toInt(),
+    query('limit').optional().isInt({ min: 1, max: 100 }).toInt(),
+  ],
+  async (req: Request, res: Response) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      res.status(400).json({ success: false, error: errors.array()[0]?.msg ?? 'Validation failed' });
+      return;
+    }
+
+    try {
+      const db = getDatabase();
+      const status = req.query.status as string | undefined;
+      const page = Number(req.query.page ?? 1);
+      const limit = Number(req.query.limit ?? 20);
+      const offset = (page - 1) * limit;
+
+      const conditions: string[] = [];
+      const values: Array<string | number> = [];
+      let idx = 1;
+
+      if (status) {
+        conditions.push(`f.status = $${idx++}`);
+        values.push(status);
+      }
+
+      const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+      values.push(limit, offset);
+
+      const rows = await db.query<{
+        id: string;
+        tenant_id: string;
+        user_id: string | null;
+        type: string;
+        message: string;
+        tags: string[];
+        status: string;
+        created_at: string;
+        company_name: string;
+        user_email: string | null;
+      }>(
+        `SELECT
+           f.id,
+           f.tenant_id,
+           f.user_id,
+           f.type,
+           f.message,
+           f.tags,
+           f.status,
+           f.created_at,
+           t.company_name,
+           u.email AS user_email
+         FROM feedback f
+         JOIN tenants t ON t.id = f.tenant_id
+         LEFT JOIN users u ON u.id = f.user_id
+         ${where}
+         ORDER BY f.created_at DESC
+         LIMIT $${idx++} OFFSET $${idx}`,
+        values
+      );
+
+      const countValues = values.slice(0, values.length - 2);
+      const countResult = await db.query<{ count: string }>(
+        `SELECT COUNT(*)::text AS count FROM feedback f ${where}`,
+        countValues
+      );
+
+      const total = parseInt(countResult.rows[0]?.count ?? '0', 10);
+
+      res.json({
+        success: true,
+        data: {
+          feedbacks: rows.rows,
+          pagination: {
+            total,
+            page,
+            limit,
+            totalPages: Math.max(1, Math.ceil(total / limit)),
+          },
+        },
+      });
+    } catch {
+      res.status(500).json({ success: false, error: 'Erreur serveur', code: 'SERVER_ERROR' });
+    }
+  }
+);
+
+/**
+ * PATCH /api/admin/feedback/:id
+ */
+router.patch(
+  '/feedback/:id',
+  [
+    param('id').isUUID(),
+    body('status').isIn(['lu', 'traite']).withMessage('Statut invalide'),
+  ],
+  async (req: Request, res: Response) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      res.status(400).json({ success: false, error: errors.array()[0]?.msg ?? 'Validation failed' });
+      return;
+    }
+
+    try {
+      const db = getDatabase();
+      const { id } = req.params;
+      const status = req.body.status as string;
+
+      const result = await db.query(
+        `UPDATE feedback SET status = $1, updated_at = NOW() WHERE id = $2 RETURNING id`,
+        [status, id]
+      );
+
+      if (result.rows.length === 0) {
+        res.status(404).json({ success: false, error: 'Feedback introuvable', code: 'NOT_FOUND' });
+        return;
+      }
+
+      res.json({ success: true });
+    } catch {
+      res.status(500).json({ success: false, error: 'Erreur serveur', code: 'SERVER_ERROR' });
+    }
+  }
+);
+
+/**
+ * GET /api/admin/at-risk-tenants?threshold_days=14
+ */
+router.get(
+  '/at-risk-tenants',
+  [query('threshold_days').optional().isInt({ min: 1, max: 365 }).toInt()],
+  async (req: Request, res: Response) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      res.status(400).json({ success: false, error: errors.array()[0]?.msg ?? 'Validation failed' });
+      return;
+    }
+
+    try {
+      const db = getDatabase();
+      const thresholdDays = Number(req.query.threshold_days ?? 14);
+
+      const rows = await db.query<{
+        tenant_id: string;
+        company_name: string;
+        subscription_tier: string | null;
+        last_login_at: string | null;
+        days_inactive: string;
+        monthly_value: string;
+      }>(
+        `SELECT
+           t.id AS tenant_id,
+           t.company_name,
+           s.tier AS subscription_tier,
+           MAX(u.last_login_at) AS last_login_at,
+           EXTRACT(DAY FROM NOW() - MAX(u.last_login_at))::text AS days_inactive,
+           CASE s.tier
+             WHEN 'normal' THEN 29
+             WHEN 'premium' THEN 89
+             WHEN 'premium_plus' THEN 149
+             ELSE 0
+           END::text AS monthly_value
+         FROM tenants t
+         LEFT JOIN subscriptions s ON s.tenant_id = t.id
+         LEFT JOIN users u ON u.tenant_id = t.id
+         WHERE t.is_active = true
+           AND s.status IN ('active', 'trial', 'past_due')
+         GROUP BY t.id, t.company_name, s.tier
+         HAVING MAX(u.last_login_at) IS NULL
+            OR MAX(u.last_login_at) < NOW() - ($1 || ' days')::INTERVAL
+         ORDER BY monthly_value DESC NULLS LAST, days_inactive DESC NULLS LAST`,
+        [thresholdDays]
+      );
+
+      res.json({
+        success: true,
+        data: rows.rows.map((r) => ({
+          tenant_id: r.tenant_id,
+          company_name: r.company_name,
+          subscription_tier: r.subscription_tier,
+          last_login_at: r.last_login_at,
+          days_inactive: r.days_inactive ? Math.round(parseFloat(r.days_inactive)) : null,
+          monthly_value: parseInt(r.monthly_value, 10),
+        })),
+      });
+    } catch {
+      res.status(500).json({ success: false, error: 'Erreur serveur', code: 'SERVER_ERROR' });
+    }
+  }
+);
+
+/**
+ * GET /api/admin/churn-stats
+ */
+router.get('/churn-stats', async (_req: Request, res: Response) => {
+  try {
+    const db = getDatabase();
+
+    const [churn30, churn90, mrrAtRisk, activeTotal] = await Promise.all([
+      db.query<{ cancelled: string; total: string }>(
+        `SELECT
+           COUNT(CASE WHEN status = 'cancelled' AND updated_at > NOW() - INTERVAL '30 days' THEN 1 END)::text AS cancelled,
+           COUNT(*)::text AS total
+         FROM subscriptions`
+      ),
+      db.query<{ cancelled: string; total: string }>(
+        `SELECT
+           COUNT(CASE WHEN status = 'cancelled' AND updated_at > NOW() - INTERVAL '90 days' THEN 1 END)::text AS cancelled,
+           COUNT(*)::text AS total
+         FROM subscriptions`
+      ),
+      db.query<{ mrr_at_risk: string }>(
+        `SELECT COALESCE(SUM(
+           CASE s.tier
+             WHEN 'normal' THEN 29
+             WHEN 'premium' THEN 89
+             WHEN 'premium_plus' THEN 149
+             ELSE 0
+           END
+         ), 0)::text AS mrr_at_risk
+         FROM subscriptions s
+         WHERE s.status IN ('active', 'trial', 'past_due')
+           AND s.tenant_id IN (
+             SELECT DISTINCT tenant_id FROM users
+             WHERE last_login_at < NOW() - INTERVAL '14 days'
+                OR last_login_at IS NULL
+           )`
+      ),
+      db.query<{ count: string }>(
+        `SELECT COUNT(*)::text AS count FROM subscriptions WHERE status IN ('active', 'trial', 'past_due')`
+      ),
+    ]);
+
+    const t30 = parseInt(churn30.rows[0]?.total ?? '0', 10);
+    const c30 = parseInt(churn30.rows[0]?.cancelled ?? '0', 10);
+    const t90 = parseInt(churn90.rows[0]?.total ?? '0', 10);
+    const c90 = parseInt(churn90.rows[0]?.cancelled ?? '0', 10);
+
+    res.json({
+      success: true,
+      data: {
+        churnRate30d: t30 > 0 ? Math.round((c30 / t30) * 1000) / 10 : 0,
+        churnRate90d: t90 > 0 ? Math.round((c90 / t90) * 1000) / 10 : 0,
+        mrrAtRisk: parseInt(mrrAtRisk.rows[0]?.mrr_at_risk ?? '0', 10),
+        activeSubscriptions: parseInt(activeTotal.rows[0]?.count ?? '0', 10),
+      },
+    });
+  } catch {
+    res.status(500).json({ success: false, error: 'Erreur serveur', code: 'SERVER_ERROR' });
+  }
+});
+
+/**
+ * GET /api/admin/pos-health
+ */
+router.get('/pos-health', async (_req: Request, res: Response) => {
+  try {
+    const db = getDatabase();
+
+    const [degradedTenants, recentWebhooks] = await Promise.all([
+      db.query<{
+        tenant_id: string;
+        company_name: string;
+        pos_status: string | null;
+        pos_last_sync_at: string | null;
+      }>(
+        `SELECT
+           t.id AS tenant_id,
+           t.company_name,
+           t.pos_status,
+           t.pos_last_sync_at
+         FROM tenants t
+         WHERE t.pos_status = 'degraded'
+            OR (t.pos_status IS NOT NULL AND t.pos_last_sync_at < NOW() - INTERVAL '1 hour')
+         ORDER BY t.pos_last_sync_at ASC NULLS FIRST`
+      ),
+      db.query<{ count: string; error_count: string }>(
+        `SELECT
+           COUNT(*)::text AS count,
+           COUNT(CASE WHEN status = 'error' THEN 1 END)::text AS error_count
+         FROM pos_webhook_events
+         WHERE created_at > NOW() - INTERVAL '1 hour'`
+      ),
+    ]);
+
+    const totalWebhooks = parseInt(recentWebhooks.rows[0]?.count ?? '0', 10);
+    const errorWebhooks = parseInt(recentWebhooks.rows[0]?.error_count ?? '0', 10);
+
+    res.json({
+      success: true,
+      data: {
+        integrations: [
+          {
+            name: 'Lightspeed',
+            status: degradedTenants.rows.length === 0 ? 'ok' : 'degraded',
+            latencyMs: null,
+            errorRate: totalWebhooks > 0 ? Math.round((errorWebhooks / totalWebhooks) * 100) : 0,
+          },
+          {
+            name: 'Saisie manuelle',
+            status: 'ok',
+            latencyMs: 0,
+            errorRate: 0,
+          },
+        ],
+        impactedTenants: degradedTenants.rows.map((t) => ({
+          tenant_id: t.tenant_id,
+          company_name: t.company_name,
+          error: t.pos_status ?? 'sync_timeout',
+          since: t.pos_last_sync_at,
+        })),
+        recentLogs: [],
+      },
+    });
+  } catch {
+    res.status(500).json({ success: false, error: 'Erreur serveur', code: 'SERVER_ERROR' });
+  }
+});
+
+/**
+ * POST /api/admin/impersonate/:tenantId
+ */
+router.post(
+  '/impersonate/:tenantId',
+  [param('tenantId').isUUID()],
+  async (req: Request, res: Response) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      res.status(400).json({ success: false, error: errors.array()[0]?.msg ?? 'Invalid tenant id' });
+      return;
+    }
+
+    try {
+      const db = getDatabase();
+      const { tenantId } = req.params;
+
+      const tenant = await db.query<{ id: string; company_name: string }>(
+        'SELECT id, company_name FROM tenants WHERE id = $1 AND is_active = true',
+        [tenantId]
+      );
+
+      if (tenant.rows.length === 0) {
+        res.status(404).json({ success: false, error: 'Tenant introuvable', code: 'TENANT_NOT_FOUND' });
+        return;
+      }
+
+      const ownerResult = await db.query<{ id: string; email: string }>(
+        `SELECT id, email FROM users
+         WHERE tenant_id = $1 AND role IN ('owner', 'user') AND is_active = true
+         ORDER BY (role = 'owner') DESC, created_at ASC
+         LIMIT 1`,
+        [tenantId]
+      );
+
+      if (ownerResult.rows.length === 0) {
+        res.status(404).json({ success: false, error: 'Aucun utilisateur actif dans ce tenant', code: 'NO_USER' });
+        return;
+      }
+
+      // Génère un JWT temporaire d'impersonnification (15 min)
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const jwt = require('jsonwebtoken') as typeof import('jsonwebtoken');
+      const secret = process.env.JWT_SECRET ?? 'dev-secret';
+      const token = jwt.sign(
+        {
+          userId: ownerResult.rows[0]!.id,
+          tenantId,
+          email: ownerResult.rows[0]!.email,
+          role: 'user',
+          isImpersonating: true,
+          impersonatedBy: req.user?.userId,
+        },
+        secret,
+        { expiresIn: '15m' }
+      );
+
+      res.json({
+        success: true,
+        data: {
+          token,
+          tenantName: tenant.rows[0]!.company_name,
+          expiresIn: 900,
+        },
+      });
+    } catch {
+      res.status(500).json({ success: false, error: 'Erreur serveur', code: 'SERVER_ERROR' });
+    }
+  }
+);
 
 router.get('/system', async (_req: Request, res: Response) => {
   try {

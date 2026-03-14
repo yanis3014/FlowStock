@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@bmad/shared": "*",
     "csv-parse": "^6.1.0",
     "jspdf": "^4.2.0",
     "jspdf-autotable": "^5.0.7",

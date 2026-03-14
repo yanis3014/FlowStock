@@ -106,7 +106,7 @@ export default function AdminUserDetailPage() {
   if (loading) {
     return (
       <div className="p-6">
-        <div className="h-40 animate-pulse rounded-xl border border-cream/5 bg-charcoal" />
+        <div className="h-40 animate-pulse rounded-xl border border-charcoal/8 bg-white" />
       </div>
     );
   }
@@ -117,17 +117,17 @@ export default function AdminUserDetailPage() {
     <div className="space-y-6 p-6">
       <Link
         href="/admin/users"
-        className="inline-flex items-center gap-1 text-sm text-cream/60 transition-colors hover:text-cream"
+        className="inline-flex items-center gap-1 text-sm text-charcoal/50 transition-colors hover:text-charcoal"
       >
         <ArrowLeft className="h-4 w-4" />
         Retour aux utilisateurs
       </Link>
 
-      <div className="rounded-xl border border-cream/5 bg-charcoal p-5">
+      <div className="rounded-xl border border-charcoal/8 bg-white p-5">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h1 className="font-display text-xl font-bold text-cream">{displayName}</h1>
-            <p className="text-sm text-cream/40">{user.email}</p>
+            <h1 className="font-display text-xl font-bold text-charcoal">{displayName}</h1>
+            <p className="text-sm text-charcoal/40">{user.email}</p>
           </div>
           <div className="flex gap-2">
             <button
@@ -158,66 +158,58 @@ export default function AdminUserDetailPage() {
         </div>
 
         <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="rounded-lg border border-cream/5 bg-[#111816] p-4">
-            <p className="text-xs text-cream/40">Rôle</p>
-            <p className="mt-1 text-sm font-medium text-cream">{user.role}</p>
-          </div>
-          <div className="rounded-lg border border-cream/5 bg-[#111816] p-4">
-            <p className="text-xs text-cream/40">Statut compte</p>
-            <p className="mt-1 text-sm font-medium text-cream">
-              {user.suspended ? 'Suspendu' : 'Actif'}
-            </p>
-          </div>
-          <div className="rounded-lg border border-cream/5 bg-[#111816] p-4">
-            <p className="text-xs text-cream/40">Email vérifié</p>
-            <p className="mt-1 text-sm font-medium text-cream">
-              {user.email_verified ? 'Oui' : 'Non'}
-            </p>
-          </div>
-          <div className="rounded-lg border border-cream/5 bg-[#111816] p-4">
-            <p className="text-xs text-cream/40">Dernière connexion</p>
-            <p className="mt-1 text-sm font-medium text-cream">
-              {user.last_login_at
+          {[
+            { label: 'Rôle', value: user.role },
+            { label: 'Statut compte', value: user.suspended ? 'Suspendu' : 'Actif' },
+            { label: 'Email vérifié', value: user.email_verified ? 'Oui' : 'Non' },
+            {
+              label: 'Dernière connexion',
+              value: user.last_login_at
                 ? new Date(user.last_login_at).toLocaleString('fr-FR')
-                : 'Jamais'}
-            </p>
-          </div>
+                : 'Jamais',
+            },
+          ].map(({ label, value }) => (
+            <div key={label} className="rounded-lg border border-charcoal/8 bg-cream p-4">
+              <p className="text-xs text-charcoal/40">{label}</p>
+              <p className="mt-1 text-sm font-medium text-charcoal capitalize">{value}</p>
+            </div>
+          ))}
         </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <div className="rounded-xl border border-cream/5 bg-charcoal p-5">
-          <h2 className="font-display text-sm font-bold text-cream">Compte restaurant</h2>
-          <p className="mt-3 text-sm text-cream/70">{user.company_name}</p>
-          <p className="mt-1 text-xs text-cream/40">Slug: {user.slug}</p>
-          <p className="mt-1 text-xs text-cream/40">
-            Plan: {user.subscription_tier ?? 'Aucun'}
+        <div className="rounded-xl border border-charcoal/8 bg-white p-5">
+          <h2 className="font-display text-sm font-bold text-charcoal">Compte restaurant</h2>
+          <p className="mt-3 text-sm font-medium text-charcoal">{user.company_name}</p>
+          <p className="mt-1 text-xs text-charcoal/40">Slug : {user.slug}</p>
+          <p className="mt-1 text-xs text-charcoal/40">
+            Plan : {user.subscription_tier ?? 'Aucun'}
           </p>
           <button
             onClick={() => router.push(`/admin/restaurants/${user.tenant_id}`)}
-            className="mt-4 rounded-lg border border-cream/10 px-3 py-1.5 text-xs text-cream/70 transition-colors hover:bg-cream/5 hover:text-cream"
+            className="mt-4 rounded-lg border border-charcoal/8 px-3 py-1.5 text-xs text-charcoal/60 transition-colors hover:bg-cream-dark hover:text-charcoal"
           >
             Ouvrir le restaurant
           </button>
         </div>
 
-        <div className="rounded-xl border border-cream/5 bg-charcoal p-5">
-          <h2 className="font-display text-sm font-bold text-cream">Activité</h2>
+        <div className="rounded-xl border border-charcoal/8 bg-white p-5">
+          <h2 className="font-display text-sm font-bold text-charcoal">Activité</h2>
           <div className="mt-3 grid grid-cols-2 gap-3">
-            <div className="rounded-lg border border-cream/5 bg-[#111816] p-3">
-              <p className="text-xs text-cream/40">Produits</p>
-              <p className="mt-1 font-display text-lg font-bold text-cream">
+            <div className="rounded-lg border border-charcoal/8 bg-cream p-3">
+              <p className="text-xs text-charcoal/40">Produits</p>
+              <p className="mt-1 font-display text-lg font-bold text-charcoal">
                 {user.productCount}
               </p>
             </div>
-            <div className="rounded-lg border border-cream/5 bg-[#111816] p-3">
-              <p className="text-xs text-cream/40">Ventes</p>
-              <p className="mt-1 font-display text-lg font-bold text-cream">
+            <div className="rounded-lg border border-charcoal/8 bg-cream p-3">
+              <p className="text-xs text-charcoal/40">Ventes</p>
+              <p className="mt-1 font-display text-lg font-bold text-charcoal">
                 {user.salesCount}
               </p>
             </div>
           </div>
-          <p className="mt-3 text-xs text-cream/40">
+          <p className="mt-3 text-xs text-charcoal/40">
             Créé le {new Date(user.created_at).toLocaleDateString('fr-FR')}
           </p>
         </div>

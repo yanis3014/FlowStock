@@ -1,146 +1,217 @@
 'use client';
 
-import { AlertTriangle, Cpu, Link2, Mail } from 'lucide-react';
+import { useEffect, useState, useCallback } from 'react';
+import { AlertTriangle, Cpu, Link2, RefreshCw } from 'lucide-react';
+import { useApi } from '@/hooks/useApi';
 
-const MOCK_POS_STATUS = [
-  { name: 'Lightspeed', status: 'ok' as const, latenceMs: 120, tauxErreur: 0.1 },
-  { name: 'Saisie manuelle', status: 'ok' as const, latenceMs: 0, tauxErreur: 0 },
-];
+interface Integration {
+  name: string;
+  status: 'ok' | 'degraded';
+  latencyMs: number | null;
+  errorRate: number;
+}
 
-const MOCK_CLIENTS_IMPACTES = [
-  { id: '1', nom: 'Le Bistrot', erreur: 'Timeout API Lightspeed', depuis: 'Il y a 15 min' },
-];
+interface ImpactedTenant {
+  tenant_id: string;
+  company_name: string;
+  error: string;
+  since: string | null;
+}
 
-const MOCK_LOGS = [
-  { id: '1', ts: '25 fév. 14:32', level: 'error', msg: 'Lightspeed API timeout — client Le Bistrot (id: 4)' },
-  { id: '2', ts: '25 fév. 14:28', level: 'warn', msg: 'Rate limit approché — Lightspeed (180/200 req/min)' },
-  { id: '3', ts: '25 fév. 14:15', level: 'info', msg: 'Sync complète — client La Terrasse' },
-];
+interface PosHealth {
+  integrations: Integration[];
+  impactedTenants: ImpactedTenant[];
+  recentLogs: { ts: string; level: string; message: string }[];
+}
 
-const MOCK_LLM = { status: 'ok' as const, latenceMs: 450, model: 'gpt-4o-mini' };
-const MOCK_ALERT_EMAIL = 'Alerte technique envoyée à tech@flowstock.fr — 1 client impacté (Lightspeed).';
+interface SystemInfo {
+  uptime: number;
+  nodeVersion: string;
+  memoryUsage: { heapUsed: number; heapTotal: number; rss: number };
+  timestamp: string;
+  database: { status: string };
+}
+
+function formatSince(dateStr: string | null): string {
+  if (!dateStr) return 'Inconnu';
+  const diffMs = Date.now() - new Date(dateStr).getTime();
+  const diffMin = Math.floor(diffMs / 60000);
+  if (diffMin < 60) return `Il y a ${diffMin} min`;
+  return `Il y a ${Math.floor(diffMin / 60)}h`;
+}
 
 export default function AdminMoniteurPage() {
+  const { fetchApi } = useApi();
+  const [posHealth, setPosHealth] = useState<PosHealth | null>(null);
+  const [systemInfo, setSystemInfo] = useState<SystemInfo | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
+
+  const fetchData = useCallback(() => {
+    setLoading(true);
+    Promise.all([
+      fetchApi('/api/admin/pos-health').then((r) => (r.ok ? r.json() : null)),
+      fetchApi('/api/admin/system').then((r) => (r.ok ? r.json() : null)),
+    ])
+      .then(([posPayload, sysPayload]) => {
+        if (posPayload?.success && posPayload.data) setPosHealth(posPayload.data as PosHealth);
+        if (sysPayload?.success && sysPayload.data) setSystemInfo(sysPayload.data as SystemInfo);
+        setLastRefresh(new Date());
+      })
+      .finally(() => setLoading(false));
+  }, [fetchApi]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="font-display text-2xl font-bold text-green-deep">Moniteur technique</h2>
-        <p className="text-sm text-gray-warm">Statut des intégrations, LLM et alertes · Données mock</p>
+    <div className="space-y-6 p-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="font-display text-xl font-bold text-charcoal">Moniteur technique</h1>
+          <p className="mt-0.5 text-sm text-charcoal/40">
+            Dernière mise à jour : {lastRefresh.toLocaleTimeString('fr-FR')}
+          </p>
+        </div>
+        <button
+          onClick={fetchData}
+          disabled={loading}
+          className="flex items-center gap-2 rounded-lg border border-charcoal/8 bg-white px-3 py-2 text-sm text-charcoal/50 transition-colors hover:bg-cream-dark disabled:opacity-50"
+        >
+          <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
+          Actualiser
+        </button>
       </div>
 
-      {/* Statut intégrations POS */}
-      <section className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-        <h3 className="flex items-center gap-2 font-display text-lg font-bold text-green-deep">
-          <Link2 className="h-5 w-5" />
-          Intégrations POS
-        </h3>
-        <div className="mt-4 space-y-3">
-          {MOCK_POS_STATUS.map((pos) => (
-            <div
-              key={pos.name}
-              className="flex flex-wrap items-center justify-between gap-4 rounded-lg border border-gray-100 bg-gray-50 p-4"
-            >
-              <div className="flex items-center gap-3">
-                <span
-                  className={`h-3 w-3 rounded-full ${
-                    pos.status === 'ok' ? 'bg-green-mid' : 'bg-red-alert'
-                  }`}
-                />
-                <span className="font-medium text-charcoal">{pos.name}</span>
-              </div>
-              <div className="flex gap-6 text-sm">
-                <span className="text-gray-warm">
-                  Latence : <strong className="text-charcoal">{pos.latenceMs} ms</strong>
-                </span>
-                <span className="text-gray-warm">
-                  Taux d&apos;erreur : <strong className="text-charcoal">{pos.tauxErreur} %</strong>
-                </span>
-              </div>
-            </div>
+      {loading && !posHealth && (
+        <div className="space-y-4">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="h-32 animate-pulse rounded-xl border border-charcoal/8 bg-white" />
           ))}
         </div>
-      </section>
+      )}
 
-      {/* Clients impactés */}
-      <section className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-        <h3 className="flex items-center gap-2 font-display text-lg font-bold text-green-deep">
-          <AlertTriangle className="h-5 w-5" />
-          Clients impactés
-        </h3>
-        {MOCK_CLIENTS_IMPACTES.length === 0 ? (
-          <p className="mt-4 text-sm text-gray-warm">Aucun client impacté actuellement.</p>
-        ) : (
-          <ul className="mt-4 space-y-2">
-            {MOCK_CLIENTS_IMPACTES.map((c) => (
-              <li
-                key={c.id}
-                className="flex items-center justify-between rounded-lg border border-orange-warn/30 bg-orange-warn/5 px-4 py-3"
+      {/* Statut intégrations POS */}
+      {posHealth && (
+        <section className="rounded-xl border border-charcoal/8 bg-white p-5">
+          <h2 className="flex items-center gap-2 font-display text-sm font-bold text-charcoal">
+            <Link2 className="h-4 w-4" />
+            Intégrations POS
+          </h2>
+          <div className="mt-4 space-y-3">
+            {posHealth.integrations.map((pos) => (
+              <div
+                key={pos.name}
+                className="flex flex-wrap items-center justify-between gap-4 rounded-lg border border-charcoal/8 bg-cream p-4"
               >
-                <span className="font-medium text-charcoal">{c.nom}</span>
-                <div className="text-right text-sm">
-                  <p className="text-orange-warn">{c.erreur}</p>
-                  <p className="text-gray-warm">{c.depuis}</p>
+                <div className="flex items-center gap-3">
+                  <span
+                    className={`h-2.5 w-2.5 rounded-full ${
+                      pos.status === 'ok' ? 'bg-green-deep' : 'bg-terracotta'
+                    }`}
+                  />
+                  <span className="font-medium text-charcoal">{pos.name}</span>
+                  <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                    pos.status === 'ok'
+                      ? 'bg-green-deep/10 text-green-deep'
+                      : 'bg-terracotta/10 text-terracotta'
+                  }`}>
+                    {pos.status === 'ok' ? 'Opérationnel' : 'Dégradé'}
+                  </span>
                 </div>
+                <div className="flex gap-6 text-sm text-charcoal/50">
+                  {pos.latencyMs !== null && (
+                    <span>
+                      Latence : <strong className="text-charcoal">{pos.latencyMs} ms</strong>
+                    </span>
+                  )}
+                  <span>
+                    Taux d&apos;erreur : <strong className="text-charcoal">{pos.errorRate}%</strong>
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Tenants impactés */}
+      {posHealth && (
+        <section className="rounded-xl border border-charcoal/8 bg-white p-5">
+          <h2 className="flex items-center gap-2 font-display text-sm font-bold text-charcoal">
+            <AlertTriangle className="h-4 w-4" />
+            Tenants impactés ({posHealth.impactedTenants.length})
+          </h2>
+          {posHealth.impactedTenants.length === 0 ? (
+            <p className="mt-4 text-sm text-charcoal/40">Aucun tenant impacté actuellement.</p>
+          ) : (
+            <ul className="mt-4 space-y-2">
+              {posHealth.impactedTenants.map((t) => (
+                <li
+                  key={t.tenant_id}
+                  className="flex items-center justify-between rounded-lg border border-terracotta/20 bg-terracotta/5 px-4 py-3"
+                >
+                  <span className="font-medium text-charcoal">{t.company_name}</span>
+                  <div className="text-right text-sm">
+                    <p className="text-terracotta">{t.error}</p>
+                    <p className="text-charcoal/40">{formatSince(t.since)}</p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
+
+      {/* Logs récents */}
+      {posHealth && posHealth.recentLogs.length > 0 && (
+        <section className="rounded-xl border border-charcoal/8 bg-white p-5">
+          <h2 className="font-display text-sm font-bold text-charcoal">Logs récents</h2>
+          <ul className="mt-4 space-y-2">
+            {posHealth.recentLogs.map((log, i) => (
+              <li
+                key={i}
+                className={`rounded-lg border px-4 py-2 font-mono text-xs ${
+                  log.level === 'error'
+                    ? 'border-terracotta/20 bg-terracotta/5 text-terracotta'
+                    : log.level === 'warn'
+                      ? 'border-gold/20 bg-gold/5 text-gold'
+                      : 'border-charcoal/8 bg-cream text-charcoal/60'
+                }`}
+              >
+                <span className="text-charcoal/50">{log.ts}</span> [{log.level}] {log.message}
               </li>
             ))}
           </ul>
-        )}
-      </section>
+        </section>
+      )}
 
-      {/* Logs erreurs */}
-      <section className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-        <h3 className="font-display text-lg font-bold text-green-deep">Logs récents</h3>
-        <ul className="mt-4 space-y-2">
-          {MOCK_LOGS.map((log) => (
-            <li
-              key={log.id}
-              className={`rounded-lg border px-4 py-2 font-mono text-xs ${
-                log.level === 'error'
-                  ? 'border-red-alert/30 bg-red-alert/5 text-red-alert'
-                  : log.level === 'warn'
-                    ? 'border-orange-warn/30 bg-orange-warn/5 text-orange-warn'
-                    : 'border-gray-100 bg-gray-50 text-gray-warm'
-              }`}
-            >
-              <span className="text-charcoal/70">{log.ts}</span> [{log.level}] {log.msg}
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      {/* Statut LLM */}
-      <section className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-        <h3 className="flex items-center gap-2 font-display text-lg font-bold text-green-deep">
-          <Cpu className="h-5 w-5" />
-          Service IA / LLM
-        </h3>
-        <div className="mt-4 flex flex-wrap items-center gap-6">
-          <div className="flex items-center gap-2">
-            <span
-              className={`h-3 w-3 rounded-full ${
-                MOCK_LLM.status === 'ok' ? 'bg-green-mid' : 'bg-red-alert'
-              }`}
-            />
-            <span className="font-medium text-charcoal">
-              {MOCK_LLM.status === 'ok' ? 'Opérationnel' : 'Indisponible'}
-            </span>
+      {/* Statut système */}
+      {systemInfo && (
+        <section className="rounded-xl border border-charcoal/8 bg-white p-5">
+          <h2 className="flex items-center gap-2 font-display text-sm font-bold text-charcoal">
+            <Cpu className="h-4 w-4" />
+            Statut système
+          </h2>
+          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {[
+              { label: 'Base de données', value: systemInfo.database.status === 'connected' ? 'Connectée' : 'Erreur', ok: systemInfo.database.status === 'connected' },
+              { label: 'Node.js', value: systemInfo.nodeVersion, ok: true },
+              { label: 'Heap utilisé', value: `${Math.round(systemInfo.memoryUsage.heapUsed / 1024 / 1024)} Mo`, ok: true },
+              { label: 'Uptime', value: `${Math.floor(systemInfo.uptime / 3600)}h ${Math.floor((systemInfo.uptime % 3600) / 60)}m`, ok: true },
+            ].map(({ label, value, ok }) => (
+              <div key={label} className="rounded-lg border border-charcoal/8 bg-cream p-3">
+                <div className="flex items-center gap-1.5">
+                  <span className={`h-1.5 w-1.5 rounded-full ${ok ? 'bg-green-deep' : 'bg-terracotta'}`} />
+                  <span className="text-xs text-charcoal/40">{label}</span>
+                </div>
+                <p className="mt-1.5 font-display text-sm font-bold text-charcoal">{value}</p>
+              </div>
+            ))}
           </div>
-          <span className="text-sm text-gray-warm">Latence moyenne : {MOCK_LLM.latenceMs} ms</span>
-          <span className="text-sm text-gray-warm">Modèle : {MOCK_LLM.model}</span>
-        </div>
-      </section>
-
-      {/* Alerte email (texte UI) */}
-      <section className="rounded-xl border border-orange-warn/30 bg-orange-warn/10 p-6">
-        <h3 className="flex items-center gap-2 font-display text-lg font-bold text-green-deep">
-          <Mail className="h-5 w-5" />
-          Alertes email
-        </h3>
-        <p className="mt-4 text-sm text-charcoal">{MOCK_ALERT_EMAIL}</p>
-        <p className="mt-2 text-xs text-gray-warm">
-          Dernière alerte envoyée : aujourd&apos;hui 14:32 (mock).
-        </p>
-      </section>
+        </section>
+      )}
     </div>
   );
 }

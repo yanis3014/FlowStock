@@ -1,268 +1,222 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Store, Users, Package, ShoppingCart, Clock } from 'lucide-react';
+import { toast } from 'sonner';
+import { useApi } from '@/hooks/useApi';
 
-/** Feedbacks et tickets par client (complément Sprint 5). */
-const MOCK_FEEDBACKS_PAR_CLIENT: Record<string, { date: string; type: string; message: string; statut: string }[]> = {
-  '1': [{ date: '24 fév. 2025', type: 'Suggestion', message: 'Export CSV hebdomadaire pour la compta.', statut: 'Traité' }],
-  '3': [{ date: '23 fév. 2025', type: 'Bug', message: 'Alertes Rush ne se rafraîchissent pas après ajustement.', statut: 'Nouveau' }],
-  '5': [{ date: '22 fév. 2025', type: 'Amélioration', message: 'Dupliquer une fiche technique en un clic.', statut: 'Lu' }],
-};
+interface RestaurantUser {
+  id: string;
+  email: string;
+  name: string;
+  role: string;
+  is_active: boolean;
+  created_at: string;
+  last_login_at: string | null;
+  suspended: boolean;
+}
 
-const MOCK_TICKETS_PAR_CLIENT: Record<string, { id: string; sujet: string; date: string; statut: string }[]> = {
-  '2': [{ id: 'T3', sujet: 'Facturation — changement d\'adresse', date: '18 fév. 2025', statut: 'Fermé' }],
-  '3': [{ id: 'T2', sujet: 'Demande formation Mode Rush', date: '20 fév. 2025', statut: 'Résolu' }],
-  '4': [{ id: 'T1', sujet: 'Problème connexion Lightspeed', date: '25 fév. 2025', statut: 'En cours' }],
-};
+interface RestaurantDetail {
+  id: string;
+  company_name: string;
+  slug: string;
+  industry: string | null;
+  created_at: string;
+  is_active: boolean;
+  subscription_tier: string | null;
+  subscription_status: string | null;
+  users: RestaurantUser[];
+  productCount: number;
+  salesCount: number;
+}
 
-const MOCK_CLIENTS: Record<
-  string,
-  {
-    nom: string;
-    ville: string;
-    plan: string;
-    email: string;
-    dateInscription: string;
-    pos: { connecte: boolean; type: string };
-    engagement: { connexions7j: number; rushLances: number };
-    dernierPaiement: string;
-    mrr: number;
-    notes: string;
-  }
-> = {
-  '1': {
-    nom: 'Le Comptoir',
-    ville: 'Paris',
-    plan: 'Pro',
-    email: 'contact@lecomptoir.fr',
-    dateInscription: '15 janvier 2025',
-    pos: { connecte: true, type: 'Lightspeed' },
-    engagement: { connexions7j: 12, rushLances: 28 },
-    dernierPaiement: '1er février 2025',
-    mrr: 89,
-    notes: 'Client très actif. Demande export CSV hebdo — à prévoir en Pro.',
-  },
-  '2': {
-    nom: 'La Terrasse',
-    ville: 'Lyon',
-    plan: 'Pro',
-    email: 'accueil@laterrasse.fr',
-    dateInscription: '22 janvier 2025',
-    pos: { connecte: true, type: 'Lightspeed' },
-    engagement: { connexions7j: 8, rushLances: 18 },
-    dernierPaiement: '22 janvier 2025',
-    mrr: 89,
-    notes: '',
-  },
-  '3': {
-    nom: 'Chez Marie',
-    ville: 'Bordeaux',
-    plan: 'Starter',
-    email: 'marie@chezmarie.fr',
-    dateInscription: '10 février 2025',
-    pos: { connecte: false, type: 'Saisie manuelle' },
-    engagement: { connexions7j: 2, rushLances: 3 },
-    dernierPaiement: '10 février 2025',
-    mrr: 29,
-    notes: 'Peu d’usage depuis 1 semaine — relance email prévue.',
-  },
-  '4': {
-    nom: 'Le Bistrot',
-    ville: 'Marseille',
-    plan: 'Pro',
-    email: 'bistrot@lebistrot.fr',
-    dateInscription: '5 décembre 2024',
-    pos: { connecte: true, type: 'Lightspeed' },
-    engagement: { connexions7j: 0, rushLances: 0 },
-    dernierPaiement: '5 janvier 2025',
-    mrr: 89,
-    notes: 'Aucune connexion depuis 14j. Churn probable — relance en cours.',
-  },
-  '5': {
-    nom: 'La Table',
-    ville: 'Toulouse',
-    plan: 'Starter',
-    email: 'contact@latable.fr',
-    dateInscription: '28 février 2025',
-    pos: { connecte: false, type: 'Saisie manuelle' },
-    engagement: { connexions7j: 5, rushLances: 7 },
-    dernierPaiement: '28 février 2025',
-    mrr: 29,
-    notes: '',
-  },
-};
+function formatDate(dateStr: string | null) {
+  if (!dateStr) return 'Jamais';
+  return new Date(dateStr).toLocaleDateString('fr-FR', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
 
 export default function AdminClientProfilPage() {
   const params = useParams();
+  const { fetchApi } = useApi();
   const id = typeof params?.id === 'string' ? params.id : '';
-  const client = id ? MOCK_CLIENTS[id] : null;
-  const feedbacks = id ? MOCK_FEEDBACKS_PAR_CLIENT[id] ?? [] : [];
-  const tickets = id ? MOCK_TICKETS_PAR_CLIENT[id] ?? [] : [];
+  const [restaurant, setRestaurant] = useState<RestaurantDetail | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  if (!client) {
+  useEffect(() => {
+    if (!id) return;
+    let cancelled = false;
+
+    fetchApi(`/api/admin/restaurants/${id}`)
+      .then(async (r) => {
+        const payload = (await r.json().catch(() => ({}))) as {
+          success?: boolean;
+          data?: RestaurantDetail;
+        };
+        if (!r.ok || !payload.success || !payload.data) {
+          throw new Error('not_found');
+        }
+        if (!cancelled) setRestaurant(payload.data);
+      })
+      .catch(() => {
+        if (!cancelled) toast.error('Client introuvable.');
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => { cancelled = true; };
+  }, [fetchApi, id]);
+
+  if (loading) {
     return (
-      <div className="space-y-4">
-        <Link href="/admin/clients" className="inline-flex items-center gap-1 text-sm text-green-mid hover:underline">
-          <ArrowLeft className="h-4 w-4" />
-          Retour aux clients
-        </Link>
-        <p className="text-gray-warm">Client non trouvé.</p>
+      <div className="space-y-4 p-6">
+        <div className="h-8 w-40 animate-pulse rounded-lg bg-charcoal/8" />
+        <div className="h-48 animate-pulse rounded-xl border border-charcoal/8 bg-white" />
+        <div className="h-48 animate-pulse rounded-xl border border-charcoal/8 bg-white" />
       </div>
     );
   }
 
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4">
-        <Link
-          href="/admin/clients"
-          className="inline-flex items-center gap-1 text-sm font-medium text-green-mid hover:underline"
-        >
+  if (!restaurant) {
+    return (
+      <div className="space-y-4 p-6">
+        <Link href="/admin/clients" className="inline-flex items-center gap-1 text-sm text-charcoal/50 hover:text-charcoal">
           <ArrowLeft className="h-4 w-4" />
-          Liste des clients
+          Retour aux clients
         </Link>
+        <p className="text-charcoal/50">Client non trouvé.</p>
       </div>
+    );
+  }
 
-      <div>
-        <h2 className="font-display text-2xl font-bold text-green-deep">{client.nom}</h2>
-        <p className="text-sm text-gray-warm">Profil client · Données mock</p>
-      </div>
+  const TIER_MRR: Record<string, number> = { normal: 29, premium: 89, premium_plus: 149 };
+  const mrr = TIER_MRR[restaurant.subscription_tier ?? ''] ?? 0;
+  const activeUsers = restaurant.users.filter((u) => !u.suspended).length;
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Infos générales */}
-        <section className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-          <h3 className="font-display text-lg font-bold text-green-deep">Informations</h3>
-          <dl className="mt-4 space-y-2 text-sm">
-            <div>
-              <dt className="text-gray-warm">Email</dt>
-              <dd className="font-medium text-charcoal">{client.email}</dd>
-            </div>
-            <div>
-              <dt className="text-gray-warm">Ville</dt>
-              <dd className="font-medium text-charcoal">{client.ville}</dd>
-            </div>
-            <div>
-              <dt className="text-gray-warm">Plan</dt>
-              <dd>
-                <span className="rounded-full bg-green-deep/10 px-2 py-0.5 font-medium text-green-deep">
-                  {client.plan}
-                </span>
-              </dd>
-            </div>
-            <div>
-              <dt className="text-gray-warm">Inscription</dt>
-              <dd className="font-medium text-charcoal">{client.dateInscription}</dd>
-            </div>
-          </dl>
-        </section>
+  return (
+    <div className="space-y-6 p-6">
+      <Link
+        href="/admin/clients"
+        className="inline-flex items-center gap-1 text-sm text-charcoal/50 transition-colors hover:text-charcoal"
+      >
+        <ArrowLeft className="h-4 w-4" />
+        Liste des clients
+      </Link>
 
-        {/* Statut POS */}
-        <section className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-          <h3 className="font-display text-lg font-bold text-green-deep">Caisse / POS</h3>
-          <div className="mt-4 flex items-center gap-3">
-            <span
-              className={`h-3 w-3 rounded-full ${
-                client.pos.connecte ? 'bg-green-mid' : 'bg-gray-warm'
-              }`}
-            />
-            <span className="font-medium text-charcoal">
-              {client.pos.connecte ? 'Connecté' : 'Non connecté'} — {client.pos.type}
+      {/* En-tête */}
+      <div className="rounded-xl border border-charcoal/8 bg-white p-5">
+        <div className="flex items-start gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-terracotta/10">
+            <Store className="h-5 w-5 text-terracotta" />
+          </div>
+          <div>
+            <h1 className="font-display text-xl font-bold text-charcoal">{restaurant.company_name}</h1>
+            <p className="text-sm text-charcoal/40">{restaurant.slug}</p>
+            {restaurant.industry && <p className="mt-1 text-xs text-charcoal/40">{restaurant.industry}</p>}
+          </div>
+          <div className="ml-auto">
+            <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
+              restaurant.is_active
+                ? 'bg-green-deep/10 text-green-deep'
+                : 'bg-charcoal/8 text-charcoal/50'
+            }`}>
+              {restaurant.is_active ? 'Actif' : 'Inactif'}
             </span>
           </div>
-        </section>
+        </div>
 
-        {/* Indicateurs d'engagement */}
-        <section className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-          <h3 className="font-display text-lg font-bold text-green-deep">Engagement (7 derniers jours)</h3>
-          <div className="mt-4 flex gap-6">
-            <div>
-              <p className="text-2xl font-display font-bold text-green-deep">{client.engagement.connexions7j}</p>
-              <p className="text-xs text-gray-warm">Connexions</p>
+        <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {[
+            { icon: Users, label: 'Utilisateurs actifs', value: activeUsers },
+            { icon: Package, label: 'Produits', value: restaurant.productCount },
+            { icon: ShoppingCart, label: 'Ventes', value: restaurant.salesCount },
+            { icon: Clock, label: 'MRR', value: mrr > 0 ? `${mrr} €/m` : 'Aucun' },
+          ].map(({ icon: Icon, label, value }) => (
+            <div key={label} className="rounded-lg border border-charcoal/8 bg-cream p-4">
+              <div className="flex items-center gap-2 text-charcoal/40">
+                <Icon className="h-4 w-4" />
+                <span className="text-xs">{label}</span>
+              </div>
+              <p className="mt-2 font-display text-lg font-bold text-charcoal">{value}</p>
             </div>
-            <div>
-              <p className="text-2xl font-display font-bold text-green-deep">{client.engagement.rushLances}</p>
-              <p className="text-xs text-gray-warm">Mode Rush lancés</p>
-            </div>
-          </div>
-        </section>
-
-        {/* Historique paiements */}
-        <section className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-          <h3 className="font-display text-lg font-bold text-green-deep">Facturation</h3>
-          <dl className="mt-4 space-y-2 text-sm">
-            <div>
-              <dt className="text-gray-warm">MRR</dt>
-              <dd className="font-display font-bold text-green-deep">
-                {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(client.mrr)}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-gray-warm">Dernier paiement</dt>
-              <dd className="font-medium text-charcoal">{client.dernierPaiement}</dd>
-            </div>
-          </dl>
-          <p className="mt-3 text-xs text-gray-warm">Historique complet (mock) — lien Stripe en production</p>
-        </section>
+          ))}
+        </div>
       </div>
 
-      {/* Notes internes */}
-      <section className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-        <h3 className="font-display text-lg font-bold text-green-deep">Notes internes</h3>
-        <p className="mt-4 text-sm text-charcoal">
-          {client.notes || 'Aucune note.'}
-        </p>
-      </section>
+      {/* Informations abonnement */}
+      <div className="rounded-xl border border-charcoal/8 bg-white p-5">
+        <h2 className="font-display text-sm font-bold text-charcoal">Abonnement</h2>
+        <dl className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4 text-sm">
+          <div>
+            <dt className="text-charcoal/40">Plan</dt>
+            <dd className="mt-1 font-medium text-charcoal capitalize">
+              {restaurant.subscription_tier ?? 'Aucun'}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-charcoal/40">Statut</dt>
+            <dd className="mt-1">
+              <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
+                restaurant.subscription_status === 'active'
+                  ? 'bg-green-deep/10 text-green-deep'
+                  : restaurant.subscription_status === 'trial'
+                    ? 'bg-gold/20 text-gold'
+                    : 'bg-charcoal/8 text-charcoal/50'
+              }`}>
+                {restaurant.subscription_status ?? 'n/a'}
+              </span>
+            </dd>
+          </div>
+          <div>
+            <dt className="text-charcoal/40">Inscription</dt>
+            <dd className="mt-1 font-medium text-charcoal">
+              {new Date(restaurant.created_at).toLocaleDateString('fr-FR')}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-charcoal/40">MRR estimé</dt>
+            <dd className="mt-1 font-display font-bold text-green-deep">
+              {mrr > 0
+                ? new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(mrr)
+                : '—'}
+            </dd>
+          </div>
+        </dl>
+      </div>
 
-      {/* Complément Sprint 5 : Feedbacks et tickets du client */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        <section className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-          <div className="flex items-center justify-between">
-            <h3 className="font-display text-lg font-bold text-green-deep">Feedbacks</h3>
-            <Link href="/admin/feedback" className="text-sm text-green-mid hover:underline">
-              Voir tout
-            </Link>
+      {/* Utilisateurs du restaurant */}
+      <div className="rounded-xl border border-charcoal/8 bg-white p-5">
+        <h2 className="font-display text-sm font-bold text-charcoal">
+          Utilisateurs ({restaurant.users.length})
+        </h2>
+        {restaurant.users.length === 0 ? (
+          <p className="mt-4 text-sm text-charcoal/40">Aucun utilisateur lié.</p>
+        ) : (
+          <div className="mt-4 divide-y divide-charcoal/5">
+            {restaurant.users.map((u) => (
+              <div key={u.id} className="flex items-center justify-between py-3">
+                <div>
+                  <p className="text-sm font-medium text-charcoal">{u.name || u.email}</p>
+                  <p className="text-xs text-charcoal/40">{u.email}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs text-charcoal/60 capitalize">{u.role}</p>
+                  <p className="text-xs text-charcoal/40">
+                    {u.last_login_at ? formatDate(u.last_login_at) : 'Jamais connecté'}
+                  </p>
+                </div>
+              </div>
+            ))}
           </div>
-          {feedbacks.length === 0 ? (
-            <p className="mt-4 text-sm text-gray-warm">Aucun feedback.</p>
-          ) : (
-            <ul className="mt-4 space-y-3">
-              {feedbacks.map((fb, i) => (
-                <li key={i} className="rounded-lg border border-gray-100 p-3">
-                  <p className="text-xs text-gray-warm">{fb.date} · {fb.type}</p>
-                  <p className="mt-1 text-sm text-charcoal">{fb.message}</p>
-                  <span className="mt-2 inline-block rounded-full bg-green-deep/10 px-2 py-0.5 text-xs font-medium text-green-deep">
-                    {fb.statut}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-        <section className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-          <div className="flex items-center justify-between">
-            <h3 className="font-display text-lg font-bold text-green-deep">Tickets support</h3>
-            <Link href="/admin/feedback" className="text-sm text-green-mid hover:underline">
-              Voir tout
-            </Link>
-          </div>
-          {tickets.length === 0 ? (
-            <p className="mt-4 text-sm text-gray-warm">Aucun ticket.</p>
-          ) : (
-            <ul className="mt-4 space-y-3">
-              {tickets.map((t) => (
-                <li key={t.id} className="flex items-center justify-between rounded-lg border border-gray-100 p-3">
-                  <div>
-                    <p className="font-medium text-charcoal">{t.sujet}</p>
-                    <p className="text-xs text-gray-warm">{t.date} · {t.statut}</p>
-                  </div>
-                  <span className="font-mono text-xs text-gray-warm">{t.id}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
+        )}
       </div>
     </div>
   );
