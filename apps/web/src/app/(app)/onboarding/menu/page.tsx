@@ -6,7 +6,7 @@ import { extractMenuWithAI } from './actions';
 import { MenuCard } from '@/components/onboarding/MenuCard';
 import type { MenuPlatLocal, OnboardingProgressData } from '@/types/onboarding';
 
-type MenuStep = 'IDLE' | 'EXTRACTING' | 'REVIEW' | 'SAVING';
+type MenuStep = 'IDLE' | 'EXTRACTING' | 'REVIEW' | 'SAVING' | 'EMPTY';
 
 export default function MenuPage() {
   const { fetchApi } = useApi();
@@ -32,12 +32,23 @@ export default function MenuPage() {
 
   const handleFileSelected = async (_file: File, dataUrl: string) => {
     setError('');
-    const mimeType = dataUrl.split(';')[0].slice(5);
-    const base64 = dataUrl.split(',')[1];
     setStep('EXTRACTING');
     try {
-      const result = await extractMenuWithAI(base64, mimeType, typeCuisine);
-      setPlats(result.plats.map((p) => ({ ...p, id: crypto.randomUUID() })));
+      // Passer la dataUrl complète à la Server Action (comme menu-scan)
+      const result = await extractMenuWithAI(dataUrl, typeCuisine);
+
+      if (!result.success) {
+        setError(result.error);
+        setStep('IDLE');
+        return;
+      }
+
+      if (result.data.plats.length === 0) {
+        setStep('EMPTY');
+        return;
+      }
+
+      setPlats(result.data.plats.map((p) => ({ ...p, id: crypto.randomUUID() })));
       setStep('REVIEW');
     } catch {
       setError("Erreur lors de l'extraction. Réessayez.");
@@ -85,7 +96,6 @@ export default function MenuPage() {
     );
     const failed = results.filter((r) => r.status === 'rejected').length;
     if (failed > 0) {
-      // Toast warning — utiliser console.warn comme fallback si toast n'est pas disponible
       console.warn(`${plats.length - failed}/${plats.length} plats sauvegardés.`);
     }
     const prev = prevData ?? { completed_steps: [], current_step: 'menu' as const };
@@ -112,7 +122,7 @@ export default function MenuPage() {
         nom: 'Nouveau plat',
         categorie: 'Plats',
         ingredients: [],
-        confiance: 'low',
+        confiance: 'low' as const,
       },
     ]);
   };
@@ -143,15 +153,51 @@ export default function MenuPage() {
       )}
 
       {step === 'EXTRACTING' && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="h-48 rounded-xl bg-charcoal/8 animate-pulse" />
-          ))}
+        <div className="flex flex-col gap-4">
+          <p className="text-sm text-charcoal/60 text-center animate-pulse">
+            Analyse de votre menu en cours…
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-48 rounded-xl bg-charcoal/8 animate-pulse" />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {step === 'EMPTY' && (
+        <div className="bg-orange-warn/10 border border-orange-warn/30 rounded-xl p-6 flex flex-col gap-3">
+          <p className="font-medium text-charcoal">Aucun plat détecté dans l&apos;image</p>
+          <p className="text-sm text-charcoal/60">
+            L&apos;image n&apos;a pas permis d&apos;identifier des plats. Essayez une autre photo plus nette,
+            ou saisissez vos plats manuellement.
+          </p>
+          <div className="flex gap-3 flex-wrap">
+            <button
+              type="button"
+              onClick={() => setStep('IDLE')}
+              className="text-sm bg-[#1C2B2A] text-white px-4 py-2 rounded-lg min-h-[44px]"
+            >
+              Réessayer avec une autre photo
+            </button>
+            <button
+              type="button"
+              onClick={() => { setPlats([]); setStep('REVIEW'); }}
+              className="text-sm text-charcoal/60 underline"
+            >
+              Saisir manuellement
+            </button>
+          </div>
         </div>
       )}
 
       {(step === 'REVIEW' || step === 'SAVING') && (
         <div className="flex flex-col gap-4">
+          {plats.length === 0 && (
+            <p className="text-sm text-charcoal/50 italic">
+              Aucun plat pour l&apos;instant — ajoutez-en avec le bouton ci-dessous.
+            </p>
+          )}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {plats.map((plat) => (
               <MenuCard
@@ -189,7 +235,7 @@ export default function MenuPage() {
         >
           ← Précédent
         </button>
-        {step === 'IDLE' && (
+        {(step === 'IDLE' || step === 'EMPTY') && (
           <button
             type="button"
             onClick={handleSkip}
