@@ -96,7 +96,9 @@ export default function MenuPage() {
     );
     const failed = results.filter((r) => r.status === 'rejected').length;
     if (failed > 0) {
-      console.warn(`${plats.length - failed}/${plats.length} plats sauvegardés.`);
+      setError(`${plats.length - failed}/${plats.length} plats enregistrés — ${failed} ont échoué. Vérifiez votre connexion.`);
+      setStep('REVIEW');
+      return;
     }
     const prev = prevData ?? { completed_steps: [], current_step: 'menu' as const };
     const completed = prev.completed_steps ?? [];
