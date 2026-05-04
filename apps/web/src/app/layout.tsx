@@ -15,6 +15,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="fr">
+      <head>
+        <link rel="manifest" href="/manifest.json" />
+      </head>
       <body className="antialiased min-h-screen bg-gray-50">
         <AuthProvider>{children}</AuthProvider>
         <Toaster

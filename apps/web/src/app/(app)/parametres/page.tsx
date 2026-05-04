@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useApi } from '@/hooks/useApi';
 import { Download, Link2, Loader2, Brain, Lock } from 'lucide-react';
@@ -73,6 +73,24 @@ export default function ParametresPage() {
   const [aiSettings, setAiSettings] = useState<AiSettings>({ ai_autonomy_level: 1, ai_auto_order_threshold: 0 });
   const [aiSaving, setAiSaving] = useState(false);
   const [subscription, setSubscription] = useState<string | null>(null);
+  const [squareConnecting, setSquareConnecting] = useState(false);
+  const squareToastDone = useRef(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || squareToastDone.current) return;
+    const params = new URLSearchParams(window.location.search);
+    const square = params.get('square');
+    if (!square) return;
+    squareToastDone.current = true;
+    if (square === 'error') {
+      toast.error('Connexion Square impossible. Merci de réessayer ou de vérifier la configuration.');
+    } else if (square === 'connected') {
+      toast.success('Square a été connecté avec succès.');
+    }
+    const u = new URL(window.location.href);
+    u.searchParams.delete('square');
+    window.history.replaceState({}, '', u.pathname + (u.search ? u.search : ''));
+  }, []);
 
   const loadData = useCallback(async () => {
     if (!token) return;
@@ -196,6 +214,30 @@ export default function ParametresPage() {
     }
   };
 
+  const handleConnectSquare = async () => {
+    setSquareConnecting(true);
+    try {
+      const res = await fetchApi('/integrations/square/oauth-url');
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(
+          typeof j?.error === 'string' ? j.error : 'Connexion Square indisponible (configuration serveur).'
+        );
+        return;
+      }
+      const url = j?.data?.authorizeUrl;
+      if (typeof url === 'string' && url.startsWith('http')) {
+        window.location.assign(url);
+        return;
+      }
+      toast.error('Réponse serveur invalide.');
+    } catch {
+      toast.error('Impossible de démarrer la connexion Square.');
+    } finally {
+      setSquareConnecting(false);
+    }
+  };
+
   const handleSaveLangue = () => {
     const prefs = { ...form, langue: form.langue ?? 'fr', fuseau: form.fuseau ?? 'Europe/Paris' };
     saveLocalPrefs(prefs);
@@ -310,6 +352,26 @@ export default function ParametresPage() {
             >
               {posStatus?.connecte ? 'Actif' : 'Inactif'}
             </span>
+          </div>
+          <div className="mt-4 flex flex-col gap-3 rounded-lg border border-charcoal/8 bg-cream/30 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-3">
+              <Link2 className="h-5 w-5 text-green-deep" />
+              <div>
+                <p className="font-medium text-charcoal">Square</p>
+                <p className="text-sm text-charcoal/50">
+                  Connexion OAuth sécurisée (aucun secret côté navigateur).
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={handleConnectSquare}
+              disabled={squareConnecting || !token}
+              className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-green-deep/40 bg-white px-4 py-2 font-display text-sm font-bold text-green-deep hover:bg-green-deep/5 transition-colors disabled:opacity-60"
+            >
+              {squareConnecting && <Loader2 className="h-4 w-4 animate-spin" />}
+              Connecter Square
+            </button>
           </div>
           <p className="mt-2 text-xs text-charcoal/50">Saisie manuelle toujours disponible en secours.</p>
         </section>

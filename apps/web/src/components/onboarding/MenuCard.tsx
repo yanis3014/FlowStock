@@ -44,28 +44,33 @@ export function MenuCard({ plat, onUpdate, onDelete }: MenuCardProps) {
 
   return (
     <div className="bg-white rounded-xl border border-charcoal/10 p-4 shadow-sm flex flex-col gap-3">
-      <div className="flex items-start gap-2">
+      <div className="flex items-start gap-2 flex-wrap min-w-0">
         <input
-          className="flex-1 font-semibold text-charcoal bg-transparent border-b border-transparent hover:border-charcoal/20 focus:border-charcoal/40 focus:outline-none text-base"
+          className="flex-1 min-w-0 font-semibold text-charcoal bg-transparent border-b border-transparent hover:border-charcoal/20 focus:border-charcoal/40 focus:outline-none text-base"
           value={plat.nom}
           onChange={(e) => onUpdate({ ...plat, nom: e.target.value })}
           placeholder="Nom du plat"
         />
-        <span className="text-xs px-2 py-0.5 rounded bg-charcoal/10 text-charcoal/60 flex-shrink-0">
-          {plat.categorie}
-        </span>
-        <span
-          className={`text-xs px-2 py-0.5 rounded flex-shrink-0 ${CONFIDENCE_STYLES[plat.confiance] ?? 'bg-charcoal/10'}`}
-        >
-          {CONFIDENCE_LABELS[plat.confiance] ?? plat.confiance}
-        </span>
+        <div className="flex items-center gap-1 flex-shrink-0">
+          <span className="text-xs px-2 py-0.5 rounded bg-charcoal/10 text-charcoal/60 whitespace-nowrap">
+            {plat.categorie}
+          </span>
+          <span
+            className={`text-xs px-2 py-0.5 rounded whitespace-nowrap flex-shrink-0 ${CONFIDENCE_STYLES[plat.confiance] ?? 'bg-charcoal/10'}`}
+          >
+            {CONFIDENCE_LABELS[plat.confiance] ?? plat.confiance}
+          </span>
+        </div>
       </div>
 
       <div className="flex flex-col gap-2">
         {plat.ingredients.map((ing, i) => (
-          <div key={i} className="flex items-center gap-2">
+          <div
+            key={i}
+            className="grid grid-cols-[1fr_80px_70px_24px] gap-1.5 items-center w-full"
+          >
             <input
-              className="flex-1 text-sm border border-charcoal/15 rounded-lg px-2 py-1 focus:outline-none focus:border-charcoal/40"
+              className="w-full min-w-0 text-sm border border-charcoal/15 rounded-lg px-2 py-1.5 focus:outline-none focus:border-charcoal/40"
               value={ing.nom}
               onChange={(e) => updateIngredient(i, 'nom', e.target.value)}
               placeholder="Ingrédient"
@@ -74,12 +79,12 @@ export function MenuCard({ plat, onUpdate, onDelete }: MenuCardProps) {
               type="number"
               min={0.001}
               step={0.001}
-              className="w-20 text-sm border border-charcoal/15 rounded-lg px-2 py-1 focus:outline-none focus:border-charcoal/40"
+              className="w-full text-sm border border-charcoal/15 rounded-lg px-2 py-1.5 focus:outline-none focus:border-charcoal/40 text-right"
               value={ing.quantite}
               onChange={(e) => updateIngredient(i, 'quantite', parseFloat(e.target.value) || 0)}
             />
             <input
-              className="w-16 text-sm border border-charcoal/15 rounded-lg px-2 py-1 focus:outline-none focus:border-charcoal/40"
+              className="w-full text-sm border border-charcoal/15 rounded-lg px-2 py-1.5 focus:outline-none focus:border-charcoal/40"
               value={ing.unite}
               onChange={(e) => updateIngredient(i, 'unite', e.target.value)}
               placeholder="unité"
@@ -87,8 +92,8 @@ export function MenuCard({ plat, onUpdate, onDelete }: MenuCardProps) {
             <button
               type="button"
               onClick={() => removeIngredient(i)}
-              className="text-charcoal/40 hover:text-red-alert flex-shrink-0"
-              aria-label="Supprimer l'ingrédient"
+              className="text-charcoal/40 hover:text-red-alert flex-shrink-0 w-6 h-6 flex items-center justify-center text-lg"
+              aria-label="Supprimer"
             >
               ×
             </button>

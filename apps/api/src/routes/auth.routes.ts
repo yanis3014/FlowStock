@@ -26,8 +26,27 @@ import {
 } from '../services/auth.service';
 import { authenticateToken } from '../middleware/auth';
 import { sendAuthErrorResponse } from '../utils/authErrors';
+import { handleSquareOAuthCallback } from '../services/square-oauth.service';
+import { config } from '../config';
 
 const router = Router();
+
+/**
+ * GET /auth/square/callback
+ * Callback OAuth Square — sans JWT (redirection depuis Square). Erreurs → /parametres?square=error uniquement.
+ */
+router.get('/square/callback', async (req: Request, res: Response) => {
+  const code = typeof req.query.code === 'string' ? req.query.code : undefined;
+  const state = typeof req.query.state === 'string' ? req.query.state : undefined;
+  const oauthError = typeof req.query.error === 'string' ? req.query.error : undefined;
+  try {
+    const redirectUrl = await handleSquareOAuthCallback(code, state, oauthError);
+    res.redirect(302, redirectUrl);
+  } catch {
+    const base = config.FRONTEND_APP_URL.replace(/\/$/, '');
+    res.redirect(302, `${base}/parametres?square=error`);
+  }
+});
 
 /**
  * GET /auth/me

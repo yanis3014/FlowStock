@@ -33,6 +33,10 @@ import extractionFeedbackRoutes from './routes/extraction-feedback.routes';
 import predictionsRoutes from './routes/predictions.routes';
 import recommendationsRoutes from './routes/recommendations.routes';
 import onboardingRoutes from './routes/onboarding.routes';
+import rushRoutes from './routes/rush.routes';
+import integrationsRoutes from './routes/integrations.routes';
+import { createChatRouter } from './routes/chat.routes';
+import { getDatabase } from './database/connection';
 import { runPeriodicEvaluation } from './services/pos-sync-status.service';
 import { computeAllTenantsSnapshots } from './services/daily-snapshot.service';
 import { openApiDocument } from './openapi/spec';
@@ -113,6 +117,8 @@ app.get('/csrf-token', (req, res, next) => {
 
 // Story 2.1: POS webhook — no CSRF (external POS systems)
 app.use('/webhooks/pos', webhooksPosRoutes);
+// Rush (public token endpoint) — no CSRF
+app.use('/rush', rushRoutes);
 
 app.use((req, res, next) => {
   if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) return next();
@@ -121,6 +127,7 @@ app.use((req, res, next) => {
 });
 
 app.use('/auth', authRoutes);
+app.use('/integrations', integrationsRoutes);
 app.use('/pos-mapping', posMappingRoutes);
 app.use('/subscriptions', subscriptionRoutes);
 app.use('/products', productRoutes);
@@ -139,6 +146,7 @@ app.use('/predictions', predictionsRoutes);
 app.use('/recommendations', recommendationsRoutes);
 app.use('/onboarding', onboardingRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/chat', createChatRouter(getDatabase().getPool()));
 
 // Story 2.2: Import stocks page
 app.get('/import-stocks', (_req, res) => {

@@ -33,3 +33,4 @@ See `README.md` and root `package.json` for standard commands (`npm run dev`, `n
 - **Docker must be started manually** in the cloud VM: `sudo dockerd &>/dev/null &` then wait a few seconds before running `docker compose`.
 - **Registration field names** use `snake_case`: `first_name`, `last_name`, `company_name` (not camelCase).
 - **Story 2.5 (mode dégradé POS)** : `POS_DEGRADED_SILENCE_MINUTES` (défaut 15) et `POS_DEGRADED_FAILURE_THRESHOLD` (défaut 5) optionnels pour la détection de perte de synchro.
+- **Square OAuth** : `SQUARE_APPLICATION_SECRET`, `SQUARE_REDIRECT_URI`, `TOKEN_ENCRYPTION_KEY` (64 hex) et `FRONTEND_APP_URL` côté API uniquement ; callback `GET /auth/square/callback` sans JWT ; flux démarré via `GET /integrations/square/oauth-url` (JWT requis). `SQUARE_REDIRECT_URI` doit être identique au dashboard Square.

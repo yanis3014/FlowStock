@@ -2,7 +2,9 @@
 
 import type { MenuExtractionResult, ExtractedDish } from '@bmad/shared';
 
-const OPENAI_URL = 'https://api.openai.com/v1/chat/completions';
+// Certaines clés/projets sont configurés avec résidence EU : l'endpoint global peut renvoyer 401.
+// On utilise donc l'endpoint EU pour l'extraction Vision.
+const OPENAI_URL = 'https://eu.api.openai.com/v1/chat/completions';
 
 const VISION_SYSTEM_PROMPT = `Tu es un expert en restauration et gestion de stocks.
 Analyse ce menu de restaurant et pour chaque plat identifié,

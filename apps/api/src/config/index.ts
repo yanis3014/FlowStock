@@ -81,6 +81,24 @@ const configSchema = z.object({
     .optional()
     .default('true')
     .transform((val) => val !== 'false'),
+
+  /** 64 hex chars (32 bytes) — chiffrement des tokens OAuth Square en DB ; optionnel en dev (dérivation depuis JWT_SECRET). */
+  TOKEN_ENCRYPTION_KEY: z.string().optional(),
+
+  /** Public Application ID Square (serveur uniquement pour construire l’URL d’auth — jamais de secret côté frontend). */
+  SQUARE_APPLICATION_ID: z.string().optional(),
+  /** Secret application Square — uniquement variables d’environnement serveur. */
+  SQUARE_APPLICATION_SECRET: z.string().optional(),
+  /** Doit correspondre exactement à l’URL enregistrée dans le dashboard Square Developer. */
+  SQUARE_REDIRECT_URI: z.string().optional(),
+  SQUARE_USE_SANDBOX: z
+    .string()
+    .optional()
+    .default('false')
+    .transform((v) => v === 'true' || v === '1'),
+
+  /** Base URL de l’app web pour redirections après OAuth (ex. http://localhost:3002). */
+  FRONTEND_APP_URL: z.string().url().optional().default('http://localhost:3002'),
 });
 
 export type Config = z.infer<typeof configSchema>;

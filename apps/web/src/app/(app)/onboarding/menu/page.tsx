@@ -128,7 +128,14 @@ export default function MenuPage() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-8 flex flex-col gap-6">
+    <div className="w-full max-w-2xl mx-auto px-4 py-8 flex flex-col gap-6 overflow-x-hidden">
+      <style>{`
+        @keyframes skeleton-progress {
+          0% { width: 15%; }
+          50% { width: 75%; }
+          100% { width: 15%; }
+        }
+      `}</style>
       <div>
         <h1 className="text-2xl font-bold text-charcoal">Votre menu</h1>
         <p className="text-charcoal/60 mt-1 text-sm">
@@ -153,14 +160,74 @@ export default function MenuPage() {
       )}
 
       {step === 'EXTRACTING' && (
-        <div className="flex flex-col gap-4">
-          <p className="text-sm text-charcoal/60 text-center animate-pulse">
-            Analyse de votre menu en cours…
-          </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="h-48 rounded-xl bg-charcoal/8 animate-pulse" />
-            ))}
+        <div className="flex flex-col gap-4 w-full">
+          <div className="flex items-center gap-3 bg-[#1C2B2A]/5 border border-[#1C2B2A]/15 rounded-xl px-4 py-3">
+            <div className="w-4 h-4 rounded-full border-2 border-[#1C2B2A] border-t-transparent animate-spin flex-shrink-0" />
+            <p className="text-sm text-charcoal/70 font-medium">
+              L&apos;IA analyse votre menu et extrait les plats…
+            </p>
+          </div>
+
+          {[1, 2, 3].map((i) => (
+            <div
+              key={i}
+              className="bg-white rounded-xl border border-charcoal/10 p-4 flex flex-col gap-3 w-full"
+              style={{ animationDelay: `${(i - 1) * 0.15}s` }}
+            >
+              <div className="flex items-center gap-2 flex-wrap">
+                <div
+                  className="h-5 bg-charcoal/10 rounded-md animate-pulse flex-1 min-w-[120px]"
+                  style={{ animationDelay: `${i * 0.1}s` }}
+                />
+                <div
+                  className="h-5 w-14 bg-charcoal/8 rounded-md animate-pulse flex-shrink-0"
+                  style={{ animationDelay: `${i * 0.15}s` }}
+                />
+                <div
+                  className="h-5 w-16 bg-green-bright/20 rounded-md animate-pulse flex-shrink-0"
+                  style={{ animationDelay: `${i * 0.2}s` }}
+                />
+              </div>
+
+              <div className="h-px bg-charcoal/8 w-full" />
+
+              {[1, 2, 3, i === 2 ? 4 : 0].filter(Boolean).map((j) => (
+                <div
+                  key={j}
+                  className="grid grid-cols-[1fr_80px_70px_24px] gap-1.5 items-center"
+                >
+                  <div
+                    className="h-8 bg-charcoal/8 rounded-lg animate-pulse"
+                    style={{ animationDelay: `${(i + Number(j)) * 0.08}s` }}
+                  />
+                  <div
+                    className="h-8 bg-charcoal/8 rounded-lg animate-pulse"
+                    style={{ animationDelay: `${(i + Number(j)) * 0.1}s` }}
+                  />
+                  <div
+                    className="h-8 bg-charcoal/8 rounded-lg animate-pulse"
+                    style={{ animationDelay: `${(i + Number(j)) * 0.12}s` }}
+                  />
+                  <div className="w-5 h-5 bg-charcoal/8 rounded animate-pulse" />
+                </div>
+              ))}
+
+              <div className="h-4 w-28 bg-charcoal/8 rounded animate-pulse mt-1" />
+              <div className="h-4 w-36 bg-red-alert/15 rounded animate-pulse" />
+            </div>
+          ))}
+
+          <div className="w-full">
+            <div className="flex justify-between text-xs text-charcoal/40 mb-1.5">
+              <span>Extraction en cours</span>
+              <span>Veuillez patienter…</span>
+            </div>
+            <div className="w-full bg-charcoal/10 rounded-full h-1.5 overflow-hidden">
+              <div
+                className="h-full bg-[#1C2B2A] rounded-full"
+                style={{ animation: 'skeleton-progress 2s ease-in-out infinite' }}
+              />
+            </div>
           </div>
         </div>
       )}
@@ -198,7 +265,7 @@ export default function MenuPage() {
               Aucun plat pour l&apos;instant — ajoutez-en avec le bouton ci-dessous.
             </p>
           )}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 w-full">
             {plats.map((plat) => (
               <MenuCard
                 key={plat.id}
@@ -208,21 +275,23 @@ export default function MenuPage() {
               />
             ))}
           </div>
-          <button
-            type="button"
-            onClick={addPlat}
-            className="text-sm text-green-deep underline text-left"
-          >
-            + Ajouter un plat
-          </button>
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={step === 'SAVING'}
-            className="bg-[#1C2B2A] text-white px-6 py-3 rounded-xl font-semibold text-sm disabled:opacity-50 min-h-[44px] self-end"
-          >
-            {step === 'SAVING' ? 'Enregistrement…' : 'Valider et continuer →'}
-          </button>
+          <div className="flex flex-col gap-3 w-full">
+            <button
+              type="button"
+              onClick={addPlat}
+              className="text-sm text-green-deep underline text-left self-start"
+            >
+              + Ajouter un plat
+            </button>
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={step === 'SAVING'}
+              className="w-full sm:w-auto sm:self-end bg-[#1C2B2A] text-white px-6 py-3 rounded-xl font-semibold text-sm disabled:opacity-50 min-h-[44px]"
+            >
+              {step === 'SAVING' ? 'Enregistrement…' : 'Valider et continuer →'}
+            </button>
+          </div>
         </div>
       )}
 

@@ -10,7 +10,13 @@ services:
       - NODE_ENV=production
       - PORT=3000
       - DATABASE_URL=postgresql://bmad:bmad@postgres:5432/bmad_stock_agent
-      - JWT_SECRET=docker-dev-secret-key-at-least-32-characters-long
+      - JWT_SECRET=${JWT_SECRET}
+      - OPENAI_API_KEY=${OPENAI_API_KEY} 
+      - SQUARE_APPLICATION_ID=${SQUARE_APPLICATION_ID}
+      - SQUARE_APPLICATION_SECRET=${SQUARE_APPLICATION_SECRET}
+      - SQUARE_ENVIRONMENT=${SQUARE_ENVIRONMENT}
+      - SQUARE_REDIRECT_URI=${SQUARE_REDIRECT_URI}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
     depends_on:
       postgres:
         condition: service_healthy
@@ -37,6 +43,7 @@ services:
       - NODE_ENV=production
       # Force le port 3002 (évite que PORT=3000 du .env écrase celui du Dockerfile)
       - PORT=3002
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
     depends_on:
       api:
         condition: service_healthy
@@ -60,8 +67,8 @@ services:
       - PYTHONUNBUFFERED=1
       - ENV=development
       - DATABASE_URL=postgresql://bmad:bmad@postgres:5432/bmad_stock_agent
-      - JWT_SECRET=docker-dev-secret-key-at-least-32-characters-long
-      - OPENAI_API_KEY=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
+      - JWT_SECRET=${JWT_SECRET}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
 
       - STOCKS_SERVICE_URL=http://api:3000
       - INTERNAL_API_TOKEN=
@@ -87,8 +94,8 @@ services:
       - POSTGRES_DB=bmad_stock_agent
       - POSTGRES_HOST_AUTH_METHOD=md5
     ports:
-      # 5433 on host to avoid conflict with local PostgreSQL (migrations from host use 5433)
-      - "5433:5432"
+      # 5434 on host to avoid conflicts with local PostgreSQL on dev machines
+      - "5434:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./docker/init-pg-hba.sh:/docker-entrypoint-initdb.d/init-pg-hba.sh:ro
@@ -122,7 +129,7 @@ services:
     ports:
       - "3001:3000"
     environment:
-      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_SECURITY_ADMIN_PASSWORD=${GF_SECURITY_ADMIN_PASSWORD}
       - GF_USERS_ALLOW_SIGN_UP=false
     volumes:
       - grafana-data:/var/lib/grafana

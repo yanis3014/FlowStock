@@ -15,7 +15,10 @@ const STEPS: { id: OnboardingStep; label: string }[] = [
 const STEP_ORDER: OnboardingStep[] = ['profil', 'menu', 'emplacements', 'stocks', 'fournisseurs', 'pos'];
 
 function getStepFromPathname(pathname: string): OnboardingStep {
+  // Gérer le sous-chemin import
+  if (pathname?.includes('/onboarding/stocks/import')) return 'stocks';
   if (pathname?.includes('/stocks/import')) return 'stocks';
+  if (pathname?.includes('/onboarding/stocks')) return 'stocks';
   const segment = pathname.split('/').pop() as OnboardingStep;
   return STEP_ORDER.includes(segment) ? segment : 'profil';
 }

@@ -92,7 +92,7 @@ export default function StocksPage() {
       method: 'PATCH',
       body: JSON.stringify({ onboarding: { ...prev, stocks_mode: 'csv' } }),
     });
-    router.push('/import-stocks?fromOnboarding=1');
+    router.push('/onboarding/stocks/import');
   };
 
   const handleSelectGuided = async () => {

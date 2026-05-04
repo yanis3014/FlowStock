@@ -1,0 +1,2 @@
+# Force LF for shell scripts (Docker/Postgres init on Windows)
+*.sh text eol=lf

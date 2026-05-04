@@ -42,6 +42,7 @@ export default function RushStocksPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [lastFetchTime, setLastFetchTime] = useState<Date | null>(null);
+  const [localQtys, setLocalQtys] = useState<Record<string, number>>({});
 
   const loadProducts = useCallback(() => {
     if (!token) return;
@@ -74,6 +75,27 @@ export default function RushStocksPage() {
   useEffect(() => {
     if (token) loadProducts();
   }, [token, loadProducts]);
+
+  useEffect(() => {
+    const init: Record<string, number> = {};
+    products.forEach((p) => { init[p.id] = p.quantity; });
+    setLocalQtys(init);
+  }, [products]);
+
+  const adjustQty = useCallback(async (id: string, delta: number) => {
+    const prev = localQtys[id] ?? 0;
+    const next = Math.max(0, prev + delta);
+    setLocalQtys((q) => ({ ...q, [id]: next }));
+    try {
+      await fetchApi(`/products/${id}/quantity`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ quantity: next }),
+      });
+    } catch {
+      setLocalQtys((q) => ({ ...q, [id]: prev }));
+    }
+  }, [localQtys, fetchApi]);
 
   const filtered = useMemo(() => {
     if (!search.trim()) return products;
@@ -154,7 +176,11 @@ export default function RushStocksPage() {
         <section className="flex-1 space-y-3 overflow-y-auto">
           {filtered.map((item) => {
             const level = stockStatusToLevel(item.stock_status);
-            const pct = levelPct(item);
+            const qty = localQtys[item.id] ?? item.quantity;
+            const pct =
+              item.min_quantity != null && item.min_quantity > 0
+                ? Math.min(100, Math.round((qty / item.min_quantity) * 100))
+                : levelPct(item);
             const levelColor =
               level === 'red' ? 'bg-red-alert' : level === 'orange' ? 'bg-orange-warn' : 'bg-green-bright';
             return (
@@ -166,18 +192,27 @@ export default function RushStocksPage() {
                   <div className="min-w-0 flex-1">
                     <p className="font-display font-bold text-cream">{item.name}</p>
                     <p className="mt-1 text-2xl font-display font-extrabold text-cream">
-                      {item.quantity}{' '}
+                      {qty}{' '}
                       <span className="text-sm font-normal text-gray-warm">
                         {unitLabel(item.unit)}
                       </span>
                     </p>
                   </div>
-                  <button
-                    type="button"
-                    className="shrink-0 rounded-lg border border-white/20 px-2 py-1 text-[10px] font-semibold text-gray-warm hover:bg-white/10"
-                  >
-                    Ajustement manuel
-                  </button>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => adjustQty(item.id, -1)}
+                      className="w-10 h-10 rounded-full border border-white/20 text-cream text-lg flex items-center justify-center hover:bg-white/10"
+                    >−</button>
+                    <span className="text-sm font-semibold text-cream w-6 text-center">
+                      {localQtys[item.id] ?? item.quantity}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => adjustQty(item.id, 1)}
+                      className="w-10 h-10 rounded-full bg-green-bright text-[#0F1B19] text-lg flex items-center justify-center"
+                    >+</button>
+                  </div>
                 </div>
                 <div className="mt-3 flex items-center gap-2">
                   <div className="h-2 flex-1 overflow-hidden rounded-full bg-white/10">
