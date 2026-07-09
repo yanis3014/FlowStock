@@ -38,6 +38,7 @@ export default function StocksPage() {
   const [ingredients, setIngredients] = useState<IngredientEntry[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
   const [hasRecipes, setHasRecipes] = useState(true);
   const [renseignes, setRenseignes] = useState(0);
 
@@ -108,8 +109,9 @@ export default function StocksPage() {
 
   const handleSaveGuided = async () => {
     setSaving(true);
+    setSaveError('');
     try {
-      await Promise.allSettled(
+      const results = await Promise.allSettled(
         ingredients.map((ing) => {
           const sku = ing.ingredient_name
             .toLowerCase()
@@ -131,6 +133,15 @@ export default function StocksPage() {
           });
         })
       );
+      const failed = results.filter((r) => r.status === 'rejected').length;
+      if (failed === ingredients.length) {
+        setSaveError("Échec de l'enregistrement — vérifiez votre connexion et réessayez.");
+        setSaving(false);
+        return;
+      }
+      if (failed > 0) {
+        setSaveError(`${ingredients.length - failed}/${ingredients.length} produits enregistrés. Les autres ont échoué.`);
+      }
       const prev = prevData ?? { completed_steps: [], current_step: 'stocks' as const };
       const completed = prev.completed_steps ?? [];
       await fetchApi('/onboarding/progress', {
@@ -256,6 +267,9 @@ export default function StocksPage() {
                   </div>
                 ))}
               </div>
+              {saveError && (
+                <p className="text-sm text-red-500 bg-red-50 border border-red-200 rounded-lg px-4 py-2">{saveError}</p>
+              )}
               <button
                 type="button"
                 onClick={handleSaveGuided}

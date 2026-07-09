@@ -39,7 +39,7 @@ export default function DonePage() {
     Promise.all([
       fetchApi('/recipes?limit=100').then((r) => r.json()),
       fetchApi('/products?limit=1').then((r) => r.json()),
-      fetchApi('/products?status=low').then((r) => r.json()),
+      fetchApi('/products?low_stock=true').then((r) => r.json()),
     ])
       .then(([recipesRes, productsRes, lowRes]) => {
         setSummary({

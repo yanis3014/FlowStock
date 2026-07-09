@@ -5,28 +5,17 @@ import { useApi } from '@/hooks/useApi';
 import type { OnboardingProgressData } from '@/types/onboarding';
 
 const LOADING_MESSAGES = [
-  'Connexion sécurisée à votre caisse en cours…',
-  'Récupération de l\'historique des ventes des 12 derniers mois…',
-  'Nettoyage et structuration des données…',
-  'Analyse des tendances et de la saisonnalité par l\'IA…',
-  'Identification de vos plats phares et catégories clés…',
+  'Chargement de votre catalogue de recettes…',
+  'Récupération de vos produits en stock…',
+  'Vérification de vos emplacements configurés…',
   'Calcul des ratios de consommation par recette…',
   'Préparation de votre tableau de bord personnalisé…',
 ];
 
-interface SalesAnalysisResult {
-  ticketsAnalyses: number;
-  platsIdentifies: number;
-  moisHistorique: number;
-}
-
-async function fetchAndAnalyzeSalesData(): Promise<SalesAnalysisResult> {
-  await new Promise((resolve) => setTimeout(resolve, 3500 + Math.random() * 1500));
-  return {
-    ticketsAnalyses: Math.floor(Math.random() * 1200) + 1800,
-    platsIdentifies: Math.floor(Math.random() * 8) + 12,
-    moisHistorique: 12,
-  };
+interface CatalogSummary {
+  recettes: number;
+  produits: number;
+  posConnecte: boolean;
 }
 
 type PageState = 'loading' | 'success' | 'error';
@@ -38,7 +27,7 @@ export default function AnalyseVentesPage() {
 
   const [pageState, setPageState] = useState<PageState>('loading');
   const [messageIndex, setMessageIndex] = useState(0);
-  const [result, setResult] = useState<SalesAnalysisResult | null>(null);
+  const [summary, setSummary] = useState<CatalogSummary | null>(null);
   const [saving, setSaving] = useState(false);
   const [prevData, setPrevData] = useState<OnboardingProgressData | null>(null);
 
@@ -59,12 +48,19 @@ export default function AnalyseVentesPage() {
     const interval = setInterval(() => {
       msgIdx = Math.min(msgIdx + 1, LOADING_MESSAGES.length - 1);
       setMessageIndex(msgIdx);
-    }, 600);
+    }, 700);
 
-    fetchAndAnalyzeSalesData()
-      .then((data) => {
+    Promise.all([
+      fetchApi('/recipes?limit=1').then((r) => r.json()),
+      fetchApi('/products?limit=1').then((r) => r.json()),
+    ])
+      .then(([recipesRes, productsRes]) => {
         clearInterval(interval);
-        setResult(data);
+        setSummary({
+          recettes: recipesRes?.pagination?.total ?? 0,
+          produits: productsRes?.pagination?.total ?? 0,
+          posConnecte: false,
+        });
         setPageState('success');
       })
       .catch(() => {
@@ -85,7 +81,7 @@ export default function AnalyseVentesPage() {
         body: JSON.stringify({
           onboarding: {
             ...prev,
-            completed_steps: completed.includes('pos') ? completed : [...completed, 'pos'],
+            completed_steps: completed.includes('analyse-ventes') ? completed : [...completed, 'analyse-ventes'],
             current_step: 'done',
           },
         }),
@@ -125,7 +121,6 @@ export default function AnalyseVentesPage() {
           100% { opacity: 0; transform: translateY(-6px); }
         }
         .animate-fade-slide-in  { animation: fadeSlideIn 0.6s ease-out forwards; }
-        .animate-fade-slide-up  { animation: fadeSlideUp 0.5s ease-out forwards; }
         .animate-spin-slow      { animation: spin 1.4s linear infinite; }
         .animate-pulse-ring     { animation: pulse-ring 2s ease-in-out infinite; }
         .animate-msg-fade       { animation: msgFade 0.5s ease-out forwards; }
@@ -134,7 +129,6 @@ export default function AnalyseVentesPage() {
 
       {pageState === 'loading' && (
         <div className="max-w-md w-full flex flex-col items-center gap-8 animate-fade-slide-in">
-          {/* Indicateur IA */}
           <div className="relative flex items-center justify-center w-24 h-24">
             <div className="absolute inset-0 rounded-full bg-[#1C2B2A]/10 animate-pulse-ring" />
             <div className="w-16 h-16 rounded-full bg-[#1C2B2A]/5 border-2 border-[#1C2B2A]/20 flex items-center justify-center">
@@ -156,14 +150,13 @@ export default function AnalyseVentesPage() {
 
           <div className="text-center flex flex-col gap-2">
             <h1 className="text-2xl font-bold text-charcoal">
-              Analyse de vos ventes en cours…
+              Finalisation de votre configuration…
             </h1>
             <p className="text-charcoal/50 text-sm">
-              L&apos;agent IA analyse votre historique. Cela prend quelques instants.
+              Récupération de vos données. Cela prend quelques instants.
             </p>
           </div>
 
-          {/* Message dynamique */}
           <div className="w-full bg-white border border-charcoal/10 rounded-xl px-5 py-4 flex items-start gap-3 min-h-[68px]">
             <div className="w-2 h-2 rounded-full bg-[#1C2B2A] mt-1 flex-shrink-0 animate-pulse" />
             <p
@@ -174,7 +167,6 @@ export default function AnalyseVentesPage() {
             </p>
           </div>
 
-          {/* Barre de progression simulée */}
           <div className="w-full">
             <div className="flex justify-between text-xs text-charcoal/40 mb-1.5">
               <span>Progression</span>
@@ -190,9 +182,8 @@ export default function AnalyseVentesPage() {
         </div>
       )}
 
-      {pageState === 'success' && result && (
+      {pageState === 'success' && summary && (
         <div className="max-w-lg w-full flex flex-col items-center gap-8 animate-fade-slide-in">
-          {/* Icône succès */}
           <div className="w-20 h-20 bg-[#1C2B2A]/8 rounded-full flex items-center justify-center">
             <svg
               width="36"
@@ -210,46 +201,29 @@ export default function AnalyseVentesPage() {
             </svg>
           </div>
 
-          {/* Titre */}
           <div className="text-center flex flex-col gap-2">
             <h1 className="text-3xl font-bold text-charcoal">
-              Vos données sont prêtes à être exploitées&nbsp;!
+              Votre catalogue est configuré&nbsp;!
             </h1>
             <p className="text-charcoal/55 text-sm">
-              L&apos;agent IA a analysé votre historique et identifié vos tendances clés.
+              Recettes, produits et emplacements sont prêts. L&apos;analyse des ventes démarrera automatiquement à la connexion de votre caisse.
             </p>
           </div>
 
-          {/* Cartes de statistiques */}
-          <div className="w-full grid grid-cols-3 gap-4">
-            <div className="stat-card-enter bg-white rounded-xl border border-charcoal/10 p-4 flex flex-col items-center gap-1.5" style={{ animationDelay: '0.05s', opacity: 0 }}>
-              <span className="text-2xl font-bold text-charcoal">
-                {result.ticketsAnalyses.toLocaleString('fr-FR')}
-              </span>
-              <span className="text-xs text-charcoal/55 text-center leading-tight">
-                Tickets analysés
-              </span>
+          {/* Stats réelles */}
+          <div className="w-full grid grid-cols-2 gap-4">
+            <div className="stat-card-enter bg-white rounded-xl border border-charcoal/10 p-5 flex flex-col items-center gap-1.5" style={{ animationDelay: '0.05s', opacity: 0 }}>
+              <span className="text-3xl font-bold text-charcoal">{summary.recettes}</span>
+              <span className="text-xs text-charcoal/55 text-center leading-tight">Fiches recettes</span>
             </div>
-            <div className="stat-card-enter bg-white rounded-xl border border-charcoal/10 p-4 flex flex-col items-center gap-1.5" style={{ animationDelay: '0.15s', opacity: 0 }}>
-              <span className="text-2xl font-bold text-charcoal">
-                {result.platsIdentifies}
-              </span>
-              <span className="text-xs text-charcoal/55 text-center leading-tight">
-                Plats identifiés
-              </span>
-            </div>
-            <div className="stat-card-enter bg-white rounded-xl border border-charcoal/10 p-4 flex flex-col items-center gap-1.5" style={{ animationDelay: '0.25s', opacity: 0 }}>
-              <span className="text-2xl font-bold text-charcoal">
-                {result.moisHistorique}
-              </span>
-              <span className="text-xs text-charcoal/55 text-center leading-tight">
-                Mois d&apos;historique
-              </span>
+            <div className="stat-card-enter bg-white rounded-xl border border-charcoal/10 p-5 flex flex-col items-center gap-1.5" style={{ animationDelay: '0.15s', opacity: 0 }}>
+              <span className="text-3xl font-bold text-charcoal">{summary.produits}</span>
+              <span className="text-xs text-charcoal/55 text-center leading-tight">Produits en stock</span>
             </div>
           </div>
 
-          {/* Encart info IA */}
-          <div className="w-full bg-[#1C2B2A]/5 border border-[#1C2B2A]/15 rounded-xl px-4 py-3.5 flex items-start gap-3">
+          {/* Encart POS en attente */}
+          <div className="w-full bg-[#D4A843]/10 border border-[#D4A843]/30 rounded-xl px-4 py-3.5 flex items-start gap-3">
             <svg
               width="18"
               height="18"
@@ -259,19 +233,17 @@ export default function AnalyseVentesPage() {
               strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
-              className="text-[#1C2B2A] flex-shrink-0 mt-0.5"
+              className="text-[#D4A843] flex-shrink-0 mt-0.5"
             >
               <circle cx="12" cy="12" r="10" />
               <line x1="12" y1="16" x2="12" y2="12" />
               <line x1="12" y1="8" x2="12.01" y2="8" />
             </svg>
             <p className="text-sm text-charcoal/70">
-              Ces données seront utilisées pour calibrer les alertes de stocks et les
-              commandes fournisseurs recommandées par votre agent.
+              <span className="font-semibold text-charcoal">Caisse non connectée.</span> Une fois votre POS configuré dans les paramètres, FlowStock analysera automatiquement votre historique de ventes et calibrera vos alertes de réapprovisionnement.
             </p>
           </div>
 
-          {/* CTA */}
           <div className="w-full flex flex-col gap-3">
             <button
               type="button"
@@ -279,7 +251,7 @@ export default function AnalyseVentesPage() {
               disabled={saving}
               className="w-full bg-[#1C2B2A] text-white rounded-xl px-6 py-4 font-semibold text-base min-h-[56px] disabled:opacity-50 transition-opacity"
             >
-              {saving ? 'Enregistrement…' : 'Continuer vers l\'inventaire initial →'}
+              {saving ? 'Enregistrement…' : 'Accéder au dashboard →'}
             </button>
           </div>
         </div>
@@ -295,9 +267,9 @@ export default function AnalyseVentesPage() {
             </svg>
           </div>
           <div className="text-center">
-            <h1 className="text-xl font-bold text-charcoal">Synchronisation impossible</h1>
+            <h1 className="text-xl font-bold text-charcoal">Erreur de chargement</h1>
             <p className="text-charcoal/60 mt-1 text-sm">
-              Une erreur est survenue lors de la récupération de l&apos;historique. Vous pouvez réessayer ou continuer sans les données.
+              Impossible de récupérer vos données. Vérifiez votre connexion et réessayez.
             </p>
           </div>
           <div className="w-full flex flex-col gap-3">
@@ -313,7 +285,7 @@ export default function AnalyseVentesPage() {
               onClick={handleContinue}
               className="w-full text-sm text-charcoal/50 underline min-h-[44px]"
             >
-              Continuer sans les données
+              Continuer quand même
             </button>
           </div>
         </div>

@@ -162,9 +162,15 @@ RÈGLES IMPÉRATIVES :
     const rawContent = data.choices?.[0]?.message?.content ?? '';
     if (!rawContent) return { success: false, error: 'Réponse OpenAI vide.' };
 
-    const jsonMatch = rawContent.trim().match(/\{[\s\S]*\}/);
-    const jsonStr = jsonMatch ? jsonMatch[0] : rawContent.trim();
-    const parsed = JSON.parse(jsonStr) as MenuExtractionResult;
+    let parsed: MenuExtractionResult;
+    try {
+      parsed = JSON.parse(rawContent.trim()) as MenuExtractionResult;
+    } catch {
+      // Fallback : extraction par regex si le modèle a ajouté du texte autour
+      const jsonMatch = rawContent.trim().match(/\{[\s\S]*\}/);
+      if (!jsonMatch) return { success: false, error: 'Réponse IA non parseable en JSON.' };
+      parsed = JSON.parse(jsonMatch[0]) as MenuExtractionResult;
+    }
 
     if (!Array.isArray(parsed.plats)) {
       return { success: false, error: 'Format de réponse IA invalide (champ "plats" manquant).' };
